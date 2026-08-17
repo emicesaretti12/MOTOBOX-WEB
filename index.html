@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Motobox — Agencia Multimarca de Motos | Córdoba, Argentina</title>
+  <meta name="description" content="Motobox: tu agencia de motos multimarca en Córdoba. Financiación propia, permuta, y las mejores marcas. Consultá por WhatsApp.">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta property="og:title" content="Motobox — Agencia Multimarca de Motos">
+  <meta property="og:description" content="Encontrá tu próxima moto en Motobox. Financiación propia, permuta y envío a todo el país.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header" id="header">
+    <div class="header__inner">
+      <a href="#" class="header__logo">
+        <span class="logo-text">MOTOBOX</span>
+      </a>
+      <nav class="header__nav" id="nav">
+        <a href="#catalogo" class="nav-link">Catálogo</a>
+        <a href="#beneficios" class="nav-link">Beneficios</a>
+        <a href="#ubicacion" class="nav-link">Ubicación</a>
+        <a href="https://wa.me/5493511234567?text=Hola%2C%20quiero%20info%20sobre%20las%20motos%20disponibles" class="nav-cta" target="_blank" rel="noopener">Consultá ahora</a>
+      </nav>
+      <button class="header__menu" id="menu-toggle" aria-label="Menú">
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MOBILE NAV OVERLAY -->
+  <div class="mobile-nav" id="mobile-nav">
+    <nav class="mobile-nav__inner">
+      <a href="#catalogo" class="mobile-nav__link">Catálogo</a>
+      <a href="#beneficios" class="mobile-nav__link">Beneficios</a>
+      <a href="#ubicacion" class="mobile-nav__link">Ubicación</a>
+      <a href="https://wa.me/5493511234567?text=Hola%2C%20quiero%20info%20sobre%20las%20motos%20disponibles" class="mobile-nav__cta" target="_blank" rel="noopener">Consultá por WhatsApp</a>
+    </nav>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="hero__content">
+      <p class="hero__tag reveal">Agencia multimarca · Córdoba</p>
+      <h1 class="hero__title reveal">
+        Tu próxima moto<br>
+        <span class="hero__title--accent">te espera.</span>
+      </h1>
+      <p class="hero__sub reveal">Financiación propia, permuta, y las mejores marcas del mercado en un solo lugar.</p>
+      <a href="https://wa.me/5493511234567?text=Hola%2C%20quiero%20info%20sobre%20las%20motos%20disponibles" class="btn btn--primary hero__cta reveal" target="_blank" rel="noopener">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Consultá por WhatsApp
+      </a>
+    </div>
+    <div class="hero__image">
+      <img src="img/hero.jpg" alt="Moto destacada en Motobox" loading="eager">
+    </div>
+  </section>
+
+  <!-- CATEGORÍAS -->
+  <section class="categories" id="categorias">
+    <div class="container">
+      <p class="section-tag reveal">Explorá por categoría</p>
+      <h2 class="section-title reveal">¿Qué tipo de moto buscás?</h2>
+      <div class="categories__grid">
+        <a href="#catalogo" class="category-card reveal" data-category="economica">
+          <div class="category-card__image">
+            <img src="img/cat-economicas.jpg" alt="Motos económicas" loading="lazy">
+          </div>
+          <div class="category-card__info">
+            <h3>Económicas</h3>
+            <p>Ideal para arrancar. Bajo consumo, fácil manejo.</p>
+            <span class="category-card__arrow">&rarr;</span>
+          </div>
+        </a>
+        <a href="#catalogo" class="category-card reveal" data-category="diario">
+          <div class="category-card__image">
+            <img src="img/cat-diario.jpg" alt="Motos de uso diario" loading="lazy">
+          </div>
+          <div class="category-card__info">
+            <h3>Uso diario</h3>
+            <p>Versatilidad y potencia para la ciudad y la ruta.</p>
+            <span class="category-card__arrow">&rarr;</span>
+          </div>
+        </a>
+        <a href="#catalogo" class="category-card reveal" data-category="viajar">
+          <div class="category-card__image">
+            <img src="img/cat-viajar.jpg" alt="Motos para viajar" loading="lazy">
+          </div>
+          <div class="category-card__info">
+            <h3>Para viajar</h3>
+            <p>Aventura sin límites. Confort para la ruta larga.</p>
+            <span class="category-card__arrow">&rarr;</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CATÁLOGO -->
+  <section class="catalog" id="catalogo">
+    <div class="container">
+      <p class="section-tag reveal">Catálogo</p>
+      <h2 class="section-title reveal">Nuestras motos</h2>
+      <div class="catalog__filters reveal">
+        <button class="filter-btn active" data-filter="todas">Todas</button>
+        <button class="filter-btn" data-filter="economica">Económicas</button>
+        <button class="filter-btn" data-filter="diario">Uso diario</button>
+        <button class="filter-btn" data-filter="viajar">Para viajar</button>
+      </div>
+      <div class="catalog__grid" id="catalog-grid">
+        <!-- Cards rendered by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- BENEFICIOS -->
+  <section class="benefits" id="beneficios">
+    <div class="container">
+      <p class="section-tag reveal">¿Por qué Motobox?</p>
+      <h2 class="section-title reveal">Todo lo que necesitás, en un solo lugar.</h2>
+      <div class="benefits__grid">
+        <div class="benefit-card reveal">
+          <div class="benefit-card__icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          </div>
+          <h3 class="benefit-card__title">Financiación propia</h3>
+          <p class="benefit-card__text">Accedé a tu moto sin bancos. Planes flexibles que se adaptan a vos.</p>
+        </div>
+        <div class="benefit-card reveal">
+          <div class="benefit-card__icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/><circle cx="17" cy="16" r="2"/></svg>
+          </div>
+          <h3 class="benefit-card__title">Tarjeta en cuotas</h3>
+          <p class="benefit-card__text">Todas las tarjetas de crédito. Hasta 12 cuotas sin interés.</p>
+        </div>
+        <div class="benefit-card reveal">
+          <div class="benefit-card__icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          </div>
+          <h3 class="benefit-card__title">Permuta</h3>
+          <p class="benefit-card__text">Tomamos tu moto usada como parte de pago. Tasación justa al instante.</p>
+        </div>
+        <div class="benefit-card reveal">
+          <div class="benefit-card__icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <h3 class="benefit-card__title">Patente y casco de regalo</h3>
+          <p class="benefit-card__text">Con la compra de tu moto 0km, te regalamos el trámite de patente y un casco.</p>
+        </div>
+        <div class="benefit-card reveal">
+          <div class="benefit-card__icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          </div>
+          <h3 class="benefit-card__title">Service propio</h3>
+          <p class="benefit-card__text">Taller de service con mecánicos especializados. Mantené tu moto siempre a punto.</p>
+        </div>
+        <div class="benefit-card reveal">
+          <div class="benefit-card__icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          </div>
+          <h3 class="benefit-card__title">Garantía oficial</h3>
+          <p class="benefit-card__text">Todas nuestras motos 0km con garantía de fábrica respaldada.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- UBICACIÓN -->
+  <section class="location" id="ubicacion">
+    <div class="container">
+      <p class="section-tag reveal">Visitanos</p>
+      <h2 class="section-title reveal">Estamos en Córdoba Capital</h2>
+      <div class="location__content">
+        <div class="location__info reveal">
+          <div class="location__detail">
+            <h3>Dirección</h3>
+            <p>Santa Rosa 4227, Córdoba Capital</p>
+          </div>
+          <div class="location__detail">
+            <h3>Horarios</h3>
+            <p>Lunes a lunes, de 9:00 a 21:00 hs</p>
+          </div>
+          <div class="location__detail">
+            <h3>Contacto</h3>
+            <p>WhatsApp: (351) 123-4567</p>
+          </div>
+          <a href="https://wa.me/5493511234567?text=Hola%2C%20quiero%20visitarlos.%20%C2%BFCu%C3%A1l%20es%20la%20direcci%C3%B3n%20exacta%3F" class="btn btn--primary" target="_blank" rel="noopener">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Cómo llegar
+          </a>
+        </div>
+        <div class="location__map reveal">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3405.5!2d-64.22!3d-31.38!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2sSanta+Rosa+4227%2C+C%C3%B3rdoba!5e0!3m2!1ses!2sar!4v1"
+            width="100%"
+            height="400"
+            style="border:0;"
+            allowfullscreen=""
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            title="Ubicación de Motobox en Google Maps"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__inner">
+        <div class="footer__brand">
+          <span class="logo-text">MOTOBOX</span>
+          <p>Agencia multimarca de motos.<br>Córdoba, Argentina.</p>
+        </div>
+        <div class="footer__links">
+          <a href="#catalogo">Catálogo</a>
+          <a href="#beneficios">Beneficios</a>
+          <a href="#ubicacion">Ubicación</a>
+        </div>
+        <div class="footer__contact">
+          <p>Santa Rosa 4227, Córdoba Capital</p>
+          <p>Lunes a lunes, 9:00 – 21:00 hs</p>
+          <a href="https://wa.me/5493511234567" target="_blank" rel="noopener">(351) 123-4567</a>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <p>&copy; 2026 Motobox. Todos los derechos reservados.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- WHATSAPP FAB -->
+  <a href="https://wa.me/5493511234567?text=Hola%2C%20quiero%20info%20sobre%20las%20motos%20disponibles" class="whatsapp-fab" target="_blank" rel="noopener" aria-label="Consultar por WhatsApp" id="whatsapp-fab">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+  </a>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
