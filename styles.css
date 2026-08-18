@@ -1,38 +1,37 @@
 /* ========================================================================
-   MOTOBOX — Ultra-Modern Mobile-First Automotive Design System
-   Concesionaria Multimarca | Córdoba, Argentina
-   Senior UI/UX & High-Conversion Architecture
+   MOTOBOX — Mobile-First Concesionaria Design System
+   Blanco · Rojo · Negro — Identidad oficial Motobox Córdoba
    ======================================================================== */
 
 /* --- 1. CSS Custom Properties / Design Tokens --- */
 :root {
-  /* Dark Luxury Automotive Palette */
-  --bg-primary: #070709;
-  --bg-secondary: #0e0e13;
-  --bg-tertiary: #15151c;
-  --bg-card: rgba(22, 22, 30, 0.85);
-  --bg-card-hover: rgba(28, 28, 38, 0.95);
-  --bg-glass: rgba(10, 10, 15, 0.78);
-  --bg-glass-strong: rgba(10, 10, 15, 0.92);
+  /* Concesionaria Light Palette — Blanco dominante */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #eaeaec;
+  --bg-card: rgba(255, 255, 255, 0.92);
+  --bg-card-hover: rgba(255, 255, 255, 1);
+  --bg-glass: rgba(255, 255, 255, 0.82);
+  --bg-glass-strong: rgba(255, 255, 255, 0.95);
 
   /* Borders & Dividers */
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-medium: rgba(255, 255, 255, 0.14);
-  --border-highlight: rgba(204, 16, 22, 0.45);
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-medium: rgba(0, 0, 0, 0.14);
+  --border-highlight: rgba(204, 16, 22, 0.4);
 
-  /* Typography Colors */
-  --text-primary: #f4f4f7;
-  --text-secondary: #9d9da8;
-  --text-muted: #676775;
-  --text-inverse: #070709;
+  /* Typography — Negro como principal */
+  --text-primary: #111111;
+  --text-secondary: #555555;
+  --text-muted: #888888;
+  --text-inverse: #ffffff;
 
-  /* Brand Accents — Motobox Red (from logo) */
+  /* Rojo Motobox (del logo) */
   --accent-orange: #cc1016;
-  --accent-orange-hover: #e01a20;
-  --accent-orange-glow: rgba(204, 16, 22, 0.3);
+  --accent-orange-hover: #a80d12;
+  --accent-orange-glow: rgba(204, 16, 22, 0.18);
   --accent-whatsapp: #25d366;
   --accent-whatsapp-dark: #128c7e;
-  --accent-whatsapp-glow: rgba(37, 211, 102, 0.25);
+  --accent-whatsapp-glow: rgba(37, 211, 102, 0.18);
   --accent-live: #22c55e;
 
   /* Typography */
@@ -40,12 +39,12 @@
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
 
-  /* Elevation & Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.55);
-  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.7);
-  --shadow-accent: 0 8px 28px rgba(204, 16, 22, 0.25);
-  --shadow-whatsapp: 0 8px 28px rgba(37, 211, 102, 0.28);
+  /* Elevation & Shadows — Suaves sobre blanco */
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.1);
+  --shadow-accent: 0 6px 20px rgba(204, 16, 22, 0.18);
+  --shadow-whatsapp: 0 6px 20px rgba(37, 211, 102, 0.22);
 
   /* Radii */
   --radius-xs: 6px;
@@ -78,7 +77,7 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
@@ -258,7 +257,7 @@ input, select {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-secondary);
   border: 1px solid var(--border-medium);
   color: var(--text-primary);
   font-size: 0.8rem;
@@ -269,7 +268,7 @@ input, select {
 }
 
 .btn-assistant-header:hover, .btn-assistant-header:active {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--bg-tertiary);
   border-color: var(--accent-orange);
   transform: translateY(-1px);
 }
@@ -353,7 +352,7 @@ input, select {
 }
 
 .hero-title-highlight {
-  background: linear-gradient(135deg, #ffffff 30%, var(--accent-orange) 100%);
+  background: linear-gradient(135deg, #111111 30%, var(--accent-orange) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -433,8 +432,8 @@ input, select {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-medium);
+  background: var(--bg-primary);
+  border: 1.5px solid var(--border-medium);
   color: var(--text-primary);
   font-size: 0.95rem;
   font-weight: 600;
@@ -444,8 +443,9 @@ input, select {
 }
 
 .btn-secondary-hero:hover, .btn-secondary-hero:active {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--bg-tertiary);
+  border-color: var(--accent-orange);
+  color: var(--accent-orange);
 }
 
 /* Hero Media / Stage */
@@ -466,7 +466,7 @@ input, select {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 65%, rgba(7, 7, 9, 0.85) 100%);
+  background: linear-gradient(180deg, transparent 60%, rgba(0, 0, 0, 0.45) 100%);
   pointer-events: none;
 }
 
@@ -488,7 +488,7 @@ input, select {
   left: 1.25rem;
   right: 1.25rem;
   z-index: 2;
-  background: rgba(15, 15, 20, 0.88);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--border-medium);
@@ -654,7 +654,7 @@ input, select {
   position: relative;
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  background: #000;
+  background: var(--bg-tertiary);
 }
 
 .category-tile-media img {
@@ -672,7 +672,7 @@ input, select {
   position: absolute;
   top: 0.85rem;
   left: 0.85rem;
-  background: rgba(10, 10, 15, 0.85);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(8px);
   border: 1px solid var(--border-medium);
   color: var(--text-primary);
@@ -790,7 +790,7 @@ input, select {
 .filter-pill .pill-count {
   font-size: 0.7rem;
   font-family: var(--font-mono);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.06);
   padding: 0.1rem 0.35rem;
   border-radius: var(--radius-full);
 }
@@ -853,7 +853,7 @@ input, select {
 
 .moto-card-header {
   position: relative;
-  background: #000;
+  background: var(--bg-tertiary);
   aspect-ratio: 4 / 3;
   overflow: hidden;
 }
@@ -894,7 +894,7 @@ input, select {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  background: rgba(10, 10, 15, 0.85);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(8px);
   border: 1px solid var(--border-medium);
   padding: 0.25rem 0.55rem;
@@ -1013,7 +1013,7 @@ input, select {
   display: block;
   font-family: var(--font-mono);
   font-size: 0.85rem;
-  color: #fff;
+  color: var(--text-primary);
   font-weight: 700;
 }
 
@@ -1207,13 +1207,14 @@ input, select {
 
 /* Simulator Output Display Box */
 .sim-output-card {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-highlight);
+  background: #111111;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  color: #ffffff;
 }
 
 .sim-output-header {
@@ -1241,7 +1242,7 @@ input, select {
 
 .sim-result-cuota-sub {
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .sim-breakdown-list {
@@ -1249,8 +1250,8 @@ input, select {
   flex-direction: column;
   gap: 0.6rem;
   margin-bottom: 1.5rem;
-  border-top: 1px solid var(--border-subtle);
-  border-bottom: 1px solid var(--border-subtle);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   padding: 0.85rem 0;
 }
 
@@ -1258,12 +1259,12 @@ input, select {
   display: flex;
   justify-content: space-between;
   font-size: 0.82rem;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .sim-breakdown-item strong {
   font-family: var(--font-mono);
-  color: var(--text-primary);
+  color: #ffffff;
 }
 
 .btn-submit-simulation {
@@ -1409,7 +1410,7 @@ input, select {
   overflow: hidden;
   border: 1px solid var(--border-subtle);
   min-height: 320px;
-  background: #000;
+  background: var(--bg-tertiary);
 }
 
 .map-embed-wrapper iframe {
@@ -1417,7 +1418,6 @@ input, select {
   height: 100%;
   min-height: 320px;
   border: none;
-  filter: grayscale(80%) invert(90%) contrast(90%);
 }
 
 /* --- 12. Modern Footer --- */
@@ -1686,7 +1686,7 @@ input, select {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.06);
   color: var(--text-secondary);
   display: flex;
   align-items: center;
@@ -1695,7 +1695,7 @@ input, select {
 }
 
 .btn-close-modal:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.12);
   color: var(--text-primary);
 }
 
@@ -1814,7 +1814,7 @@ input, select {
 .match-box-header {
   position: relative;
   aspect-ratio: 16 / 9;
-  background: #000;
+  background: var(--bg-tertiary);
 }
 
 .match-box-header img {
@@ -1873,7 +1873,7 @@ input, select {
 .match-price-row strong {
   font-family: var(--font-heading);
   font-size: 1.2rem;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .btn-match-whatsapp {
