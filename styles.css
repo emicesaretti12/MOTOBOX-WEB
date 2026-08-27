@@ -59,7 +59,7 @@
   /* Layout */
   --max-width: 1100px;
   --header-height: 52px;
-  --bottom-bar-height: 50px;
+  --bottom-bar-height: 52px;
 
   /* Transitions */
   --ease-ios: cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -149,7 +149,7 @@ ul, ol { list-style: none; }
 .brand-logo {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.5rem;
 }
 
 .brand-badge { display: none; }
@@ -163,14 +163,34 @@ ul, ol { list-style: none; }
   line-height: 1;
 }
 
-.brand-location {
-  display: block;
-  font-size: 0.6rem;
-  color: var(--text-muted);
+.header-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.65rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin-top: 1px;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-xs);
+}
+@media (max-width: 520px) {
+  .header-status-badge { display: none; }
+}
+
+.live-dot-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #34c759;
+  box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.7);
+  animation: liveDotPulse 2s infinite;
+}
+
+@keyframes liveDotPulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(52, 199, 89, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 199, 89, 0); }
 }
 
 .nav-desktop { display: none; }
@@ -179,7 +199,7 @@ ul, ol { list-style: none; }
   .nav-desktop {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: 1.25rem;
   }
 }
 
@@ -190,9 +210,15 @@ ul, ol { list-style: none; }
   padding: 0.3rem 0.5rem;
   border-radius: var(--radius-xs);
   transition: all var(--transition-fast);
+  border-bottom: 2px solid transparent;
 }
 .nav-desktop-link:hover {
   color: var(--text-primary);
+}
+.nav-desktop-link.active {
+  color: var(--text-primary);
+  font-weight: 700;
+  border-bottom-color: var(--accent-orange);
 }
 
 .header-actions {
@@ -598,7 +624,7 @@ ul, ol { list-style: none; }
   color: var(--accent-orange);
 }
 
-/* ── CATALOG SECTION ── */
+/* ── CATALOG SECTION & TOOLBAR ── */
 .catalog-section {
   padding: 1.25rem 0;
 }
@@ -609,12 +635,70 @@ ul, ol { list-style: none; }
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
+
+.catalog-toolbar-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
 @media (min-width: 768px) {
-  .catalog-toolbar {
+  .catalog-toolbar-header {
     flex-direction: row;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-end;
   }
+}
+
+/* Live Search Box */
+.catalog-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 380px;
+}
+
+.catalog-search-wrap .search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.catalog-search-input {
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  padding: 0.55rem 2rem 0.55rem 2.25rem;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  outline: none;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+.catalog-search-input:focus {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 1px var(--text-primary);
+}
+
+.catalog-search-clear {
+  position: absolute;
+  right: 0.5rem;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: bold;
+}
+.catalog-search-clear:hover {
+  background: var(--border-medium);
+  color: var(--text-primary);
 }
 
 /* Precision Segmented Filter Bar */
@@ -677,6 +761,43 @@ ul, ol { list-style: none; }
 }
 @media (min-width: 1024px) {
   .catalog-cards-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+}
+
+/* Empty search state */
+.catalog-empty-state {
+  grid-column: 1 / -1;
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.empty-state-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.35rem;
+}
+.catalog-empty-state h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.catalog-empty-state p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  max-width: 360px;
+  margin-bottom: 0.5rem;
 }
 
 /* ── MOTORCYCLE CARDS (Maximum Photo Prominence) ── */
@@ -1144,7 +1265,7 @@ ul, ol { list-style: none; }
   }
 }
 
-/* ── BOTTOM DOCK (Mobile Tab Bar) ── */
+/* ── BOTTOM DOCK (Mobile Tab Bar 3-Item Layout) ── */
 .mobile-bottom-dock {
   position: fixed;
   bottom: 0;
@@ -1156,38 +1277,43 @@ ul, ol { list-style: none; }
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
   border-top: 1px solid var(--border-subtle);
-  padding: 0.3rem 1.5rem calc(0.3rem + env(safe-area-inset-bottom, 0px));
+  padding: 0.25rem 1rem calc(0.25rem + env(safe-area-inset-bottom, 0px));
   display: flex;
   align-items: center;
+  justify-content: space-around;
 }
 
 @media (min-width: 900px) {
   .mobile-bottom-dock { display: none; }
 }
 
-.btn-dock-assistant,
-.btn-dock-whatsapp {
+.btn-dock-item {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.1rem;
+  gap: 0.15rem;
   background: transparent;
+  color: var(--text-secondary);
   font-size: 0.62rem;
-  font-weight: 600;
-  padding: 0.2rem 0;
+  font-weight: 700;
+  padding: 0.25rem 0;
+  transition: all var(--transition-fast);
+}
+.btn-dock-item:active {
+  color: var(--text-primary);
+  transform: scale(0.95);
 }
 
-.btn-dock-assistant svg,
-.btn-dock-whatsapp svg {
-  width: 20px;
-  height: 20px;
+.btn-dock-item svg {
+  width: 19px;
+  height: 19px;
 }
 
-.btn-dock-assistant { color: var(--text-secondary); }
-.btn-dock-assistant:active { color: var(--text-primary); }
-.btn-dock-whatsapp { color: var(--accent-whatsapp); }
+.btn-dock-item.btn-dock-whatsapp {
+  color: var(--accent-whatsapp);
+}
 
 /* ── FLOATING FAB (Desktop) ── */
 .floating-fab-desktop { display: none; }

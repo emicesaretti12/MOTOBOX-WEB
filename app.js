@@ -85,12 +85,47 @@
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
   }
 
+  // Search DOM References
+  const catalogSearchInput = document.getElementById("catalog-search-input");
+  const catalogSearchClear = document.getElementById("catalog-search-clear");
+  let currentSearchQuery = "";
+
   // --- 1. Catalog Engine ---
-  function renderCatalog(filter) {
+  function renderCatalog(filter = currentFilter, searchQuery = currentSearchQuery) {
     currentFilter = filter;
-    const filtered = filter === "todas" ? motos : motos.filter(m => m.categoria === filter);
+    currentSearchQuery = searchQuery;
+
+    let filtered = filter === "todas" ? motos : motos.filter(m => m.categoria === filter);
+
+    if (searchQuery && searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter(m => 
+        m.marca.toLowerCase().includes(q) ||
+        m.modelo.toLowerCase().includes(q) ||
+        (m.categoriaLabel && m.categoriaLabel.toLowerCase().includes(q)) ||
+        (m.cilindrada && m.cilindrada.toLowerCase().includes(q)) ||
+        (m.tagline && m.tagline.toLowerCase().includes(q))
+      );
+    }
 
     catalogGrid.innerHTML = "";
+
+    if (filtered.length === 0) {
+      const emptyBox = document.createElement("div");
+      emptyBox.className = "catalog-empty-state";
+      emptyBox.innerHTML = `
+        <div class="empty-state-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </div>
+        <h4>No encontramos resultados para "${searchQuery}"</h4>
+        <p>¿Buscás otro modelo o querés consultar disponibilidad directa a un asesor?</p>
+        <a href="${buildWhatsAppUrl('Hola Motobox! Busco información sobre el modelo: ' + searchQuery)}" class="btn-primary-hero" target="_blank" rel="noopener">
+          Consultar por WhatsApp
+        </a>
+      `;
+      catalogGrid.appendChild(emptyBox);
+      return;
+    }
 
     filtered.forEach((moto, idx) => {
       const card = document.createElement("article");
@@ -100,14 +135,10 @@
       const formattedPrice = moto.precio ? formatCurrency(moto.precio) : "Consultar Precio";
       const isConsultPrice = !moto.precio;
 
-      const cuotaHtml = moto.cuotaMinimaEstimada
-        ? `<div class="price-cuota-pill"><span>Cuotas fijas desde</span><strong>${formatCurrency(moto.cuotaMinimaEstimada)} / mes</strong></div>`
-        : `<div class="price-cuota-pill"><span>Financiación propia</span><strong>Consultar cuota</strong></div>`;
-
       const directWaMsg = `Hola Motobox! Quiero consultar por disponibilidad y financiación para la ${moto.marca} ${moto.modelo} (${moto.cilindrada}).`;
 
       // Build image gallery (supports multiple images from CRM)
-      const images = moto.imagenes || [moto.imagen];
+      const images = (moto.imagenes && moto.imagenes.length) ? moto.imagenes : [moto.imagen];
       const hasGallery = images.length > 1;
       
       const galleryHtml = hasGallery
@@ -210,9 +241,31 @@
     pill.addEventListener("click", () => {
       filterPills.forEach(p => p.classList.remove("active"));
       pill.classList.add("active");
-      renderCatalog(pill.dataset.filter);
+      renderCatalog(pill.dataset.filter, currentSearchQuery);
     });
   });
+
+  // Search Input Event Listeners
+  if (catalogSearchInput) {
+    catalogSearchInput.addEventListener("input", (e) => {
+      const val = e.target.value;
+      if (catalogSearchClear) {
+        catalogSearchClear.style.display = val.trim() ? "flex" : "none";
+      }
+      renderCatalog(currentFilter, val);
+    });
+  }
+
+  if (catalogSearchClear) {
+    catalogSearchClear.addEventListener("click", () => {
+      if (catalogSearchInput) {
+        catalogSearchInput.value = "";
+        catalogSearchInput.focus();
+      }
+      catalogSearchClear.style.display = "none";
+      renderCatalog(currentFilter, "");
+    });
+  }
 
   // Category Tiles Event Listeners
   categoryTiles.forEach(tile => {
@@ -222,7 +275,7 @@
         if (p.dataset.filter === cat) p.classList.add("active");
         else p.classList.remove("active");
       });
-      renderCatalog(cat);
+      renderCatalog(cat, currentSearchQuery);
       document.getElementById("catalogo").scrollIntoView({ behavior: "smooth" });
     });
   });
@@ -621,6 +674,10 @@
   let lastScrollY = 0;
   let ticking = false;
 
+  // Scrollspy references
+  const navLinks = document.querySelectorAll(".nav-desktop-link");
+  const trackedSections = ["catalogo", "beneficios", "ubicacion"].map(id => document.getElementById(id)).filter(Boolean);
+
   function handleScroll() {
     const scrollY = window.scrollY;
 
@@ -643,6 +700,19 @@
     }
 
     lastScrollY = scrollY;
+
+    // Update ScrollSpy
+    const scrollPos = scrollY + 120;
+    trackedSections.forEach(sec => {
+      const top = sec.offsetTop;
+      const height = sec.offsetHeight;
+      const id = sec.getAttribute("id");
+      if (scrollPos >= top && scrollPos < top + height) {
+        navLinks.forEach(l => {
+          l.classList.toggle("active", l.getAttribute("data-nav") === id);
+        });
+      }
+    });
   }
 
   window.addEventListener("scroll", () => {
@@ -671,12 +741,30 @@
 
   document.querySelectorAll(".reveal-on-scroll").forEach(el => observer.observe(el));
 
-  // --- 7. ESC Key Closes Modals ---
+  // --- 7. Keyboard Navigation & Shortcuts ---
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeAssistant();
       closeTradein();
       closeMotoDetail();
+    }
+
+    // Left/Right arrow keys flip detail gallery photos
+    if (motoDetailModal && motoDetailModal.classList.contains("open")) {
+      const track = document.getElementById("detail-gallery-track");
+      if (track) {
+        const slides = track.querySelectorAll(".moto-detail-gallery-slide");
+        if (slides.length > 1) {
+          const currentIdx = Math.round(track.scrollLeft / track.clientWidth);
+          if (e.key === "ArrowRight") {
+            const nextIdx = Math.min(currentIdx + 1, slides.length - 1);
+            slides[nextIdx]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+          } else if (e.key === "ArrowLeft") {
+            const prevIdx = Math.max(currentIdx - 1, 0);
+            slides[prevIdx]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+          }
+        }
+      }
     }
   });
 
@@ -694,7 +782,7 @@
   });
 
   // --- Init Application ---
-  renderCatalog("todas");
+  renderCatalog("todas", "");
   handleScroll();
 
 })();
