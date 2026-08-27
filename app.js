@@ -47,6 +47,14 @@
   const btnCloseTradein = document.getElementById("btn-close-tradein");
   const tradeinForm = document.getElementById("tradein-form");
 
+  // Motorcycle Detail Modal DOM References
+  const motoDetailModal = document.getElementById("moto-detail-modal");
+  const btnCloseMotoDetail = document.getElementById("btn-close-moto-detail");
+  const motoDetailAvatar = document.getElementById("moto-detail-avatar");
+  const motoDetailHeaderTitle = document.getElementById("moto-detail-header-title");
+  const motoDetailHeaderCategory = document.getElementById("moto-detail-header-category");
+  const motoDetailBody = document.getElementById("moto-detail-body");
+
   // --- State ---
   let currentFilter = "todas";
   let simSelectedMoto = motos[0];
@@ -151,6 +159,14 @@
           </div>
         </div>
       `;
+
+      // Card click opens full detail modal
+      card.addEventListener("click", (e) => {
+        if (e.target.closest(".btn-card-whatsapp") || e.target.closest(".gallery-dot")) {
+          return;
+        }
+        openMotoDetail(moto.id);
+      });
 
       catalogGrid.appendChild(card);
     });
@@ -446,6 +462,161 @@
     });
   }
 
+  // --- 4.5. Motorcycle Detail Modal Engine ---
+  function openMotoDetail(motoId) {
+    const moto = motos.find(m => m.id === motoId);
+    if (!moto || !motoDetailModal) return;
+
+    if (motoDetailAvatar) motoDetailAvatar.textContent = moto.marca.slice(0, 2).toUpperCase();
+    if (motoDetailHeaderTitle) motoDetailHeaderTitle.textContent = `${moto.marca} ${moto.modelo}`;
+    if (motoDetailHeaderCategory) motoDetailHeaderCategory.textContent = `${moto.categoriaLabel} · ${moto.cilindrada}`;
+
+    const images = (moto.imagenes && moto.imagenes.length) ? moto.imagenes : [moto.imagen];
+    const hasMultiple = images.length > 1;
+
+    const galleryHtml = `
+      <div class="moto-detail-gallery-box">
+        <div class="moto-detail-gallery-track" id="detail-gallery-track">
+          ${images.map((img, i) => `
+            <div class="moto-detail-gallery-slide" data-index="${i}">
+              <img src="${img}" alt="${moto.marca} ${moto.modelo} - Foto ${i + 1}" loading="lazy">
+            </div>
+          `).join("")}
+        </div>
+        ${hasMultiple ? `<span class="moto-detail-counter" id="detail-gallery-counter">1 / ${images.length}</span>` : ""}
+      </div>
+      ${hasMultiple ? `
+        <div class="moto-detail-thumbs" id="detail-gallery-thumbs">
+          ${images.map((img, i) => `
+            <div class="moto-detail-thumb${i === 0 ? " active" : ""}" data-index="${i}">
+              <img src="${img}" alt="Thumbnail ${i + 1}">
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
+    `;
+
+    const directWaMsg = `Hola Motobox! Quiero consultar por disponibilidad y financiación para la *${moto.marca} ${moto.modelo}* (${moto.cilindrada}). ¿La tienen en showroom para ver?`;
+
+    motoDetailBody.innerHTML = `
+      ${galleryHtml}
+
+      <div class="moto-detail-info">
+        ${moto.badge ? `<span class="moto-badge-tag" style="position: static; display: inline-block; margin-bottom: 0.5rem;">${moto.badge}</span>` : ""}
+        <p class="moto-detail-tagline">${moto.tagline}</p>
+
+        <p class="moto-detail-section-title">Ficha Técnica Oficial</p>
+        <div class="moto-detail-specs-grid">
+          <div class="moto-detail-spec-card">
+            <span class="spec-k">Cilindrada</span>
+            <span class="spec-v">${moto.cilindrada}</span>
+          </div>
+          <div class="moto-detail-spec-card">
+            <span class="spec-k">Potencia</span>
+            <span class="spec-v">${moto.potencia}</span>
+          </div>
+          <div class="moto-detail-spec-card">
+            <span class="spec-k">Consumo</span>
+            <span class="spec-v">${moto.consumo}</span>
+          </div>
+          <div class="moto-detail-spec-card">
+            <span class="spec-k">Frenos</span>
+            <span class="spec-v">${moto.frenos}</span>
+          </div>
+          <div class="moto-detail-spec-card">
+            <span class="spec-k">Tanque</span>
+            <span class="spec-v">${moto.tanque}</span>
+          </div>
+          <div class="moto-detail-spec-card">
+            <span class="spec-k">Arranque</span>
+            <span class="spec-v">${moto.arranque}</span>
+          </div>
+        </div>
+
+        <p class="moto-detail-section-title">Perfil y Beneficios</p>
+        <div class="moto-detail-perks-box">
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem; line-height: 1.4;">
+            ${moto.perfilComprador}
+          </p>
+          <ul class="moto-detail-perks-list">
+            <li><strong>✓</strong> Financiación propia en cuotas fijas sólo con DNI</li>
+            <li><strong>✓</strong> Casco homologado de regalo con tu 0km</li>
+            <li><strong>✓</strong> Gestión y trámite de patentamiento bonificado</li>
+            <li><strong>✓</strong> Tomamos tu moto usada en parte de pago</li>
+          </ul>
+        </div>
+
+        <div class="moto-detail-actions">
+          <a href="${buildWhatsAppUrl(directWaMsg)}" class="btn-match-whatsapp" target="_blank" rel="noopener" style="margin-bottom: 0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            <span>Consultar por WhatsApp</span>
+          </a>
+          <button class="btn-detail-tradein" id="btn-detail-tradein-action" type="button">
+            <span>Cotizar Permuta con mi Usada</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Attach gallery scroll & thumb sync
+    if (hasMultiple) {
+      const track = document.getElementById("detail-gallery-track");
+      const counter = document.getElementById("detail-gallery-counter");
+      const thumbs = document.querySelectorAll(".moto-detail-thumb");
+      const slides = track.querySelectorAll(".moto-detail-gallery-slide");
+
+      const galleryObs = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const idx = Array.from(slides).indexOf(entry.target);
+            if (counter) counter.textContent = `${idx + 1} / ${images.length}`;
+            thumbs.forEach((t, i) => t.classList.toggle("active", i === idx));
+          }
+        });
+      }, { root: track, threshold: 0.6 });
+
+      slides.forEach(s => galleryObs.observe(s));
+
+      thumbs.forEach(thumb => {
+        thumb.addEventListener("click", () => {
+          const idx = parseInt(thumb.dataset.index, 10);
+          slides[idx]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+        });
+      });
+    }
+
+    // Tradein trigger from detail
+    const btnTradeinAction = document.getElementById("btn-detail-tradein-action");
+    if (btnTradeinAction) {
+      btnTradeinAction.addEventListener("click", () => {
+        closeMotoDetail();
+        const select = document.getElementById("tradein-target-moto");
+        if (select) {
+          const matchingOption = Array.from(select.options).find(opt => opt.value.includes(moto.modelo));
+          if (matchingOption) select.value = matchingOption.value;
+        }
+        openTradein();
+      });
+    }
+
+    motoDetailModal.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeMotoDetail() {
+    if (motoDetailModal) {
+      motoDetailModal.classList.remove("open");
+      document.body.style.overflow = "";
+    }
+  }
+
+  if (btnCloseMotoDetail) btnCloseMotoDetail.addEventListener("click", closeMotoDetail);
+  if (motoDetailModal) {
+    motoDetailModal.addEventListener("click", (e) => {
+      if (e.target === motoDetailModal) closeMotoDetail();
+    });
+  }
+
   // --- 5. Global Scroll & Header Behavior ---
   let lastScrollY = 0;
   let ticking = false;
@@ -505,6 +676,7 @@
     if (e.key === "Escape") {
       closeAssistant();
       closeTradein();
+      closeMotoDetail();
     }
   });
 
