@@ -10,10 +10,8 @@
   <meta property="og:description" content="Financiación propia, tomamos tu usada y te llevás casco + patente de regalo. Escribinos por WhatsApp.">
   <meta property="og:type" content="website">
   
-  <!-- Google Fonts: Space Grotesk & Inter -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <!-- System Font Stack — Native App Feel -->
+
   
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -39,7 +37,6 @@
 
         <nav class="nav-desktop">
           <a href="#catalogo" class="nav-desktop-link">Catálogo</a>
-          <a href="#simulador" class="nav-desktop-link">Simular Cuota</a>
           <a href="#beneficios" class="nav-desktop-link">Financiación</a>
           <a href="#ubicacion" class="nav-desktop-link">Showroom</a>
         </nav>
@@ -129,7 +126,7 @@
         <div class="funnel-grid">
           
           <!-- Trigger 1: Financing Simulator -->
-          <a href="#simulador" class="funnel-card">
+          <a href="https://wa.me/5493511234567?text=Hola%20Motobox!%20Quiero%20consultar%20por%20financiaci%C3%B3n%20en%20cuotas" class="funnel-card" target="_blank" rel="noopener">
             <div class="funnel-icon">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
             </div>
@@ -273,104 +270,8 @@
       </div>
     </section>
 
-    <!-- 7. INTERACTIVE FINANCING CALCULATOR (High Conversion Lead Magnet) -->
-    <section class="simulator-section" id="simulador">
-      <div class="container">
-        <div class="section-header" style="text-align: center; max-width: 620px; margin: 0 auto 2rem;">
-          <p class="section-tag">Financiación a Medida</p>
-          <h2 class="section-title">Calculá tu cuota mensual</h2>
-          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem;">
-            Elegí el modelo, cuánto querés entregar de anticipo y en cuántas cuotas querés pagar. Te pre-aprobamos la solicitud directo por WhatsApp.
-          </p>
-        </div>
 
-        <div class="simulator-box">
-          <div class="simulator-grid">
-            
-            <!-- Controls Form -->
-            <div class="sim-controls-col">
-              
-              <!-- Select Motorcycle -->
-              <div class="sim-control-group">
-                <label class="sim-label" for="sim-select-moto">
-                  <span>1. Modelo a financiar</span>
-                </label>
-                <select id="sim-select-moto" class="sim-select">
-                  <!-- Populated by JS -->
-                </select>
-              </div>
 
-              <!-- Down Payment Slider -->
-              <div class="sim-control-group">
-                <div class="sim-label">
-                  <span>2. Entrega inicial (Anticipo)</span>
-                  <span class="sim-label-val" id="sim-anticipo-display">$0 (Financiación 100%)</span>
-                </div>
-                <input type="range" id="sim-anticipo-slider" class="sim-range" min="0" max="70" step="5" value="0">
-                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.35rem; font-family: var(--font-mono);">
-                  <span>$0 (Sin anticipo)</span>
-                  <span>35%</span>
-                  <span>70%</span>
-                </div>
-              </div>
-
-              <!-- Installment Term Buttons -->
-              <div class="sim-control-group">
-                <div class="sim-label">
-                  <span>3. Plazo de financiación</span>
-                  <span class="sim-label-val" id="sim-cuotas-display">24 Cuotas</span>
-                </div>
-                <div class="cuotas-btn-group">
-                  <button class="btn-cuota-term" data-cuotas="12">12 meses</button>
-                  <button class="btn-cuota-term" data-cuotas="18">18 meses</button>
-                  <button class="btn-cuota-term active" data-cuotas="24">24 meses</button>
-                  <button class="btn-cuota-term" data-cuotas="36">36 meses</button>
-                </div>
-              </div>
-
-            </div>
-
-            <!-- Output & WhatsApp Submit -->
-            <div class="sim-output-col">
-              <div class="sim-output-card">
-                
-                <div class="sim-output-header">
-                  <p class="sim-output-tag">Cuota Estimada Fija</p>
-                  <div class="sim-result-cuota" id="sim-cuota-result">$0</div>
-                  <p class="sim-result-cuota-sub" id="sim-cuota-sub">Planes con mínimos requisitos · DNI</p>
-                </div>
-
-                <div class="sim-breakdown-list">
-                  <div class="sim-breakdown-item">
-                    <span>Moto seleccionada:</span>
-                    <strong id="sim-summary-moto">-</strong>
-                  </div>
-                  <div class="sim-breakdown-item">
-                    <span>Precio de lista:</span>
-                    <strong id="sim-summary-precio">-</strong>
-                  </div>
-                  <div class="sim-breakdown-item">
-                    <span>Anticipo a entregar:</span>
-                    <strong id="sim-summary-anticipo">$0</strong>
-                  </div>
-                  <div class="sim-breakdown-item">
-                    <span>Monto a financiar:</span>
-                    <strong id="sim-summary-financiar">-</strong>
-                  </div>
-                </div>
-
-                <a href="#" class="btn-submit-simulation" id="btn-submit-sim-whatsapp" target="_blank" rel="noopener">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                  <span>Pedir Pre-Aprobación por WhatsApp</span>
-                </a>
-
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </section>
 
     <!-- 8. WHY CHOOSE MOTOBOX (Diferenciales) -->
     <section class="benefits-section" id="beneficios">
@@ -506,7 +407,6 @@
           <h5>Navegación</h5>
           <ul>
             <li><a href="#catalogo">Catálogo de Motos</a></li>
-            <li><a href="#simulador">Simulador de Cuotas</a></li>
             <li><a href="#beneficios">Financiación & Permuta</a></li>
             <li><a href="#ubicacion">Showroom & Mapa</a></li>
           </ul>
