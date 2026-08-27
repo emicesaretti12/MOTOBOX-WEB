@@ -1,161 +1,53 @@
 /**
- * MOTOBOX — Senior Frontend Architecture & Interactive Lead Engines
- * Concesionaria Multimarca | Córdoba, Argentina
+ * MOTOBOX — Arquitectura Frontend Senior
+ * Concesionaria Oficial Multimarca | Córdoba, Argentina
+ * 
+ * Lógica modular para 3 páginas:
+ * - Home (index.html): Modelos destacados 0km
+ * - Catálogo (catalogo.html): Grid completo, buscador en tiempo real, filtros por categoría y ficha técnica modal
+ * - Nosotros (nosotros.html): Información institucional, showroom y contacto
  */
 
 (function () {
   "use strict";
 
-  // --- DOM References ---
-  const catalogGrid = document.getElementById("catalog-cards-grid");
-  const filterPills = document.querySelectorAll(".filter-pill");
-  const categoryTiles = document.querySelectorAll(".category-tile");
-  const header = document.getElementById("site-header");
-  
-  // Simulator DOM References
-  const simSelectMoto = document.getElementById("sim-select-moto");
-  const simAnticipoSlider = document.getElementById("sim-anticipo-slider");
-  const simAnticipoDisplay = document.getElementById("sim-anticipo-display");
-  const simCuotasBtns = document.querySelectorAll(".btn-cuota-term");
-  const simCuotaResult = document.getElementById("sim-cuota-result");
-  const simCuotaSub = document.getElementById("sim-cuota-sub");
-  const simSummaryMoto = document.getElementById("sim-summary-moto");
-  const simSummaryPrecio = document.getElementById("sim-summary-precio");
-  const simSummaryAnticipo = document.getElementById("sim-summary-anticipo");
-  const simSummaryFinanciar = document.getElementById("sim-summary-financiar");
-  const btnSubmitSimWhatsapp = document.getElementById("btn-submit-sim-whatsapp");
-
-  // Assistant Modal DOM References
-  const assistantModal = document.getElementById("assistant-modal");
-  const btnCloseAssistant = document.getElementById("btn-close-assistant");
-  const assistantProgressFill = document.getElementById("assistant-progress-fill");
-  const quizSteps = document.querySelectorAll(".quiz-step");
-  const quizOptBtns = document.querySelectorAll(".quiz-opt-btn");
-  const quizMatchBox = document.getElementById("quiz-match-box");
-  const btnQuizWhatsappLead = document.getElementById("btn-quiz-whatsapp-lead");
-  const btnRestartQuiz = document.getElementById("btn-restart-quiz");
-
-  // Assistant Open Triggers
-  const btnOpenAssistantNav = document.getElementById("btn-open-assistant-nav");
-  const btnOpenAssistantHero = document.getElementById("btn-open-assistant-hero");
-  const cardOpenAssistantTrigger = document.getElementById("card-open-assistant-trigger");
-  const btnDockOpenAssistant = document.getElementById("btn-dock-open-assistant");
-
-  // Trade-in Modal DOM References
-  const tradeinModal = document.getElementById("tradein-modal");
-  const cardOpenTradein = document.getElementById("card-open-tradein");
-  const btnCloseTradein = document.getElementById("btn-close-tradein");
-  const tradeinForm = document.getElementById("tradein-form");
-
-  // Motorcycle Detail Modal DOM References
-  const motoDetailModal = document.getElementById("moto-detail-modal");
-  const btnCloseMotoDetail = document.getElementById("btn-close-moto-detail");
-  const motoDetailAvatar = document.getElementById("moto-detail-avatar");
-  const motoDetailHeaderTitle = document.getElementById("moto-detail-header-title");
-  const motoDetailHeaderCategory = document.getElementById("moto-detail-header-category");
-  const motoDetailBody = document.getElementById("moto-detail-body");
-
-  // --- State ---
-  let currentFilter = "todas";
-  let simSelectedMoto = motos[0];
-  let simSelectedCuotas = 24;
-  let simAnticipoPercent = 0;
-
-  let quizAnswers = {
-    uso: null,
-    usoLabel: "",
-    pago: null,
-    pagoLabel: "",
-    presupuesto: null,
-    presupuestoLabel: "",
-    matchedMoto: null
-  };
-
-  // --- Utilities ---
-  function formatCurrency(val) {
-    if (val === null || val === undefined || isNaN(val)) return null;
-    return new Intl.NumberFormat("es-AR", {
-      style: "currency",
-      currency: "ARS",
-      maximumFractionDigits: 0
-    }).format(val);
-  }
-
+  // --- Helper Functions ---
   function buildWhatsAppUrl(message) {
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
   }
 
-  // Search DOM References
-  const catalogSearchInput = document.getElementById("catalog-search-input");
-  const catalogSearchClear = document.getElementById("catalog-search-clear");
-  let currentSearchQuery = "";
+  // Determine current page context
+  const currentPage = document.body.dataset.page || (
+    window.location.pathname.includes("catalogo.html") ? "catalogo" :
+    window.location.pathname.includes("nosotros.html") ? "nosotros" : "home"
+  );
 
-  // --- 1. Catalog Engine ---
-  function renderCatalog(filter = currentFilter, searchQuery = currentSearchQuery) {
-    currentFilter = filter;
-    currentSearchQuery = searchQuery;
+  // --- Shared Elements ---
+  const header = document.getElementById("site-header");
 
-    let filtered = filter === "todas" ? motos : motos.filter(m => m.categoria === filter);
+  // ==========================================================================
+  // 1. HOME PAGE LOGIC (index.html)
+  // ==========================================================================
+  function initHomePage() {
+    const featuredContainer = document.getElementById("featured-cards-grid");
+    if (!featuredContainer) return;
 
-    if (searchQuery && searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      filtered = filtered.filter(m => 
-        m.marca.toLowerCase().includes(q) ||
-        m.modelo.toLowerCase().includes(q) ||
-        (m.categoriaLabel && m.categoriaLabel.toLowerCase().includes(q)) ||
-        (m.cilindrada && m.cilindrada.toLowerCase().includes(q)) ||
-        (m.tagline && m.tagline.toLowerCase().includes(q))
-      );
-    }
+    // Filter 3 highlighted 0km models (e.g. Rouser NS200, Tornado, Keller 110)
+    const featuredModels = motos.filter(m => m.destacada || m.badge === "Más Vendida").slice(0, 3);
 
-    catalogGrid.innerHTML = "";
+    featuredContainer.innerHTML = "";
 
-    if (filtered.length === 0) {
-      const emptyBox = document.createElement("div");
-      emptyBox.className = "catalog-empty-state";
-      emptyBox.innerHTML = `
-        <div class="empty-state-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        </div>
-        <h4>No encontramos resultados para "${searchQuery}"</h4>
-        <p>¿Buscás otro modelo o querés consultar disponibilidad directa a un asesor?</p>
-        <a href="${buildWhatsAppUrl('Hola Motobox! Busco información sobre el modelo: ' + searchQuery)}" class="btn-primary-hero" target="_blank" rel="noopener">
-          Consultar por WhatsApp
-        </a>
-      `;
-      catalogGrid.appendChild(emptyBox);
-      return;
-    }
-
-    filtered.forEach((moto, idx) => {
+    featuredModels.forEach((moto, idx) => {
       const card = document.createElement("article");
       card.className = "moto-card-modern reveal-on-scroll";
-      card.style.transitionDelay = `${idx * 60}ms`;
+      card.style.transitionDelay = `${idx * 80}ms`;
 
-      const formattedPrice = moto.precio ? formatCurrency(moto.precio) : "Consultar Precio";
-      const isConsultPrice = !moto.precio;
-
-      const directWaMsg = `Hola Motobox! Quiero consultar por disponibilidad y financiación para la ${moto.marca} ${moto.modelo} (${moto.cilindrada}).`;
-
-      // Build image gallery (supports multiple images from CRM)
-      const images = (moto.imagenes && moto.imagenes.length) ? moto.imagenes : [moto.imagen];
-      const hasGallery = images.length > 1;
-      
-      const galleryHtml = hasGallery
-        ? `<div class="moto-gallery">
-            <div class="moto-gallery-track">
-              ${images.map((img, i) => `<div class="moto-gallery-slide"><img src="${img}" alt="${moto.marca} ${moto.modelo} - Foto ${i + 1}" loading="lazy"></div>`).join('')}
-            </div>
-            <div class="moto-gallery-dots">
-              ${images.map((_, i) => `<span class="gallery-dot${i === 0 ? ' active' : ''}" data-index="${i}"></span>`).join('')}
-            </div>
-          </div>`
-        : `<img src="${images[0]}" alt="${moto.marca} ${moto.modelo}" loading="lazy">`;
+      const directWaMsg = `Hola Motobox! Quiero consultar por disponibilidad de la ${moto.marca} ${moto.modelo} 0km que vi en la web.`;
 
       card.innerHTML = `
         <div class="moto-card-header">
           ${moto.badge ? `<span class="moto-badge-tag">${moto.badge}</span>` : ""}
-          ${galleryHtml}
+          <img src="${moto.imagen}" alt="${moto.marca} ${moto.modelo} 0km" loading="lazy">
         </div>
         
         <div class="moto-card-body">
@@ -184,515 +76,411 @@
 
           <div class="moto-card-actions">
             <a href="${buildWhatsAppUrl(directWaMsg)}" class="btn-card-whatsapp" target="_blank" rel="noopener">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-              <span>Consultar</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              <span>Consultar Stock 0km</span>
             </a>
           </div>
         </div>
       `;
 
-      // Card click opens full detail modal
       card.addEventListener("click", (e) => {
-        if (e.target.closest(".btn-card-whatsapp") || e.target.closest(".gallery-dot")) {
-          return;
-        }
-        openMotoDetail(moto.id);
+        if (e.target.closest(".btn-card-whatsapp")) return;
+        window.location.href = `catalogo.html`;
       });
 
-      catalogGrid.appendChild(card);
-    });
-
-    // Init gallery dot indicators (scroll-based)
-    document.querySelectorAll(".moto-gallery-track").forEach(track => {
-      const dots = track.parentElement.querySelectorAll(".gallery-dot");
-      if (dots.length < 2) return;
-      
-      const slides = track.querySelectorAll(".moto-gallery-slide");
-      const obsv = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const idx = Array.from(slides).indexOf(entry.target);
-            dots.forEach((d, i) => d.classList.toggle("active", i === idx));
-          }
-        });
-      }, { root: track, threshold: 0.6 });
-      
-      slides.forEach(s => obsv.observe(s));
-      
-      // Dot click to scroll
-      dots.forEach(dot => {
-        dot.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const i = parseInt(dot.dataset.index, 10);
-          slides[i]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
-        });
-      });
-    });
-
-    // Re-observe animations
-    requestAnimationFrame(() => {
-      document.querySelectorAll(".reveal-on-scroll").forEach(el => observer.observe(el));
+      featuredContainer.appendChild(card);
     });
   }
 
-  // Filter Pills Event Listeners
-  filterPills.forEach(pill => {
-    pill.addEventListener("click", () => {
-      filterPills.forEach(p => p.classList.remove("active"));
-      pill.classList.add("active");
-      renderCatalog(pill.dataset.filter, currentSearchQuery);
-    });
-  });
+  // ==========================================================================
+  // 2. CATALOG PAGE LOGIC (catalogo.html)
+  // ==========================================================================
+  function initCatalogPage() {
+    const catalogGrid = document.getElementById("catalog-cards-grid");
+    if (!catalogGrid) return;
 
-  // Search Input Event Listeners
-  if (catalogSearchInput) {
-    catalogSearchInput.addEventListener("input", (e) => {
-      const val = e.target.value;
-      if (catalogSearchClear) {
-        catalogSearchClear.style.display = val.trim() ? "flex" : "none";
+    const filterPills = document.querySelectorAll(".filter-pill");
+    const searchInput = document.getElementById("catalog-search-input");
+    const searchClearBtn = document.getElementById("catalog-search-clear");
+    const stockSummaryText = document.getElementById("stock-summary-text");
+
+    const motoDetailModal = document.getElementById("moto-detail-modal");
+    const btnCloseMotoDetail = document.getElementById("btn-close-moto-detail");
+    const motoDetailAvatar = document.getElementById("moto-detail-avatar");
+    const motoDetailHeaderTitle = document.getElementById("moto-detail-header-title");
+    const motoDetailHeaderCategory = document.getElementById("moto-detail-header-category");
+    const motoDetailBody = document.getElementById("moto-detail-body");
+
+    // Read initial filter from URL param (e.g. ?cat=economica)
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialCategory = urlParams.get("cat") || "todas";
+
+    let currentFilter = initialCategory;
+    let currentSearch = "";
+
+    // Sync active filter pill based on URL
+    filterPills.forEach(pill => {
+      if (pill.dataset.filter === currentFilter) {
+        filterPills.forEach(p => p.classList.remove("active"));
+        pill.classList.add("active");
       }
-      renderCatalog(currentFilter, val);
     });
-  }
 
-  if (catalogSearchClear) {
-    catalogSearchClear.addEventListener("click", () => {
-      if (catalogSearchInput) {
-        catalogSearchInput.value = "";
-        catalogSearchInput.focus();
+    function renderCatalogCards() {
+      let list = currentFilter === "todas" ? motos : motos.filter(m => m.categoria === currentFilter);
+
+      if (currentSearch.trim()) {
+        const q = currentSearch.trim().toLowerCase();
+        list = list.filter(m => 
+          m.marca.toLowerCase().includes(q) ||
+          m.modelo.toLowerCase().includes(q) ||
+          (m.categoriaLabel && m.categoriaLabel.toLowerCase().includes(q)) ||
+          (m.cilindrada && m.cilindrada.toLowerCase().includes(q)) ||
+          (m.tagline && m.tagline.toLowerCase().includes(q))
+        );
       }
-      catalogSearchClear.style.display = "none";
-      renderCatalog(currentFilter, "");
-    });
-  }
 
-  // Category Tiles Event Listeners
-  categoryTiles.forEach(tile => {
-    tile.addEventListener("click", () => {
-      const cat = tile.dataset.category;
-      filterPills.forEach(p => {
-        if (p.dataset.filter === cat) p.classList.add("active");
-        else p.classList.remove("active");
-      });
-      renderCatalog(cat, currentSearchQuery);
-      document.getElementById("catalogo").scrollIntoView({ behavior: "smooth" });
-    });
-  });
+      catalogGrid.innerHTML = "";
 
-  // --- 2. Interactive Financing Simulator Engine ---
-  function initSimulator() {
-    // Populate dropdown
-    simSelectMoto.innerHTML = "";
-    motos.forEach(moto => {
-      const opt = document.createElement("option");
-      opt.value = moto.id;
-      opt.textContent = `${moto.marca} ${moto.modelo} (${moto.precio ? formatCurrency(moto.precio) : 'Precio a consultar'})`;
-      simSelectMoto.appendChild(opt);
-    });
+      if (stockSummaryText) {
+        stockSummaryText.textContent = `${list.length} modelo${list.length === 1 ? '' : 's'} disponible${list.length === 1 ? '' : 's'}`;
+      }
 
-    simSelectMoto.addEventListener("change", (e) => {
-      const motoId = parseInt(e.target.value, 10);
-      simSelectedMoto = motos.find(m => m.id === motoId) || motos[0];
-      calculateSimulation();
-    });
-
-    simAnticipoSlider.addEventListener("input", (e) => {
-      simAnticipoPercent = parseInt(e.target.value, 10);
-      calculateSimulation();
-    });
-
-    simCuotasBtns.forEach(btn => {
-      btn.addEventListener("click", () => {
-        simCuotasBtns.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        simSelectedCuotas = parseInt(btn.dataset.cuotas, 10);
-        calculateSimulation();
-      });
-    });
-
-    calculateSimulation();
-  }
-
-  function selectMotoInSimulator(motoId) {
-    simSelectedMoto = motos.find(m => m.id === motoId) || motos[0];
-    simSelectMoto.value = simSelectedMoto.id;
-    calculateSimulation();
-  }
-
-  function calculateSimulation() {
-    const basePrice = simSelectedMoto.precio || 3500000; // Reference price if null
-    const anticipoAmount = Math.round(basePrice * (simAnticipoPercent / 100));
-    const montoFinanciar = basePrice - anticipoAmount;
-
-    // Display anticipo text
-    if (simAnticipoPercent === 0) {
-      simAnticipoDisplay.textContent = "$0 (Financiación 100%)";
-    } else {
-      simAnticipoDisplay.textContent = `${formatCurrency(anticipoAmount)} (${simAnticipoPercent}%)`;
-    }
-
-    // Term display
-    document.getElementById("sim-cuotas-display").textContent = `${simSelectedCuotas} Cuotas`;
-
-    // Monthly installment calculation
-    // Amortización con tasa mensual de mercado
-    const r = CONFIG.tasaInteresEstimada;
-    const n = simSelectedCuotas;
-    let cuotaMensual = 0;
-
-    if (montoFinanciar > 0) {
-      cuotaMensual = Math.round(montoFinanciar * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1));
-    }
-
-    // Update Output Card
-    if (simSelectedMoto.precio) {
-      simCuotaResult.textContent = `${formatCurrency(cuotaMensual)} / mes`;
-      simCuotaSub.textContent = `En ${simSelectedCuotas} cuotas fijas en pesos · Con DNI`;
-      simSummaryPrecio.textContent = formatCurrency(basePrice);
-      simSummaryAnticipo.textContent = simAnticipoPercent === 0 ? "$0 (Sin anticipo)" : formatCurrency(anticipoAmount);
-      simSummaryFinanciar.textContent = formatCurrency(montoFinanciar);
-    } else {
-      simCuotaResult.textContent = "A Consultar";
-      simCuotaSub.textContent = "Planes especiales y financiación directa para este modelo";
-      simSummaryPrecio.textContent = "Consultar valor";
-      simSummaryAnticipo.textContent = "A convenir";
-      simSummaryFinanciar.textContent = "Planes a medida";
-    }
-
-    simSummaryMoto.textContent = `${simSelectedMoto.marca} ${simSelectedMoto.modelo}`;
-
-    // WhatsApp Message
-    const simMessage = simSelectedMoto.precio
-      ? `Hola Motobox! Hice una simulación en la web para financiar la ${simSelectedMoto.marca} ${simSelectedMoto.modelo} ($${formatCurrency(basePrice)}):\n- Anticipo: ${simAnticipoPercent === 0 ? '$0 (100% financiado)' : formatCurrency(anticipoAmount)}\n- Plazo: ${simSelectedCuotas} cuotas de aprox ${formatCurrency(cuotaMensual)}\n¿Podrían indicarme los requisitos para pre-aprobar el crédito?`
-      : `Hola Motobox! Quiero consultar por planes de financiación para la ${simSelectedMoto.marca} ${simSelectedMoto.modelo} en ${simSelectedCuotas} cuotas. ¿Qué opciones tienen disponibles?`;
-
-    btnSubmitSimWhatsapp.href = buildWhatsAppUrl(simMessage);
-  }
-
-  // --- 3. Interactive Sales Assistant Engine (Matchmaker Quiz) ---
-  function openAssistant() {
-    assistantModal.classList.add("open");
-    document.body.style.overflow = "hidden";
-  }
-
-  function closeAssistant() {
-    assistantModal.classList.remove("open");
-    document.body.style.overflow = "";
-  }
-
-  function setQuizStep(stepNumber) {
-    quizSteps.forEach(step => step.classList.remove("active"));
-    const target = document.getElementById(`quiz-step-${stepNumber}`);
-    if (target) target.classList.add("active");
-
-    const progress = (stepNumber / 4) * 100;
-    assistantProgressFill.style.width = `${progress}%`;
-  }
-
-  function handleQuizOption(step, val, label) {
-    if (step === 1) {
-      quizAnswers.uso = val;
-      quizAnswers.usoLabel = label;
-      setQuizStep(2);
-    } else if (step === 2) {
-      quizAnswers.pago = val;
-      quizAnswers.pagoLabel = label;
-      setQuizStep(3);
-    } else if (step === 3) {
-      quizAnswers.presupuesto = val;
-      quizAnswers.presupuestoLabel = label;
-      calculateMatchAndShowResult();
-    }
-  }
-
-  function calculateMatchAndShowResult() {
-    let matched = motos[0]; // default Keller
-
-    if (quizAnswers.uso === "viajar" || quizAnswers.presupuesto === "premium") {
-      matched = motos.find(m => m.modelo.includes("Tornado")) || motos[4];
-    } else if (quizAnswers.uso === "estilo" || quizAnswers.presupuesto === "medio") {
-      matched = motos.find(m => m.modelo.includes("NS 200")) || motos[3];
-    } else if (quizAnswers.uso === "trabajo" || quizAnswers.uso === "ciudad") {
-      matched = motos.find(m => m.categoria === "economica") || motos[0];
-    }
-
-    quizAnswers.matchedMoto = matched;
-
-    const formattedPrice = matched.precio ? formatCurrency(matched.precio) : "Consultar precio";
-    const cuotaDisplay = matched.cuotaMinimaEstimada ? `Cuotas desde ${formatCurrency(matched.cuotaMinimaEstimada)}` : "Financiación disponible";
-
-    quizMatchBox.innerHTML = `
-      <div class="match-box-header">
-        <span class="match-tag-pill">Recomendación Personalizada</span>
-        <img src="${matched.imagen}" alt="${matched.marca} ${matched.modelo}">
-      </div>
-      <div class="match-box-body">
-        <h4 class="match-title">${matched.marca} ${matched.modelo}</h4>
-        <p class="match-specs-text">
-          <strong>${matched.cilindrada}</strong> · ${matched.consumo} · ${matched.perfilComprador}
-        </p>
-        <p style="font-size: 0.75rem; color: var(--accent-live); font-weight: 600; margin-top: 0.25rem;">
-          ✓ Financiación directa con DNI · Casco y Patente bonificados con tu 0km
-        </p>
-      </div>
-    `;
-
-    // WhatsApp Message
-    const leadMsg = `Hola Motobox! Hice el Test de Compra en la web:\n- Uso buscado: ${quizAnswers.usoLabel}\n- Forma de pago: ${quizAnswers.pagoLabel}\n- Presupuesto: ${quizAnswers.presupuestoLabel}\n\nMe recomendó la *${matched.marca} ${matched.modelo}* (${matched.cilindrada}). ¿Tienen disponibilidad para verla hoy en Santa Rosa 4227?`;
-
-    btnQuizWhatsappLead.href = buildWhatsAppUrl(leadMsg);
-    setQuizStep(4);
-  }
-
-  function resetQuiz() {
-    quizAnswers = {
-      uso: null,
-      usoLabel: "",
-      pago: null,
-      pagoLabel: "",
-      presupuesto: null,
-      presupuestoLabel: "",
-      matchedMoto: null
-    };
-    setQuizStep(1);
-  }
-
-  // Assistant Event Listeners
-  [btnOpenAssistantNav, btnOpenAssistantHero, cardOpenAssistantTrigger, btnDockOpenAssistant].forEach(btn => {
-    if (btn) btn.addEventListener("click", () => {
-      openAssistant();
-    });
-  });
-
-  if (btnCloseAssistant) btnCloseAssistant.addEventListener("click", closeAssistant);
-  if (btnRestartQuiz) btnRestartQuiz.addEventListener("click", resetQuiz);
-
-  quizOptBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      const step = parseInt(btn.dataset.step, 10);
-      const val = btn.dataset.val;
-      const label = btn.dataset.label;
-      handleQuizOption(step, val, label);
-    });
-  });
-
-  // Modal Backdrop click to close
-  assistantModal.addEventListener("click", (e) => {
-    if (e.target === assistantModal) closeAssistant();
-  });
-
-  // --- 4. Trade-in / Permuta Modal Engine ---
-  function openTradein() {
-    tradeinModal.classList.add("open");
-    document.body.style.overflow = "hidden";
-  }
-
-  function closeTradein() {
-    tradeinModal.classList.remove("open");
-    document.body.style.overflow = "";
-  }
-
-  if (cardOpenTradein) cardOpenTradein.addEventListener("click", openTradein);
-  if (btnCloseTradein) btnCloseTradein.addEventListener("click", closeTradein);
-
-  tradeinModal.addEventListener("click", (e) => {
-    if (e.target === tradeinModal) closeTradein();
-  });
-
-  if (tradeinForm) {
-    tradeinForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const motoUsada = document.getElementById("tradein-moto").value.trim();
-      const anio = document.getElementById("tradein-anio").value.trim();
-      const km = document.getElementById("tradein-km").value.trim() || "A verificar";
-      const target0km = document.getElementById("tradein-target-moto").value;
-
-      const msg = `Hola Motobox! Quiero cotizar mi moto usada para permuta:\n- Moto actual: ${motoUsada}\n- Año: ${anio}\n- Kilómetros: ${km}\n- Me interesa sacar: ${target0km}\n¿Me podrían pasar una cotización aproximada?`;
-
-      window.open(buildWhatsAppUrl(msg), "_blank", "noopener");
-      closeTradein();
-    });
-  }
-
-  // --- 4.5. Motorcycle Detail Modal Engine ---
-  function openMotoDetail(motoId) {
-    const moto = motos.find(m => m.id === motoId);
-    if (!moto || !motoDetailModal) return;
-
-    if (motoDetailAvatar) motoDetailAvatar.textContent = moto.marca.slice(0, 2).toUpperCase();
-    if (motoDetailHeaderTitle) motoDetailHeaderTitle.textContent = `${moto.marca} ${moto.modelo}`;
-    if (motoDetailHeaderCategory) motoDetailHeaderCategory.textContent = `${moto.categoriaLabel} · ${moto.cilindrada}`;
-
-    const images = (moto.imagenes && moto.imagenes.length) ? moto.imagenes : [moto.imagen];
-    const hasMultiple = images.length > 1;
-
-    const galleryHtml = `
-      <div class="moto-detail-gallery-box">
-        <div class="moto-detail-gallery-track" id="detail-gallery-track">
-          ${images.map((img, i) => `
-            <div class="moto-detail-gallery-slide" data-index="${i}">
-              <img src="${img}" alt="${moto.marca} ${moto.modelo} - Foto ${i + 1}" loading="lazy">
-            </div>
-          `).join("")}
-        </div>
-        ${hasMultiple ? `<span class="moto-detail-counter" id="detail-gallery-counter">1 / ${images.length}</span>` : ""}
-      </div>
-      ${hasMultiple ? `
-        <div class="moto-detail-thumbs" id="detail-gallery-thumbs">
-          ${images.map((img, i) => `
-            <div class="moto-detail-thumb${i === 0 ? " active" : ""}" data-index="${i}">
-              <img src="${img}" alt="Thumbnail ${i + 1}">
-            </div>
-          `).join("")}
-        </div>
-      ` : ""}
-    `;
-
-    const directWaMsg = `Hola Motobox! Quiero consultar por disponibilidad y financiación para la *${moto.marca} ${moto.modelo}* (${moto.cilindrada}). ¿La tienen en showroom para ver?`;
-
-    motoDetailBody.innerHTML = `
-      ${galleryHtml}
-
-      <div class="moto-detail-info">
-        ${moto.badge ? `<span class="moto-badge-tag" style="position: static; display: inline-block; margin-bottom: 0.5rem;">${moto.badge}</span>` : ""}
-        <p class="moto-detail-tagline">${moto.tagline}</p>
-
-        <p class="moto-detail-section-title">Ficha Técnica Oficial</p>
-        <div class="moto-detail-specs-grid">
-          <div class="moto-detail-spec-card">
-            <span class="spec-k">Cilindrada</span>
-            <span class="spec-v">${moto.cilindrada}</span>
+      if (list.length === 0) {
+        const emptyState = document.createElement("div");
+        emptyState.className = "catalog-empty-state";
+        emptyState.innerHTML = `
+          <div class="empty-state-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           </div>
-          <div class="moto-detail-spec-card">
-            <span class="spec-k">Potencia</span>
-            <span class="spec-v">${moto.potencia}</span>
-          </div>
-          <div class="moto-detail-spec-card">
-            <span class="spec-k">Consumo</span>
-            <span class="spec-v">${moto.consumo}</span>
-          </div>
-          <div class="moto-detail-spec-card">
-            <span class="spec-k">Frenos</span>
-            <span class="spec-v">${moto.frenos}</span>
-          </div>
-          <div class="moto-detail-spec-card">
-            <span class="spec-k">Tanque</span>
-            <span class="spec-v">${moto.tanque}</span>
-          </div>
-          <div class="moto-detail-spec-card">
-            <span class="spec-k">Arranque</span>
-            <span class="spec-v">${moto.arranque}</span>
-          </div>
-        </div>
-
-        <p class="moto-detail-section-title">Perfil y Beneficios</p>
-        <div class="moto-detail-perks-box">
-          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem; line-height: 1.4;">
-            ${moto.perfilComprador}
-          </p>
-          <ul class="moto-detail-perks-list">
-            <li><strong>✓</strong> Financiación propia en cuotas fijas sólo con DNI</li>
-            <li><strong>✓</strong> Casco homologado de regalo con tu 0km</li>
-            <li><strong>✓</strong> Gestión y trámite de patentamiento bonificado</li>
-            <li><strong>✓</strong> Tomamos tu moto usada en parte de pago</li>
-          </ul>
-        </div>
-
-        <div class="moto-detail-actions">
-          <a href="${buildWhatsAppUrl(directWaMsg)}" class="btn-match-whatsapp" target="_blank" rel="noopener" style="margin-bottom: 0;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            <span>Consultar por WhatsApp</span>
+          <h4>No encontramos modelos para "${currentSearch}"</h4>
+          <p>¿Buscás otra cilindrada o marca específica? Consultanos directamente por WhatsApp para consultar ingresos de stock.</p>
+          <a href="${buildWhatsAppUrl('Hola Motobox! Busco información de stock sobre: ' + currentSearch)}" class="btn-primary-hero" target="_blank" rel="noopener">
+            Consultar a un Asesor
           </a>
-          <button class="btn-detail-tradein" id="btn-detail-tradein-action" type="button">
-            <span>Cotizar Permuta con mi Usada</span>
-          </button>
-        </div>
-      </div>
-    `;
+        `;
+        catalogGrid.appendChild(emptyState);
+        return;
+      }
 
-    // Attach gallery scroll & thumb sync
-    if (hasMultiple) {
-      const track = document.getElementById("detail-gallery-track");
-      const counter = document.getElementById("detail-gallery-counter");
-      const thumbs = document.querySelectorAll(".moto-detail-thumb");
-      const slides = track.querySelectorAll(".moto-detail-gallery-slide");
+      list.forEach((moto, idx) => {
+        const card = document.createElement("article");
+        card.className = "moto-card-modern reveal-on-scroll";
+        card.style.transitionDelay = `${idx * 50}ms`;
 
-      const galleryObs = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const idx = Array.from(slides).indexOf(entry.target);
-            if (counter) counter.textContent = `${idx + 1} / ${images.length}`;
-            thumbs.forEach((t, i) => t.classList.toggle("active", i === idx));
+        const directWaMsg = `Hola Motobox! Quiero consultar por disponibilidad y entrega inmediata de la ${moto.marca} ${moto.modelo} 0km (${moto.cilindrada}).`;
+
+        const images = (moto.imagenes && moto.imagenes.length) ? moto.imagenes : [moto.imagen];
+        const hasGallery = images.length > 1;
+
+        const galleryHtml = hasGallery
+          ? `<div class="moto-gallery">
+              <div class="moto-gallery-track">
+                ${images.map((img, i) => `<div class="moto-gallery-slide"><img src="${img}" alt="${moto.marca} ${moto.modelo} 0km - Foto ${i + 1}" loading="lazy"></div>`).join('')}
+              </div>
+              <div class="moto-gallery-dots">
+                ${images.map((_, i) => `<span class="gallery-dot${i === 0 ? ' active' : ''}" data-index="${i}"></span>`).join('')}
+              </div>
+            </div>`
+          : `<img src="${images[0]}" alt="${moto.marca} ${moto.modelo} 0km" loading="lazy">`;
+
+        card.innerHTML = `
+          <div class="moto-card-header">
+            ${moto.badge ? `<span class="moto-badge-tag">${moto.badge}</span>` : ""}
+            ${galleryHtml}
+          </div>
+          
+          <div class="moto-card-body">
+            <div class="moto-brand-row">
+              <span class="moto-brand-label">${moto.marca}</span>
+              <span class="moto-category-label">${moto.categoriaLabel}</span>
+            </div>
+
+            <h3 class="moto-title-h3">${moto.modelo}</h3>
+            <p class="moto-tagline">${moto.tagline}</p>
+
+            <div class="moto-specs-strip">
+              <div class="spec-item">
+                <span class="spec-k">Motor</span>
+                <span class="spec-v">${moto.cilindrada}</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-k">Consumo</span>
+                <span class="spec-v">${moto.consumo}</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-k">Frenos</span>
+                <span class="spec-v">${moto.frenos.split('/')[0]}</span>
+              </div>
+            </div>
+
+            <div class="moto-card-actions">
+              <a href="${buildWhatsAppUrl(directWaMsg)}" class="btn-card-whatsapp" target="_blank" rel="noopener">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                <span>Consultar por WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        `;
+
+        card.addEventListener("click", (e) => {
+          if (e.target.closest(".btn-card-whatsapp") || e.target.closest(".gallery-dot")) {
+            return;
           }
+          openMotoDetail(moto.id);
         });
-      }, { root: track, threshold: 0.6 });
 
-      slides.forEach(s => galleryObs.observe(s));
+        catalogGrid.appendChild(card);
+      });
 
-      thumbs.forEach(thumb => {
-        thumb.addEventListener("click", () => {
-          const idx = parseInt(thumb.dataset.index, 10);
-          slides[idx]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+      // Init dots observers on gallery cards
+      document.querySelectorAll(".moto-gallery-track").forEach(track => {
+        const dots = track.parentElement.querySelectorAll(".gallery-dot");
+        if (dots.length < 2) return;
+        const slides = track.querySelectorAll(".moto-gallery-slide");
+
+        const obsv = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const idx = Array.from(slides).indexOf(entry.target);
+              dots.forEach((d, i) => d.classList.toggle("active", i === idx));
+            }
+          });
+        }, { root: track, threshold: 0.6 });
+
+        slides.forEach(s => obsv.observe(s));
+
+        dots.forEach(dot => {
+          dot.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const i = parseInt(dot.dataset.index, 10);
+            slides[i]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+          });
         });
+      });
+
+      requestAnimationFrame(() => {
+        document.querySelectorAll(".reveal-on-scroll").forEach(el => observer.observe(el));
       });
     }
 
-    // Tradein trigger from detail
-    const btnTradeinAction = document.getElementById("btn-detail-tradein-action");
-    if (btnTradeinAction) {
-      btnTradeinAction.addEventListener("click", () => {
-        closeMotoDetail();
-        const select = document.getElementById("tradein-target-moto");
-        if (select) {
-          const matchingOption = Array.from(select.options).find(opt => opt.value.includes(moto.modelo));
-          if (matchingOption) select.value = matchingOption.value;
-        }
-        openTradein();
-      });
+    // Detail Modal Functionality
+    function openMotoDetail(motoId) {
+      const moto = motos.find(m => m.id === motoId);
+      if (!moto || !motoDetailModal) return;
+
+      const images = (moto.imagenes && moto.imagenes.length) ? moto.imagenes : [moto.imagen];
+      const hasMultiple = images.length > 1;
+
+      motoDetailAvatar.textContent = moto.marca.slice(0, 2).toUpperCase();
+      motoDetailHeaderTitle.textContent = `${moto.marca} ${moto.modelo}`;
+      motoDetailHeaderCategory.textContent = `${moto.categoriaLabel} · 0KM Nueva`;
+
+      const directWaMsg = `Hola Motobox! Quiero consultar disponibilidad, colores y entrega inmediata para la ${moto.marca} ${moto.modelo} 0km (${moto.cilindrada}).`;
+
+      const galleryHtml = `
+        <div class="moto-detail-gallery-box">
+          <div class="moto-detail-gallery-track" id="detail-gallery-track">
+            ${images.map((img, i) => `
+              <div class="moto-detail-gallery-slide">
+                <img src="${img}" alt="${moto.marca} ${moto.modelo} - Foto ${i + 1}" loading="eager">
+              </div>
+            `).join('')}
+          </div>
+          ${hasMultiple ? `<span class="moto-detail-counter" id="detail-gallery-counter">1 / ${images.length}</span>` : ""}
+        </div>
+        ${hasMultiple ? `
+          <div class="moto-detail-thumbs" id="detail-gallery-thumbs">
+            ${images.map((img, i) => `
+              <div class="moto-detail-thumb${i === 0 ? ' active' : ''}" data-index="${i}">
+                <img src="${img}" alt="Thumbnail ${i + 1}">
+              </div>
+            `).join('')}
+          </div>
+        ` : ""}
+      `;
+
+      motoDetailBody.innerHTML = `
+        ${galleryHtml}
+
+        <div class="moto-detail-info">
+          ${moto.badge ? `<span class="moto-badge-tag" style="position: static; display: inline-block; margin-bottom: 0.5rem;">${moto.badge}</span>` : ""}
+          <p class="moto-detail-tagline">${moto.tagline}</p>
+
+          <p class="moto-detail-section-title">Ficha Técnica Oficial 0KM</p>
+          <div class="moto-detail-specs-grid">
+            <div class="moto-detail-spec-card">
+              <span class="spec-k">Cilindrada</span>
+              <span class="spec-v">${moto.cilindrada}</span>
+            </div>
+            <div class="moto-detail-spec-card">
+              <span class="spec-k">Potencia</span>
+              <span class="spec-v">${moto.potencia}</span>
+            </div>
+            <div class="moto-detail-spec-card">
+              <span class="spec-k">Consumo</span>
+              <span class="spec-v">${moto.consumo}</span>
+            </div>
+            <div class="moto-detail-spec-card">
+              <span class="spec-k">Frenos</span>
+              <span class="spec-v">${moto.frenos}</span>
+            </div>
+            <div class="moto-detail-spec-card">
+              <span class="spec-k">Tanque</span>
+              <span class="spec-v">${moto.tanque}</span>
+            </div>
+            <div class="moto-detail-spec-card">
+              <span class="spec-k">Arranque</span>
+              <span class="spec-v">${moto.arranque}</span>
+            </div>
+          </div>
+
+          <p class="moto-detail-section-title">Beneficios y Garantías 0KM</p>
+          <div class="moto-detail-perks-box">
+            <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.5rem; line-height: 1.45;">
+              ${moto.perfilComprador}
+            </p>
+            <ul class="moto-detail-perks-list">
+              <li><strong>✓</strong> Unidad 0km nueva de fábrica lista para entrega</li>
+              <li><strong>✓</strong> Garantía oficial por escrito de la marca</li>
+              <li><strong>✓</strong> Casco de seguridad homologado de regalo</li>
+              <li><strong>✓</strong> Gestión y trámite de patentamiento bonificado</li>
+            </ul>
+          </div>
+
+          <div class="moto-detail-actions">
+            <a href="${buildWhatsAppUrl(directWaMsg)}" class="btn-match-whatsapp" target="_blank" rel="noopener">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              <span>Consultar Disponibilidad por WhatsApp</span>
+            </a>
+          </div>
+        </div>
+      `;
+
+      if (hasMultiple) {
+        const track = document.getElementById("detail-gallery-track");
+        const counter = document.getElementById("detail-gallery-counter");
+        const thumbs = document.querySelectorAll(".moto-detail-thumb");
+        const slides = track.querySelectorAll(".moto-detail-gallery-slide");
+
+        const galleryObs = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const idx = Array.from(slides).indexOf(entry.target);
+              if (counter) counter.textContent = `${idx + 1} / ${images.length}`;
+              thumbs.forEach((t, i) => t.classList.toggle("active", i === idx));
+            }
+          });
+        }, { root: track, threshold: 0.6 });
+
+        slides.forEach(s => galleryObs.observe(s));
+
+        thumbs.forEach(thumb => {
+          thumb.addEventListener("click", () => {
+            const idx = parseInt(thumb.dataset.index, 10);
+            slides[idx]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+          });
+        });
+      }
+
+      motoDetailModal.classList.add("open");
+      document.body.style.overflow = "hidden";
     }
 
-    motoDetailModal.classList.add("open");
-    document.body.style.overflow = "hidden";
-  }
+    function closeMotoDetail() {
+      if (motoDetailModal) {
+        motoDetailModal.classList.remove("open");
+        document.body.style.overflow = "";
+      }
+    }
 
-  function closeMotoDetail() {
+    if (btnCloseMotoDetail) btnCloseMotoDetail.addEventListener("click", closeMotoDetail);
     if (motoDetailModal) {
-      motoDetailModal.classList.remove("open");
-      document.body.style.overflow = "";
+      motoDetailModal.addEventListener("click", (e) => {
+        if (e.target === motoDetailModal) closeMotoDetail();
+      });
     }
-  }
 
-  if (btnCloseMotoDetail) btnCloseMotoDetail.addEventListener("click", closeMotoDetail);
-  if (motoDetailModal) {
-    motoDetailModal.addEventListener("click", (e) => {
-      if (e.target === motoDetailModal) closeMotoDetail();
+    // Filter pills listeners
+    filterPills.forEach(pill => {
+      pill.addEventListener("click", () => {
+        filterPills.forEach(p => p.classList.remove("active"));
+        pill.classList.add("active");
+        currentFilter = pill.dataset.filter;
+        renderCatalogCards();
+      });
     });
+
+    // Search input listeners
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => {
+        currentSearch = e.target.value;
+        if (searchClearBtn) {
+          searchClearBtn.style.display = currentSearch.trim() ? "flex" : "none";
+        }
+        renderCatalogCards();
+      });
+    }
+
+    if (searchClearBtn) {
+      searchClearBtn.addEventListener("click", () => {
+        if (searchInput) {
+          searchInput.value = "";
+          searchInput.focus();
+        }
+        searchClearBtn.style.display = "none";
+        currentSearch = "";
+        renderCatalogCards();
+      });
+    }
+
+    // Keyboard controls for detail gallery
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeMotoDetail();
+
+      if (motoDetailModal && motoDetailModal.classList.contains("open")) {
+        const track = document.getElementById("detail-gallery-track");
+        if (track) {
+          const slides = track.querySelectorAll(".moto-detail-gallery-slide");
+          if (slides.length > 1) {
+            const currentIdx = Math.round(track.scrollLeft / track.clientWidth);
+            if (e.key === "ArrowRight") {
+              const nextIdx = Math.min(currentIdx + 1, slides.length - 1);
+              slides[nextIdx]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+            } else if (e.key === "ArrowLeft") {
+              const prevIdx = Math.max(currentIdx - 1, 0);
+              slides[prevIdx]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+            }
+          }
+        }
+      }
+    });
+
+    // Initial render
+    renderCatalogCards();
   }
 
-  // --- 5. Global Scroll & Header Behavior ---
+  // ==========================================================================
+  // 3. GLOBAL BEHAVIORS (Scroll, Navbar, Observers)
+  // ==========================================================================
   let lastScrollY = 0;
   let ticking = false;
 
-  // Scrollspy references
-  const navLinks = document.querySelectorAll(".nav-desktop-link");
-  const trackedSections = ["catalogo", "beneficios", "ubicacion"].map(id => document.getElementById(id)).filter(Boolean);
-
   function handleScroll() {
+    if (!header) return;
     const scrollY = window.scrollY;
 
-    // Scrolled state for visual compaction
-    if (scrollY > 30) {
+    if (scrollY > 25) {
       header.classList.add("scrolled");
     } else {
       header.classList.remove("scrolled");
     }
 
-    // Auto-hide header on scroll down, reveal on scroll up
     if (scrollY > 300) {
-      if (scrollY > lastScrollY + 5) {
+      if (scrollY > lastScrollY + 6) {
         header.classList.add("header-hidden");
-      } else if (scrollY < lastScrollY - 5) {
+      } else if (scrollY < lastScrollY - 6) {
         header.classList.remove("header-hidden");
       }
     } else {
@@ -700,19 +488,6 @@
     }
 
     lastScrollY = scrollY;
-
-    // Update ScrollSpy
-    const scrollPos = scrollY + 120;
-    trackedSections.forEach(sec => {
-      const top = sec.offsetTop;
-      const height = sec.offsetHeight;
-      const id = sec.getAttribute("id");
-      if (scrollPos >= top && scrollPos < top + height) {
-        navLinks.forEach(l => {
-          l.classList.toggle("active", l.getAttribute("data-nav") === id);
-        });
-      }
-    });
   }
 
   window.addEventListener("scroll", () => {
@@ -725,64 +500,27 @@
     }
   }, { passive: true });
 
-  // --- 6. Scroll Reveal Observer ---
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry, i) => {
       if (entry.isIntersecting) {
-        // Stagger the reveal for a more organic, hand-crafted feel
-        const delay = parseInt(entry.target.style.transitionDelay, 10) || (i * 80);
+        const delay = parseInt(entry.target.style.transitionDelay, 10) || (i * 60);
         setTimeout(() => {
           entry.target.classList.add("visible");
         }, delay);
         observer.unobserve(entry.target);
       }
     });
-  }, { threshold: 0.06, rootMargin: "0px 0px -40px 0px" });
+  }, { threshold: 0.05, rootMargin: "0px 0px -30px 0px" });
 
   document.querySelectorAll(".reveal-on-scroll").forEach(el => observer.observe(el));
 
-  // --- 7. Keyboard Navigation & Shortcuts ---
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeAssistant();
-      closeTradein();
-      closeMotoDetail();
-    }
+  // Init page-specific module
+  if (currentPage === "home") {
+    initHomePage();
+  } else if (currentPage === "catalogo") {
+    initCatalogPage();
+  }
 
-    // Left/Right arrow keys flip detail gallery photos
-    if (motoDetailModal && motoDetailModal.classList.contains("open")) {
-      const track = document.getElementById("detail-gallery-track");
-      if (track) {
-        const slides = track.querySelectorAll(".moto-detail-gallery-slide");
-        if (slides.length > 1) {
-          const currentIdx = Math.round(track.scrollLeft / track.clientWidth);
-          if (e.key === "ArrowRight") {
-            const nextIdx = Math.min(currentIdx + 1, slides.length - 1);
-            slides[nextIdx]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
-          } else if (e.key === "ArrowLeft") {
-            const prevIdx = Math.max(currentIdx - 1, 0);
-            slides[prevIdx]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
-          }
-        }
-      }
-    }
-  });
-
-  // --- 8. Smooth Anchor Navigation ---
-  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener("click", function (e) {
-      const targetId = this.getAttribute("href");
-      if (targetId === "#") return;
-      const target = document.querySelector(targetId);
-      if (target) {
-        e.preventDefault();
-        target.scrollIntoView({ behavior: "smooth" });
-      }
-    });
-  });
-
-  // --- Init Application ---
-  renderCatalog("todas", "");
   handleScroll();
 
 })();

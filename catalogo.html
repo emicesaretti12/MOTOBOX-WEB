@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Catálogo de Motos 0km — MOTOBOX Córdoba</title>
+  <meta name="description" content="Catálogo completo de motos 0km nuevas en Córdoba. Marcas oficiales Honda, Bajaj, Keller, Motomel, Zanella. Entrega inmediata y garantía de fábrica.">
+  <meta name="theme-color" content="#151516">
+  <meta property="og:title" content="Catálogo 0km — MOTOBOX Córdoba">
+  <meta property="og:description" content="Explorá todas las motos 0km disponibles para entrega inmediata en Córdoba.">
+  <meta property="og:type" content="website">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="catalogo">
+
+  <!-- 1. EXECUTIVE SITE NAVIGATION HEADER -->
+  <header class="site-header" id="site-header">
+    <div class="container">
+      <div class="header-inner">
+        <a href="index.html" class="brand-logo" aria-label="Motobox Inicio">
+          <span class="brand-name"><span style="color: var(--accent-orange);">Moto</span>Box</span>
+          <span class="brand-tagline">0KM Córdoba</span>
+        </a>
+
+        <nav class="nav-desktop">
+          <a href="index.html" class="nav-desktop-link">Inicio</a>
+          <a href="catalogo.html" class="nav-desktop-link active">Catálogo</a>
+          <a href="nosotros.html" class="nav-desktop-link">Nosotros</a>
+        </nav>
+
+        <div class="header-actions">
+          <a href="https://wa.me/5493511234567?text=Hola%20Motobox!%20Quiero%20consultar%20por%20motos%200km%20disponibles" class="btn-whatsapp-header" target="_blank" rel="noopener">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            <span>Consultar Stock</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- 2. CATALOG HEADER & TOOLBAR -->
+    <section class="catalog-page-hero">
+      <div class="container">
+        <nav class="catalog-breadcrumbs" aria-label="Breadcrumb">
+          <a href="index.html">Inicio</a>
+          <span>/</span>
+          <span aria-current="page">Catálogo Oficial 0KM</span>
+        </nav>
+
+        <div class="catalog-page-header">
+          <div>
+            <h1 class="catalog-page-title">Catálogo Oficial de Motos 0KM</h1>
+            <p class="catalog-page-subtitle">Unidades nuevas multimarca disponibles para entrega inmediata en Córdoba Capital. Hacé clic en cualquier modelo para ver fotos y ficha técnica.</p>
+          </div>
+        </div>
+
+        <!-- Toolbar: Search Bar + Category Segmented Tabs -->
+        <div class="catalog-toolbar">
+          <div class="catalog-toolbar-header">
+            <!-- Search Box -->
+            <div class="catalog-search-wrap">
+              <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="catalog-search-input" class="catalog-search-input" placeholder="Buscar por modelo o marca (ej: Tornado, 110, Bajaj)..." autocomplete="off" aria-label="Buscar moto">
+              <button id="catalog-search-clear" class="catalog-search-clear" aria-label="Limpiar búsqueda" style="display: none;">✕</button>
+            </div>
+
+            <div class="catalog-stock-summary">
+              <span class="stock-summary-badge">Stock Físico 0KM</span>
+              <span class="stock-summary-text" id="stock-summary-text">5 modelos disponibles</span>
+            </div>
+          </div>
+
+          <!-- Category Segmented Filter Tabs -->
+          <div class="filter-pills-bar">
+            <button class="filter-pill active" data-filter="todas">
+              <span>Todas</span>
+              <span class="pill-count" id="count-todas">5</span>
+            </button>
+            <button class="filter-pill" data-filter="economica">
+              <span>Económicas</span>
+              <span class="pill-count">3</span>
+            </button>
+            <button class="filter-pill" data-filter="diario">
+              <span>Uso Diario</span>
+              <span class="pill-count">1</span>
+            </button>
+            <button class="filter-pill" data-filter="viajar">
+              <span>Aventura & Sierras</span>
+              <span class="pill-count">1</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Motorcycle Grid -->
+        <div class="catalog-cards-grid" id="catalog-cards-grid">
+          <!-- Populated dynamically by app.js -->
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 3. ASSISTANCE BANNER -->
+    <section class="catalog-cta-strip">
+      <div class="container">
+        <div class="cta-strip-inner">
+          <div>
+            <h3>¿Tenés dudas sobre cuál 0km es ideal para vos?</h3>
+            <p>Escribinos por WhatsApp y un asesor comercial te envía disponibilidad en tiempo real, opciones de colores y detalles de retiro.</p>
+          </div>
+          <a href="https://wa.me/5493511234567?text=Hola%20Motobox!%20Quiero%20asesoramiento%20sobre%20los%20modelos%200km%20disponibles" class="btn-primary-hero" target="_blank" rel="noopener">
+            <span>Consultar por WhatsApp</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 4. MOTORCYCLE DETAIL MODAL (Quick-View Sheet) -->
+  <div class="assistant-modal-backdrop" id="moto-detail-modal" role="dialog" aria-modal="true" aria-labelledby="moto-detail-header-title">
+    <div class="assistant-modal-card moto-detail-card">
+      <div class="assistant-header">
+        <div class="assistant-header-info">
+          <div class="moto-detail-brand-badge" id="moto-detail-avatar">MB</div>
+          <div class="assistant-title-col">
+            <h4 id="moto-detail-header-title">Detalle de Modelo</h4>
+            <span id="moto-detail-header-category">0KM Oficial</span>
+          </div>
+        </div>
+        <button class="btn-close-modal" id="btn-close-moto-detail" aria-label="Cerrar detalle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="assistant-body" id="moto-detail-body">
+        <!-- Injected dynamically by app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. EXECUTIVE FOOTER -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        
+        <div class="footer-brand-bio">
+          <div class="brand-logo">
+            <span class="brand-name"><span style="color: var(--accent-orange);">Moto</span>Box</span>
+          </div>
+          <p>
+            Concesionaria multimarca oficial de motos 0km en Córdoba Capital. Calidad, respaldo y entrega inmediata.
+          </p>
+        </div>
+
+        <div class="footer-nav-col">
+          <h5>Páginas</h5>
+          <ul>
+            <li><a href="index.html">Inicio</a></li>
+            <li><a href="catalogo.html">Catálogo 0KM</a></li>
+            <li><a href="nosotros.html">Nosotros & Showroom</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-nav-col">
+          <h5>Atención Comercial</h5>
+          <ul>
+            <li>Santa Rosa 4227, Córdoba</li>
+            <li>Lunes a Sábados 09:00 a 20:30 hs</li>
+            <li><a href="https://wa.me/5493511234567" target="_blank" rel="noopener">WhatsApp Directo: (351) 123-4567</a></li>
+            <li><a href="mailto:ventas@motoboxcordoba.com.ar">ventas@motoboxcordoba.com.ar</a></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="footer-bottom-bar">
+        <span>&copy; 2026 MOTOBOX Oficial · Córdoba, Argentina. Solo motos 0km nuevas.</span>
+        <span>Atención y consultas comerciales vía WhatsApp</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 6. MOBILE BOTTOM TAB BAR -->
+  <div class="mobile-bottom-dock">
+    <a href="index.html" class="btn-dock-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Inicio</span>
+    </a>
+
+    <a href="catalogo.html" class="btn-dock-item active">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Catálogo</span>
+    </a>
+
+    <a href="nosotros.html" class="btn-dock-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Nosotros</span>
+    </a>
+    
+    <a href="https://wa.me/5493511234567?text=Hola%20Motobox!%20Quiero%20consultar%20por%20las%20motos%200km%20disponibles" class="btn-dock-item btn-dock-whatsapp" target="_blank" rel="noopener">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      <span>WhatsApp</span>
+    </a>
+  </div>
+
+  <!-- 7. DESKTOP FLOATING WHATSAPP FAB -->
+  <a href="https://wa.me/5493511234567?text=Hola%20Motobox!%20Quiero%20consultar%20por%20las%20motos%200km%20disponibles" class="floating-fab-desktop" target="_blank" rel="noopener">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    <span>Consultar por WhatsApp</span>
+  </a>
+
+  <!-- Scripts -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

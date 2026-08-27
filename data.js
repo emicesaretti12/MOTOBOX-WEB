@@ -1,19 +1,19 @@
 /**
- * MOTOBOX — Catálogo & Sistema de Datos
- * Concesionaria Multimarca | Córdoba, Argentina
- * 
- * Estructura de datos enriquecida para catálogo, simulador financiero
- * y asistente de ventas con conexión directa a WhatsApp.
+ * MOTOBOX — Catálogo & Sistema de Datos 0KM
+ * Concesionaria Multimarca Oficial | Córdoba, Argentina
+ * Venta exclusiva de motos 0km nuevas de fábrica.
  */
 
-const WHATSAPP_NUMBER = "5493511234567"; // Reemplazar con el número real de atención
+const WHATSAPP_NUMBER = "5493511234567"; // Número comercial de ventas Motobox Córdoba
 
 const CONFIG = {
-  nombreAgencia: "Motobox",
+  nombreAgencia: "Motobox Córdoba",
+  slogan: "Concesionaria Multimarca de Motos 0km",
   direccion: "Santa Rosa 4227, Córdoba Capital",
-  horarios: "Lunes a Lunes de 09:00 a 21:00 hs",
-  tasaInteresEstimada: 0.042, // Tasa mensual estimada para el simulador
-  cuotasDisponibles: [12, 18, 24, 36]
+  horarios: "Lunes a Sábados de 09:00 a 20:30 hs",
+  telefono: "(0351) 123-4567",
+  email: "ventas@motoboxcordoba.com.ar",
+  whatsappUrl: `https://wa.me/${WHATSAPP_NUMBER}`
 };
 
 const motos = [
@@ -22,9 +22,8 @@ const motos = [
     marca: "Keller",
     modelo: "Crono Classic 110",
     categoria: "economica",
-    categoriaLabel: "Económica / Urbana",
-    precio: 1450000,
-    cuotaMinimaEstimada: 68500,
+    categoriaLabel: "Económica & Urbana",
+    estado: "0km Nueva",
     imagen: "img/motos/keller-110.jpg",
     imagenes: ["img/motos/keller-110.jpg"],
     disponible: true,
@@ -34,20 +33,19 @@ const motos = [
     frenos: "Disco delantero / Tambor",
     tanque: "4.0 Litros",
     arranque: "Eléctrico y a pedal",
-    destacada: false,
+    destacada: true,
     badge: "Más Vendida",
-    tagline: "La reina del ahorro urbano y bajo costo de mantenimiento.",
+    tagline: "La reina del ahorro urbano, agilidad y mínimo costo operativo.",
     usosRecomendados: ["trabajo", "ciudad", "primera-moto"],
-    perfilComprador: "Ideal para delivery, traslados diarios económicos o primera moto."
+    perfilComprador: "Ideal para delivery, movilidad diaria y traslados económicos en la ciudad."
   },
   {
     id: 2,
     marca: "Motomel",
     modelo: "B110 Blitz",
     categoria: "economica",
-    categoriaLabel: "Económica / Urbana",
-    precio: 1380000,
-    cuotaMinimaEstimada: 64900,
+    categoriaLabel: "Económica & Urbana",
+    estado: "0km Nueva",
     imagen: "img/motos/motomel-b110.jpg",
     imagenes: ["img/motos/motomel-b110.jpg"],
     disponible: true,
@@ -58,19 +56,18 @@ const motos = [
     tanque: "3.8 Litros",
     arranque: "Eléctrico y patada",
     destacada: false,
-    badge: "Precio Imbatible",
-    tagline: "Agilidad, simplicidad mecánica y máximo rendimiento diario.",
+    badge: "Eficiencia Total",
+    tagline: "Agilidad comprobada, bajo consumo y repuestos siempre disponibles.",
     usosRecomendados: ["trabajo", "ciudad", "primera-moto"],
-    perfilComprador: "Excelente relación precio/calidad para movilidad diaria en Córdoba."
+    perfilComprador: "Excelente opción de bajo mantenimiento para moverte sin demoras."
   },
   {
     id: 3,
     marca: "Zanella",
     modelo: "ZR 150 OHC",
     categoria: "economica",
-    categoriaLabel: "Calle / Trabajo",
-    precio: 1890000,
-    cuotaMinimaEstimada: 89000,
+    categoriaLabel: "Calle & Trabajo",
+    estado: "0km Nueva",
     imagen: "img/motos/zanella-zr150.jpg",
     imagenes: ["img/motos/zanella-zr150.jpg"],
     disponible: true,
@@ -82,18 +79,17 @@ const motos = [
     arranque: "Eléctrico",
     destacada: false,
     badge: "Gran Autonomía",
-    tagline: "Mayor porte, tanque grande y confort para jornadas intensas.",
-    usosRecomendados: ["trabajo", "ciudad", "viajes-cortos"],
-    perfilComprador: "Para quienes necesitan potencia extra en avenidas y circunvalación."
+    tagline: "Mayor porte, tanque de 12L y respuesta para jornadas intensas.",
+    usosRecomendados: ["trabajo", "ciudad", "avenidas"],
+    perfilComprador: "Para quienes necesitan potencia extra en circunvalación y trayectos largos."
   },
   {
     id: 4,
     marca: "Bajaj",
     modelo: "Rouser NS 200",
     categoria: "diario",
-    categoriaLabel: "Naked Sport / Uso Diario",
-    precio: 4200000,
-    cuotaMinimaEstimada: 198000,
+    categoriaLabel: "Naked Sport & Ciudad",
+    estado: "0km Nueva",
     imagen: "img/motos/bajaj-ns200.jpg",
     imagenes: ["img/motos/bajaj-ns200.jpg", "img/cat-diario.jpg"],
     disponible: true,
@@ -104,19 +100,18 @@ const motos = [
     tanque: "12 Litros",
     arranque: "Eléctrico",
     destacada: true,
-    badge: "Hero Deportiva",
-    tagline: "Potencia pura, refrigeración líquida y facha imbatible en ciudad.",
+    badge: "Líder Deportiva",
+    tagline: "Potencia pura de 24.5 HP, refrigeración líquida y diseño agresivo.",
     usosRecomendados: ["ciudad", "estilo", "viajes-cortos"],
-    perfilComprador: "Buscás aceleración, diseño agresivo y tecnología superior."
+    perfilComprador: "Buscás aceleración deportiva, tecnología superior y presencia en la calle."
   },
   {
     id: 5,
     marca: "Honda",
     modelo: "XR 250 Tornado",
     categoria: "viajar",
-    categoriaLabel: "On-Off / Aventura & Viajes",
-    precio: null, // "Consultar precio"
-    cuotaMinimaEstimada: null,
+    categoriaLabel: "On-Off / Aventura & Sierras",
+    estado: "0km Nueva",
     imagen: "img/motos/honda-tornado.jpg",
     imagenes: ["img/motos/honda-tornado.jpg", "img/cat-viajar.jpg", "img/hero.jpg"],
     disponible: true,
@@ -128,9 +123,9 @@ const motos = [
     arranque: "Eléctrico",
     destacada: true,
     badge: "Mito de la Ruta",
-    tagline: "Indestructible. Las sierras de Córdoba y cualquier camino son tuyos.",
+    tagline: "Indestructible. Las sierras de Córdoba y cualquier terreno son tuyos.",
     usosRecomendados: ["viajar", "aventura", "ciudad"],
-    perfilComprador: "Para quienes no tienen límites de terreno y buscan máxima reventa."
+    perfilComprador: "Para quienes buscan confiabilidad legendaria y máximo valor de reventa."
   }
 ];
 
@@ -138,25 +133,22 @@ const categoriasInfo = [
   {
     slug: "economica",
     nombre: "Económicas & Trabajo",
-    descripcion: "Bajo consumo, cuotas mínimas y repuestos súper accesibles.",
+    descripcion: "Bajo consumo de combustible, agilidad y repuestos económicos.",
     imagen: "img/cat-economicas.jpg",
-    cuotaDesde: "$64.900",
     badge: "Consumo 2L/100km"
   },
   {
     slug: "diario",
     nombre: "Uso Diario & Sport",
-    descripcion: "Potencia, estética agresiva y agilidad para circunvalación.",
+    descripcion: "Potencia superior, refrigeración líquida y diseño deportivo para la ciudad.",
     imagen: "img/cat-diario.jpg",
-    cuotaDesde: "$198.000",
     badge: "Hasta 24.5 HP"
   },
   {
     slug: "viajar",
-    nombre: "Aventura & Viajes",
-    descripcion: "Suspensión de largo recorrido, confiabilidad y confort de ruta.",
+    nombre: "Aventura & Sierras",
+    descripcion: "Suspensión de largo recorrido, robustez off-road y confort de marcha.",
     imagen: "img/cat-viajar.jpg",
-    cuotaDesde: "Consultar",
     badge: "Todo Terreno"
   }
 ];
