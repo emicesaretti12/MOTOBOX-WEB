@@ -567,14 +567,14 @@ ul, ol { list-style: none; }
 
 .catalog-cards-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
 }
 @media (min-width: 640px) {
-  .catalog-cards-grid { grid-template-columns: repeat(2, 1fr); }
+  .catalog-cards-grid { gap: 0.75rem; }
 }
 @media (min-width: 1024px) {
-  .catalog-cards-grid { grid-template-columns: repeat(3, 1fr); }
+  .catalog-cards-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; }
 }
 
 /* ── MOTO CARDS ── */
@@ -590,22 +590,81 @@ ul, ol { list-style: none; }
 
 .moto-card-header {
   position: relative;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 1 / 1;
   overflow: hidden;
   background: var(--bg-primary);
 }
+@media (min-width: 640px) {
+  .moto-card-header { aspect-ratio: 4 / 3; }
+}
 
-.moto-card-header img {
+.moto-card-header img,
+.moto-gallery-slide img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+}
+
+/* Multi-Image Gallery */
+.moto-gallery {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.moto-gallery-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.moto-gallery-track::-webkit-scrollbar { display: none; }
+
+.moto-gallery-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  position: relative;
+}
+
+.moto-gallery-dots {
+  position: absolute;
+  bottom: 0.4rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.gallery-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0.5px 2px rgba(0,0,0,0.3);
+  transition: background 0.2s ease, transform 0.2s ease;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.gallery-dot.active {
+  background: #ffffff;
+  transform: scale(1.3);
 }
 
 .moto-badge-tag {
   position: absolute;
   top: 0.6rem;
   left: 0.6rem;
-  z-index: 2;
+  z-index: 4;
   font-size: 0.6rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -619,10 +678,13 @@ ul, ol { list-style: none; }
 .moto-stock-indicator { display: none; }
 
 .moto-card-body {
-  padding: 0.85rem;
+  padding: 0.6rem;
   display: flex;
   flex-direction: column;
   flex-grow: 1;
+}
+@media (min-width: 640px) {
+  .moto-card-body { padding: 0.85rem; }
 }
 
 .moto-brand-row {
@@ -633,24 +695,37 @@ ul, ol { list-style: none; }
 }
 
 .moto-brand-label {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--accent-orange);
 }
+@media (min-width: 640px) {
+  .moto-brand-label { font-size: 0.65rem; }
+}
 
 .moto-category-label {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: var(--text-muted);
+}
+@media (min-width: 640px) {
+  .moto-category-label { font-size: 0.65rem; }
 }
 
 .moto-title-h3 {
-  font-size: 1.05rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 0.15rem;
   letter-spacing: -0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (min-width: 640px) {
+  .moto-title-h3 { font-size: 1.05rem; white-space: normal; }
 }
 
 .moto-tagline {
@@ -658,11 +733,18 @@ ul, ol { list-style: none; }
   color: var(--text-secondary);
   line-height: 1.35;
   margin-bottom: 0.6rem;
+  display: none;
+}
+@media (min-width: 640px) {
+  .moto-tagline { display: block; }
 }
 
 .moto-specs-strip {
-  display: flex;
+  display: none;
   margin-bottom: 0.6rem;
+}
+@media (min-width: 640px) {
+  .moto-specs-strip { display: flex; }
 }
 
 .spec-item {
@@ -698,8 +780,11 @@ ul, ol { list-style: none; }
 
 .moto-card-actions {
   margin-top: auto;
-  padding-top: 0.6rem;
+  padding-top: 0.5rem;
   border-top: 1px solid var(--border-subtle);
+}
+@media (min-width: 640px) {
+  .moto-card-actions { padding-top: 0.6rem; }
 }
 
 .btn-card-whatsapp {
@@ -707,13 +792,21 @@ ul, ol { list-style: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
   background: var(--accent-whatsapp);
   color: white;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  padding: 0.65rem;
-  border-radius: 10px;
+  padding: 0.45rem 0.5rem;
+  border-radius: 8px;
+}
+@media (min-width: 640px) {
+  .btn-card-whatsapp {
+    font-size: 0.85rem;
+    padding: 0.65rem;
+    gap: 0.35rem;
+    border-radius: 10px;
+  }
 }
 .btn-card-whatsapp:active { opacity: 0.8; }
 
