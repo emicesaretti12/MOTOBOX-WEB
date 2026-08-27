@@ -150,6 +150,7 @@ const categoriasInfo = [
     descripcion: "Suspensión de largo recorrido, robustez off-road y confort de marcha.",
     imagen: "img/cat-viajar.jpg",
     badge: "Todo Terreno"
+  }
 ];
 
 /**
