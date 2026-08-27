@@ -431,26 +431,56 @@
   }
 
   // --- 5. Global Scroll & Header Behavior ---
+  let lastScrollY = 0;
+  let ticking = false;
+
   function handleScroll() {
     const scrollY = window.scrollY;
+
+    // Scrolled state for visual compaction
     if (scrollY > 30) {
       header.classList.add("scrolled");
     } else {
       header.classList.remove("scrolled");
     }
+
+    // Auto-hide header on scroll down, reveal on scroll up
+    if (scrollY > 300) {
+      if (scrollY > lastScrollY + 5) {
+        header.classList.add("header-hidden");
+      } else if (scrollY < lastScrollY - 5) {
+        header.classList.remove("header-hidden");
+      }
+    } else {
+      header.classList.remove("header-hidden");
+    }
+
+    lastScrollY = scrollY;
   }
 
-  window.addEventListener("scroll", handleScroll, { passive: true });
+  window.addEventListener("scroll", () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        handleScroll();
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { passive: true });
 
   // --- 6. Scroll Reveal Observer ---
   const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
+    entries.forEach((entry, i) => {
       if (entry.isIntersecting) {
-        entry.target.classList.add("visible");
+        // Stagger the reveal for a more organic, hand-crafted feel
+        const delay = parseInt(entry.target.style.transitionDelay, 10) || (i * 80);
+        setTimeout(() => {
+          entry.target.classList.add("visible");
+        }, delay);
         observer.unobserve(entry.target);
       }
     });
-  }, { threshold: 0.08, rootMargin: "0px 0px -30px 0px" });
+  }, { threshold: 0.06, rootMargin: "0px 0px -40px 0px" });
 
   document.querySelectorAll(".reveal-on-scroll").forEach(el => observer.observe(el));
 
