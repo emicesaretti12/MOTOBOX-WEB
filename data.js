@@ -1,10 +1,12 @@
 /**
- * MOTOBOX — Catálogo & Sistema de Datos 0KM
- * Concesionaria Multimarca Oficial | Córdoba, Argentina
- * Venta exclusiva de motos 0km nuevas de fábrica.
+ * MOTOBOX — Datos Dinámicos desde CRM (Supabase)
+ * Lee el catálogo de motos y el poster promocional desde la base de datos.
+ * Fallback a datos estáticos si la API falla.
  */
 
-const WHATSAPP_NUMBER = "5493511234567"; // Número comercial de ventas Motobox Córdoba
+const SUPABASE_URL = "https://szgencxcwhhjwonubika.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_C4tFvXzQJi_o8TWPpdVg3A_f0X0aGss";
+const WHATSAPP_NUMBER = "5493511234567";
 
 const CONFIG = {
   nombreAgencia: "Motobox Córdoba",
@@ -16,153 +18,150 @@ const CONFIG = {
   whatsappUrl: `https://wa.me/${WHATSAPP_NUMBER}`
 };
 
-const motos = [
-  {
-    id: 1,
-    marca: "Keller",
-    modelo: "Crono Classic 110",
-    categoria: "economica",
-    categoriaLabel: "Económica & Urbana",
+const CAT_LABELS = {
+  economica: "Económica & Urbana",
+  diario: "Uso Diario & Sport",
+  viajar: "Aventura & Sierras"
+};
+
+// --- Supabase REST helper ---
+async function supabaseFetch(table, query = '') {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.warn(`[MotoBox] Error fetching ${table}:`, e.message);
+    return null;
+  }
+}
+
+// --- Fetch motos from CRM ---
+async function fetchMotosFromCRM() {
+  const data = await supabaseFetch('inventario_motos', 'visible_web=eq.true&estado=neq.vendida&order=destacada.desc,created_at.desc');
+  if (!data || data.length === 0) return null;
+
+  return data.map((m, idx) => ({
+    id: m.id || idx + 1,
+    marca: m.marca || '',
+    modelo: m.modelo || '',
+    categoria: m.categoria || 'economica',
+    categoriaLabel: CAT_LABELS[m.categoria] || m.categoria || 'General',
     estado: "0km Nueva",
-    imagen: "img/motos/keller-110.jpg",
-    imagenes: ["img/motos/keller-110.jpg"],
-    disponible: true,
-    cilindrada: "110 cc",
-    consumo: "2.1 L / 100km",
-    potencia: "7.0 HP",
-    frenos: "Disco delantero / Tambor",
-    tanque: "4.0 Litros",
-    arranque: "Eléctrico y a pedal",
-    destacada: true,
-    badge: "Más Vendida",
-    tagline: "La reina del ahorro urbano, agilidad y mínimo costo operativo.",
-    usosRecomendados: ["trabajo", "ciudad", "primera-moto"],
-    perfilComprador: "Ideal para delivery, movilidad diaria y traslados económicos en la ciudad."
+    imagen: m.imagen_url || `img/motos/placeholder.jpg`,
+    imagenes: m.imagen_url ? [m.imagen_url] : [],
+    disponible: m.estado === 'disponible',
+    cilindrada: m.cilindrada ? `${m.cilindrada} cc` : '',
+    consumo: m.consumo || '',
+    potencia: m.potencia || '',
+    frenos: m.frenos || '',
+    tanque: m.tanque || '',
+    arranque: m.arranque || '',
+    destacada: m.destacada || false,
+    badge: m.destacada ? 'Destacada' : (m.estado === 'reservada' ? 'Reservada' : ''),
+    tagline: m.tagline || `${m.marca} ${m.modelo} — disponible en nuestro showroom.`,
+    precio: m.precio || null,
+    color: m.color || '',
+    anio: m.anio || null,
+    usosRecomendados: [],
+    perfilComprador: ''
+  }));
+}
+
+// --- Fetch promo poster from CRM ---
+async function fetchPromoFromCRM() {
+  const data = await supabaseFetch('configuracion_web', 'id=eq.1');
+  if (!data || data.length === 0) return null;
+  const c = data[0];
+  return {
+    activo: c.poster_activo !== false,
+    badge: c.poster_badge || '',
+    titulo: c.poster_titulo || '',
+    subtitulo: c.poster_subtitulo || '',
+    imagen: c.poster_imagen_url || 'img/hero.jpg',
+    textoBoton: c.poster_boton_texto || 'Consultar por WhatsApp',
+    mensajeWhatsApp: c.poster_whatsapp_msg || 'Hola Motobox!'
+  };
+}
+
+// --- Fallback static data ---
+const STATIC_MOTOS = [
+  {
+    id: 1, marca: "Keller", modelo: "Crono Classic 110", categoria: "economica",
+    categoriaLabel: "Económica & Urbana", estado: "0km Nueva", imagen: "img/motos/keller-110.jpg",
+    imagenes: ["img/motos/keller-110.jpg"], disponible: true, cilindrada: "110 cc",
+    consumo: "2.1 L / 100km", potencia: "7.0 HP", frenos: "Disco delantero / Tambor",
+    tanque: "4.0 Litros", arranque: "Eléctrico y a pedal", destacada: true,
+    badge: "Más Vendida", tagline: "La reina del ahorro urbano, agilidad y mínimo costo operativo.",
+    usosRecomendados: ["trabajo", "ciudad"], perfilComprador: "Ideal para delivery y movilidad diaria."
   },
   {
-    id: 2,
-    marca: "Motomel",
-    modelo: "B110 Blitz",
-    categoria: "economica",
-    categoriaLabel: "Económica & Urbana",
-    estado: "0km Nueva",
-    imagen: "img/motos/motomel-b110.jpg",
-    imagenes: ["img/motos/motomel-b110.jpg"],
-    disponible: true,
-    cilindrada: "110 cc",
-    consumo: "2.0 L / 100km",
-    potencia: "7.2 HP",
-    frenos: "Tambor / Tambor",
-    tanque: "3.8 Litros",
-    arranque: "Eléctrico y patada",
-    destacada: false,
-    badge: "Eficiencia Total",
-    tagline: "Agilidad comprobada, bajo consumo y repuestos siempre disponibles.",
-    usosRecomendados: ["trabajo", "ciudad", "primera-moto"],
-    perfilComprador: "Excelente opción de bajo mantenimiento para moverte sin demoras."
+    id: 4, marca: "Bajaj", modelo: "Rouser NS 200", categoria: "diario",
+    categoriaLabel: "Naked Sport & Ciudad", estado: "0km Nueva", imagen: "img/motos/bajaj-ns200.jpg",
+    imagenes: ["img/motos/bajaj-ns200.jpg"], disponible: true, cilindrada: "199.5 cc",
+    consumo: "3.2 L / 100km", potencia: "24.5 HP", frenos: "Disco lobulado del/tras",
+    tanque: "12 Litros", arranque: "Eléctrico", destacada: true,
+    badge: "Líder Deportiva", tagline: "Potencia pura de 24.5 HP y diseño agresivo.",
+    usosRecomendados: ["ciudad", "estilo"], perfilComprador: "Aceleración deportiva y presencia."
   },
   {
-    id: 3,
-    marca: "Zanella",
-    modelo: "ZR 150 OHC",
-    categoria: "economica",
-    categoriaLabel: "Calle & Trabajo",
-    estado: "0km Nueva",
-    imagen: "img/motos/zanella-zr150.jpg",
-    imagenes: ["img/motos/zanella-zr150.jpg"],
-    disponible: true,
-    cilindrada: "150 cc",
-    consumo: "2.6 L / 100km",
-    potencia: "11.5 HP",
-    frenos: "Disco delantero",
-    tanque: "12 Litros",
-    arranque: "Eléctrico",
-    destacada: false,
-    badge: "Gran Autonomía",
-    tagline: "Mayor porte, tanque de 12L y respuesta para jornadas intensas.",
-    usosRecomendados: ["trabajo", "ciudad", "avenidas"],
-    perfilComprador: "Para quienes necesitan potencia extra en circunvalación y trayectos largos."
-  },
-  {
-    id: 4,
-    marca: "Bajaj",
-    modelo: "Rouser NS 200",
-    categoria: "diario",
-    categoriaLabel: "Naked Sport & Ciudad",
-    estado: "0km Nueva",
-    imagen: "img/motos/bajaj-ns200.jpg",
-    imagenes: ["img/motos/bajaj-ns200.jpg", "img/cat-diario.jpg"],
-    disponible: true,
-    cilindrada: "199.5 cc",
-    consumo: "3.2 L / 100km",
-    potencia: "24.5 HP (Triple bujía)",
-    frenos: "Disco lobulado del/tras",
-    tanque: "12 Litros",
-    arranque: "Eléctrico",
-    destacada: true,
-    badge: "Líder Deportiva",
-    tagline: "Potencia pura de 24.5 HP, refrigeración líquida y diseño agresivo.",
-    usosRecomendados: ["ciudad", "estilo", "viajes-cortos"],
-    perfilComprador: "Buscás aceleración deportiva, tecnología superior y presencia en la calle."
-  },
-  {
-    id: 5,
-    marca: "Honda",
-    modelo: "XR 250 Tornado",
-    categoria: "viajar",
-    categoriaLabel: "On-Off / Aventura & Sierras",
-    estado: "0km Nueva",
-    imagen: "img/motos/honda-tornado.jpg",
-    imagenes: ["img/motos/honda-tornado.jpg", "img/cat-viajar.jpg", "img/hero.jpg"],
-    disponible: true,
-    cilindrada: "249 cc",
-    consumo: "3.4 L / 100km",
-    potencia: "23.3 HP DOHC",
-    frenos: "Disco delantero / Tambor",
-    tanque: "11.5 Litros",
-    arranque: "Eléctrico",
-    destacada: true,
-    badge: "Mito de la Ruta",
-    tagline: "Indestructible. Las sierras de Córdoba y cualquier terreno son tuyos.",
-    usosRecomendados: ["viajar", "aventura", "ciudad"],
-    perfilComprador: "Para quienes buscan confiabilidad legendaria y máximo valor de reventa."
+    id: 5, marca: "Honda", modelo: "XR 250 Tornado", categoria: "viajar",
+    categoriaLabel: "On-Off / Aventura & Sierras", estado: "0km Nueva", imagen: "img/motos/honda-tornado.jpg",
+    imagenes: ["img/motos/honda-tornado.jpg"], disponible: true, cilindrada: "249 cc",
+    consumo: "3.4 L / 100km", potencia: "23.3 HP DOHC", frenos: "Disco delantero / Tambor",
+    tanque: "11.5 Litros", arranque: "Eléctrico", destacada: true,
+    badge: "Mito de la Ruta", tagline: "Indestructible. Las sierras de Córdoba son tuyas.",
+    usosRecomendados: ["viajar", "aventura"], perfilComprador: "Confiabilidad legendaria."
   }
 ];
 
-const categoriasInfo = [
-  {
-    slug: "economica",
-    nombre: "Económicas & Trabajo",
-    descripcion: "Bajo consumo de combustible, agilidad y repuestos económicos.",
-    imagen: "img/cat-economicas.jpg",
-    badge: "Consumo 2L/100km"
-  },
-  {
-    slug: "diario",
-    nombre: "Uso Diario & Sport",
-    descripcion: "Potencia superior, refrigeración líquida y diseño deportivo para la ciudad.",
-    imagen: "img/cat-diario.jpg",
-    badge: "Hasta 24.5 HP"
-  },
-  {
-    slug: "viajar",
-    nombre: "Aventura & Sierras",
-    descripcion: "Suspensión de largo recorrido, robustez off-road y confort de marcha.",
-    imagen: "img/cat-viajar.jpg",
-    badge: "Todo Terreno"
-  }
-];
-
-/**
- * Configuración de Publicidad / Poster Promocional Editable desde el CRM
- * El personal del CRM puede cambiar la imagen, títulos y links aquí o vía API.
- */
-const PROMO_CRM = {
+const STATIC_PROMO = {
   activo: true,
   badge: "Oportunidad Exclusiva 0KM",
   titulo: "Subite a tu moto 0km hoy con Casco y Patente 100% Bonificados",
   subtitulo: "Válido en nuestro Showroom de Santa Rosa 4227 para todas las marcas oficiales en stock físico.",
-  imagen: "img/hero.jpg", // Ruta del poster publicitario generado o subido desde el CRM
+  imagen: "img/hero.jpg",
   textoBoton: "Aprovechar Promo por WhatsApp",
   mensajeWhatsApp: "Hola Motobox! Quiero aprovechar la promoción de Casco y Patente Bonificados que vi en la web."
 };
+
+// --- Categorías ---
+const categoriasInfo = [
+  { slug: "economica", nombre: "Económicas & Trabajo", descripcion: "Bajo consumo, agilidad y repuestos económicos.", imagen: "img/cat-economicas.jpg", badge: "Consumo 2L/100km" },
+  { slug: "diario", nombre: "Uso Diario & Sport", descripcion: "Potencia superior, refrigeración líquida y diseño deportivo.", imagen: "img/cat-diario.jpg", badge: "Hasta 24.5 HP" },
+  { slug: "viajar", nombre: "Aventura & Sierras", descripcion: "Suspensión de largo recorrido y robustez off-road.", imagen: "img/cat-viajar.jpg", badge: "Todo Terreno" }
+];
+
+// --- Global variables (populated async) ---
+let motos = STATIC_MOTOS;
+let PROMO_CRM = STATIC_PROMO;
+
+/**
+ * Initialize data from CRM.
+ * Called by app.js before rendering.
+ */
+async function initDataFromCRM() {
+  const [crmMotos, crmPromo] = await Promise.all([
+    fetchMotosFromCRM(),
+    fetchPromoFromCRM()
+  ]);
+
+  if (crmMotos && crmMotos.length > 0) {
+    motos = crmMotos;
+    console.log(`[MotoBox] ✅ ${crmMotos.length} motos cargadas desde CRM`);
+  } else {
+    console.log('[MotoBox] ⚠️ Usando catálogo estático (fallback)');
+  }
+
+  if (crmPromo) {
+    PROMO_CRM = crmPromo;
+    console.log('[MotoBox] ✅ Poster cargado desde CRM');
+  } else {
+    console.log('[MotoBox] ⚠️ Usando poster estático (fallback)');
+  }
+}

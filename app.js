@@ -32,7 +32,12 @@
     const featuredContainer = document.getElementById("featured-cards-grid");
     if (featuredContainer) {
       // Filter 3 highlighted 0km models
-      const featuredModels = motos.filter(m => m.destacada || m.badge === "Más Vendida").slice(0, 3);
+      let featuredModels = motos.filter(m => m.destacada || m.badge === "Más Vendida" || m.badge === "Destacada");
+      if (featuredModels.length === 0) {
+        featuredModels = motos.slice(0, 3);
+      } else {
+        featuredModels = featuredModels.slice(0, 3);
+      }
       featuredContainer.innerHTML = "";
 
       featuredModels.forEach((moto, idx) => {
@@ -60,15 +65,15 @@
             <div class="moto-specs-strip">
               <div class="spec-item">
                 <span class="spec-k">Motor</span>
-                <span class="spec-v">${moto.cilindrada}</span>
+                <span class="spec-v">${moto.cilindrada || '-'}</span>
               </div>
               <div class="spec-item">
                 <span class="spec-k">Consumo</span>
-                <span class="spec-v">${moto.consumo}</span>
+                <span class="spec-v">${moto.consumo || '-'}</span>
               </div>
               <div class="spec-item">
                 <span class="spec-k">Frenos</span>
-                <span class="spec-v">${moto.frenos.split('/')[0]}</span>
+                <span class="spec-v">${moto.frenos ? moto.frenos.split('/')[0] : '-'}</span>
               </div>
             </div>
 
@@ -91,21 +96,27 @@
     }
 
     // Dynamic CRM Promo Poster Initialization
-    if (typeof PROMO_CRM !== "undefined" && PROMO_CRM && PROMO_CRM.activo) {
-      const promoImg = document.getElementById("promo-poster-img");
-      const promoTitle = document.getElementById("promo-poster-title");
-      const promoDesc = document.getElementById("promo-poster-desc");
-      const promoBadge = document.getElementById("promo-poster-badge");
-      const promoBtn = document.getElementById("promo-poster-btn");
-      const promoBtnText = document.getElementById("promo-poster-btn-text");
+    const promoSection = document.getElementById("promo-poster-section");
+    if (typeof PROMO_CRM !== "undefined" && PROMO_CRM) {
+      if (!PROMO_CRM.activo) {
+        if (promoSection) promoSection.style.display = "none";
+      } else {
+        if (promoSection) promoSection.style.display = "";
+        const promoImg = document.getElementById("promo-poster-img");
+        const promoTitle = document.getElementById("promo-poster-title");
+        const promoDesc = document.getElementById("promo-poster-desc");
+        const promoBadge = document.getElementById("promo-poster-badge");
+        const promoBtn = document.getElementById("promo-poster-btn");
+        const promoBtnText = document.getElementById("promo-poster-btn-text");
 
-      if (promoImg && PROMO_CRM.imagen) promoImg.src = PROMO_CRM.imagen;
-      if (promoTitle && PROMO_CRM.titulo) promoTitle.textContent = PROMO_CRM.titulo;
-      if (promoDesc && PROMO_CRM.subtitulo) promoDesc.textContent = PROMO_CRM.subtitulo;
-      if (promoBadge && PROMO_CRM.badge) promoBadge.textContent = PROMO_CRM.badge;
-      if (promoBtnText && PROMO_CRM.textoBoton) promoBtnText.textContent = PROMO_CRM.textoBoton;
-      if (promoBtn && PROMO_CRM.mensajeWhatsApp) {
-        promoBtn.href = buildWhatsAppUrl(PROMO_CRM.mensajeWhatsApp);
+        if (promoImg && PROMO_CRM.imagen) promoImg.src = PROMO_CRM.imagen;
+        if (promoTitle && PROMO_CRM.titulo) promoTitle.textContent = PROMO_CRM.titulo;
+        if (promoDesc && PROMO_CRM.subtitulo) promoDesc.textContent = PROMO_CRM.subtitulo;
+        if (promoBadge && PROMO_CRM.badge) promoBadge.textContent = PROMO_CRM.badge;
+        if (promoBtnText && PROMO_CRM.textoBoton) promoBtnText.textContent = PROMO_CRM.textoBoton;
+        if (promoBtn && PROMO_CRM.mensajeWhatsApp) {
+          promoBtn.href = buildWhatsAppUrl(PROMO_CRM.mensajeWhatsApp);
+        }
       }
     }
 
@@ -240,15 +251,15 @@
             <div class="moto-specs-strip">
               <div class="spec-item">
                 <span class="spec-k">Motor</span>
-                <span class="spec-v">${moto.cilindrada}</span>
+                <span class="spec-v">${moto.cilindrada || '-'}</span>
               </div>
               <div class="spec-item">
                 <span class="spec-k">Consumo</span>
-                <span class="spec-v">${moto.consumo}</span>
+                <span class="spec-v">${moto.consumo || '-'}</span>
               </div>
               <div class="spec-item">
                 <span class="spec-k">Frenos</span>
-                <span class="spec-v">${moto.frenos.split('/')[0]}</span>
+                <span class="spec-v">${moto.frenos ? moto.frenos.split('/')[0] : '-'}</span>
               </div>
             </div>
 
@@ -346,27 +357,27 @@
           <div class="moto-detail-specs-grid">
             <div class="moto-detail-spec-card">
               <span class="spec-k">Cilindrada</span>
-              <span class="spec-v">${moto.cilindrada}</span>
+              <span class="spec-v">${moto.cilindrada || '-'}</span>
             </div>
             <div class="moto-detail-spec-card">
               <span class="spec-k">Potencia</span>
-              <span class="spec-v">${moto.potencia}</span>
+              <span class="spec-v">${moto.potencia || '-'}</span>
             </div>
             <div class="moto-detail-spec-card">
               <span class="spec-k">Consumo</span>
-              <span class="spec-v">${moto.consumo}</span>
+              <span class="spec-v">${moto.consumo || '-'}</span>
             </div>
             <div class="moto-detail-spec-card">
               <span class="spec-k">Frenos</span>
-              <span class="spec-v">${moto.frenos}</span>
+              <span class="spec-v">${moto.frenos || '-'}</span>
             </div>
             <div class="moto-detail-spec-card">
               <span class="spec-k">Tanque</span>
-              <span class="spec-v">${moto.tanque}</span>
+              <span class="spec-v">${moto.tanque || '-'}</span>
             </div>
             <div class="moto-detail-spec-card">
               <span class="spec-k">Arranque</span>
-              <span class="spec-v">${moto.arranque}</span>
+              <span class="spec-v">${moto.arranque || '-'}</span>
             </div>
           </div>
 
@@ -534,28 +545,44 @@
     }
   }, { passive: true });
 
-  // Init page-specific module FIRST so elements exist in DOM
-  if (currentPage === "home") {
-    initHomePage();
-  } else if (currentPage === "catalogo") {
-    initCatalogPage();
+  // Async initialization to load CRM data from Supabase before rendering
+  async function initApp() {
+    if (typeof initDataFromCRM === "function") {
+      try {
+        await initDataFromCRM();
+      } catch (e) {
+        console.error("Error loading CRM data:", e);
+      }
+    }
+
+    if (currentPage === "home") {
+      initHomePage();
+    } else if (currentPage === "catalogo") {
+      initCatalogPage();
+    }
+
+    // Safe reveal observer (ensures no element stays invisible)
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          const delay = parseInt(entry.target.style.transitionDelay, 10) || (i * 50);
+          setTimeout(() => {
+            entry.target.classList.add("visible");
+          }, delay);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.02, rootMargin: "0px 0px 50px 0px" });
+
+    document.querySelectorAll(".reveal-on-scroll").forEach(el => observer.observe(el));
+
+    handleScroll();
   }
 
-  // Safe reveal observer (ensures no element stays invisible)
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, i) => {
-      if (entry.isIntersecting) {
-        const delay = parseInt(entry.target.style.transitionDelay, 10) || (i * 50);
-        setTimeout(() => {
-          entry.target.classList.add("visible");
-        }, delay);
-        observer.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.02, rootMargin: "0px 0px 50px 0px" });
-
-  document.querySelectorAll(".reveal-on-scroll").forEach(el => observer.observe(el));
-
-  handleScroll();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initApp);
+  } else {
+    initApp();
+  }
 
 })();
