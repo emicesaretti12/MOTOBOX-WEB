@@ -1,7 +1,6 @@
 /**
- * MOTOBOX — Datos Dinámicos desde CRM (Supabase)
- * Lee el catálogo de motos y el poster promocional desde la base de datos.
- * Fallback a datos estáticos si la API falla.
+ * MOTOBOX — Datos Dinámicos & Sincronización Realtime desde CRM (Supabase)
+ * Lee el catálogo de motos y el poster promocional en tiempo real sin refrescar la página.
  */
 
 const SUPABASE_URL = "https://szgencxcwhhjwonubika.supabase.co";
@@ -23,6 +22,16 @@ const CAT_LABELS = {
   diario: "Uso Diario & Sport",
   viajar: "Aventura & Sierras"
 };
+
+// --- Initialize Supabase Client for REST & Realtime ---
+let supabaseClient = null;
+if (typeof window !== "undefined" && window.supabase && typeof window.supabase.createClient === "function") {
+  try {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch (e) {
+    console.warn("[MotoBox] Error initializing Supabase client:", e);
+  }
+}
 
 // --- Supabase REST helper ---
 async function supabaseFetch(table, query = '') {
@@ -142,7 +151,7 @@ let motos = STATIC_MOTOS;
 let PROMO_CRM = STATIC_PROMO;
 
 /**
- * Initialize data from CRM.
+ * Initialize data from CRM and activate Realtime sync.
  * Called by app.js before rendering.
  */
 async function initDataFromCRM() {
@@ -163,5 +172,44 @@ async function initDataFromCRM() {
     console.log('[MotoBox] ✅ Poster cargado desde CRM');
   } else {
     console.log('[MotoBox] ⚠️ Usando poster estático (fallback)');
+  }
+
+  setupRealtimeSubscriptions();
+}
+
+/**
+ * Supabase Realtime Subscriptions
+ * Listens for INSERT, UPDATE, DELETE on inventario_motos and configuracion_web
+ * and dispatches events to instantly update UI without full page refresh.
+ */
+function setupRealtimeSubscriptions() {
+  if (!supabaseClient) return;
+
+  try {
+    supabaseClient
+      .channel('motobox-realtime-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inventario_motos' }, async (payload) => {
+        console.log('[MotoBox Realtime] ⚡ Actualización detectada en inventario:', payload.eventType);
+        const updatedMotos = await fetchMotosFromCRM();
+        if (updatedMotos) {
+          motos = updatedMotos;
+          document.dispatchEvent(new CustomEvent('motobox:motos-updated', { detail: motos }));
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracion_web' }, async (payload) => {
+        console.log('[MotoBox Realtime] ⚡ Actualización detectada en poster web:', payload.eventType);
+        const updatedPromo = await fetchPromoFromCRM();
+        if (updatedPromo) {
+          PROMO_CRM = updatedPromo;
+          document.dispatchEvent(new CustomEvent('motobox:promo-updated', { detail: PROMO_CRM }));
+        }
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[MotoBox Realtime] 🟢 Conectado en tiempo real con el CRM');
+        }
+      });
+  } catch (err) {
+    console.warn('[MotoBox Realtime] Error configurando suscripciones:', err);
   }
 }

@@ -29,8 +29,9 @@
   // 1. HOME PAGE LOGIC (index.html)
   // ==========================================================================
   function initHomePage() {
-    const featuredContainer = document.getElementById("featured-cards-grid");
-    if (featuredContainer) {
+    function renderFeaturedCards() {
+      const featuredContainer = document.getElementById("featured-cards-grid");
+      if (!featuredContainer) return;
       // Filter 3 highlighted 0km models
       let featuredModels = motos.filter(m => m.destacada || m.badge === "Más Vendida" || m.badge === "Destacada");
       if (featuredModels.length === 0) {
@@ -95,30 +96,45 @@
       });
     }
 
-    // Dynamic CRM Promo Poster Initialization
-    const promoSection = document.getElementById("promo-poster-section");
-    if (typeof PROMO_CRM !== "undefined" && PROMO_CRM) {
-      if (!PROMO_CRM.activo) {
-        if (promoSection) promoSection.style.display = "none";
-      } else {
-        if (promoSection) promoSection.style.display = "";
-        const promoImg = document.getElementById("promo-poster-img");
-        const promoTitle = document.getElementById("promo-poster-title");
-        const promoDesc = document.getElementById("promo-poster-desc");
-        const promoBadge = document.getElementById("promo-poster-badge");
-        const promoBtn = document.getElementById("promo-poster-btn");
-        const promoBtnText = document.getElementById("promo-poster-btn-text");
+    function renderPromoPoster() {
+      const promoSection = document.getElementById("promo-poster-section");
+      if (typeof PROMO_CRM !== "undefined" && PROMO_CRM) {
+        if (!PROMO_CRM.activo) {
+          if (promoSection) promoSection.style.display = "none";
+        } else {
+          if (promoSection) promoSection.style.display = "";
+          const promoImg = document.getElementById("promo-poster-img");
+          const promoTitle = document.getElementById("promo-poster-title");
+          const promoDesc = document.getElementById("promo-poster-desc");
+          const promoBadge = document.getElementById("promo-poster-badge");
+          const promoBtn = document.getElementById("promo-poster-btn");
+          const promoBtnText = document.getElementById("promo-poster-btn-text");
 
-        if (promoImg && PROMO_CRM.imagen) promoImg.src = PROMO_CRM.imagen;
-        if (promoTitle && PROMO_CRM.titulo) promoTitle.textContent = PROMO_CRM.titulo;
-        if (promoDesc && PROMO_CRM.subtitulo) promoDesc.textContent = PROMO_CRM.subtitulo;
-        if (promoBadge && PROMO_CRM.badge) promoBadge.textContent = PROMO_CRM.badge;
-        if (promoBtnText && PROMO_CRM.textoBoton) promoBtnText.textContent = PROMO_CRM.textoBoton;
-        if (promoBtn && PROMO_CRM.mensajeWhatsApp) {
-          promoBtn.href = buildWhatsAppUrl(PROMO_CRM.mensajeWhatsApp);
+          if (promoImg && PROMO_CRM.imagen) promoImg.src = PROMO_CRM.imagen;
+          if (promoTitle && PROMO_CRM.titulo) promoTitle.textContent = PROMO_CRM.titulo;
+          if (promoDesc && PROMO_CRM.subtitulo) promoDesc.textContent = PROMO_CRM.subtitulo;
+          if (promoBadge && PROMO_CRM.badge) promoBadge.textContent = PROMO_CRM.badge;
+          if (promoBtnText && PROMO_CRM.textoBoton) promoBtnText.textContent = PROMO_CRM.textoBoton;
+          if (promoBtn && PROMO_CRM.mensajeWhatsApp) {
+            promoBtn.href = buildWhatsAppUrl(PROMO_CRM.mensajeWhatsApp);
+          }
         }
       }
     }
+
+    renderFeaturedCards();
+    renderPromoPoster();
+
+    // Listen to Realtime updates from CRM
+    document.addEventListener("motobox:motos-updated", () => {
+      console.log("[MotoBox Realtime] 🔄 Re-renderizando modelos destacados...");
+      renderFeaturedCards();
+    });
+
+    document.addEventListener("motobox:promo-updated", () => {
+      console.log("[MotoBox Realtime] 🔄 Re-renderizando poster promocional...");
+      renderPromoPoster();
+    });
 
     // FAQ Accordion Interactivity
     const faqItems = document.querySelectorAll(".faq-item");
@@ -504,6 +520,12 @@
 
     // Initial render
     renderCatalogCards();
+
+    // Listen to Realtime updates from CRM
+    document.addEventListener("motobox:motos-updated", () => {
+      console.log("[MotoBox Realtime] 🔄 Re-renderizando catálogo en vivo...");
+      renderCatalogCards();
+    });
   }
 
   // ==========================================================================
