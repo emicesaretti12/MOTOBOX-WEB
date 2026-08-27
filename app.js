@@ -90,6 +90,26 @@
 
       featuredContainer.appendChild(card);
     });
+
+    // FAQ Accordion Interactivity
+    const faqItems = document.querySelectorAll(".faq-item");
+    faqItems.forEach(item => {
+      const questionBtn = item.querySelector(".faq-question");
+      if (questionBtn) {
+        questionBtn.addEventListener("click", () => {
+          const isCurrentActive = item.classList.contains("active");
+          faqItems.forEach(i => {
+            i.classList.remove("active");
+            const btn = i.querySelector(".faq-question");
+            if (btn) btn.setAttribute("aria-expanded", "false");
+          });
+          if (!isCurrentActive) {
+            item.classList.add("active");
+            questionBtn.setAttribute("aria-expanded", "true");
+          }
+        });
+      }
+    });
   }
 
   // ==========================================================================
