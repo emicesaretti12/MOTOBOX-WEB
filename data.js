@@ -150,5 +150,18 @@ const categoriasInfo = [
     descripcion: "Suspensión de largo recorrido, robustez off-road y confort de marcha.",
     imagen: "img/cat-viajar.jpg",
     badge: "Todo Terreno"
-  }
 ];
+
+/**
+ * Configuración de Publicidad / Poster Promocional Editable desde el CRM
+ * El personal del CRM puede cambiar la imagen, títulos y links aquí o vía API.
+ */
+const PROMO_CRM = {
+  activo: true,
+  badge: "Oportunidad Exclusiva 0KM",
+  titulo: "Subite a tu moto 0km hoy con Casco y Patente 100% Bonificados",
+  subtitulo: "Válido en nuestro Showroom de Santa Rosa 4227 para todas las marcas oficiales en stock físico.",
+  imagen: "img/hero.jpg", // Ruta del poster publicitario generado o subido desde el CRM
+  textoBoton: "Aprovechar Promo por WhatsApp",
+  mensajeWhatsApp: "Hola Motobox! Quiero aprovechar la promoción de Casco y Patente Bonificados que vi en la web."
+};

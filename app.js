@@ -3,7 +3,7 @@
  * Concesionaria Oficial Multimarca | Córdoba, Argentina
  * 
  * Lógica modular para 3 páginas:
- * - Home (index.html): Modelos destacados 0km
+ * - Home (index.html): Modelos destacados 0km, CRM Promo Poster, Acordeón FAQ
  * - Catálogo (catalogo.html): Grid completo, buscador en tiempo real, filtros por categoría y ficha técnica modal
  * - Nosotros (nosotros.html): Información institucional, showroom y contacto
  */
@@ -30,66 +30,84 @@
   // ==========================================================================
   function initHomePage() {
     const featuredContainer = document.getElementById("featured-cards-grid");
-    if (!featuredContainer) return;
+    if (featuredContainer) {
+      // Filter 3 highlighted 0km models
+      const featuredModels = motos.filter(m => m.destacada || m.badge === "Más Vendida").slice(0, 3);
+      featuredContainer.innerHTML = "";
 
-    // Filter 3 highlighted 0km models (e.g. Rouser NS200, Tornado, Keller 110)
-    const featuredModels = motos.filter(m => m.destacada || m.badge === "Más Vendida").slice(0, 3);
+      featuredModels.forEach((moto, idx) => {
+        const card = document.createElement("article");
+        card.className = "moto-card-modern reveal-on-scroll visible";
+        card.style.transitionDelay = `${idx * 70}ms`;
 
-    featuredContainer.innerHTML = "";
+        const directWaMsg = `Hola Motobox! Quiero consultar por disponibilidad de la ${moto.marca} ${moto.modelo} 0km que vi en la web.`;
 
-    featuredModels.forEach((moto, idx) => {
-      const card = document.createElement("article");
-      card.className = "moto-card-modern reveal-on-scroll";
-      card.style.transitionDelay = `${idx * 80}ms`;
-
-      const directWaMsg = `Hola Motobox! Quiero consultar por disponibilidad de la ${moto.marca} ${moto.modelo} 0km que vi en la web.`;
-
-      card.innerHTML = `
-        <div class="moto-card-header">
-          ${moto.badge ? `<span class="moto-badge-tag">${moto.badge}</span>` : ""}
-          <img src="${moto.imagen}" alt="${moto.marca} ${moto.modelo} 0km" loading="lazy">
-        </div>
-        
-        <div class="moto-card-body">
-          <div class="moto-brand-row">
-            <span class="moto-brand-label">${moto.marca}</span>
-            <span class="moto-category-label">${moto.categoriaLabel}</span>
+        card.innerHTML = `
+          <div class="moto-card-header">
+            ${moto.badge ? `<span class="moto-badge-tag">${moto.badge}</span>` : ""}
+            <img src="${moto.imagen}" alt="${moto.marca} ${moto.modelo} 0km" loading="lazy">
           </div>
-
-          <h3 class="moto-title-h3">${moto.modelo}</h3>
-          <p class="moto-tagline">${moto.tagline}</p>
-
-          <div class="moto-specs-strip">
-            <div class="spec-item">
-              <span class="spec-k">Motor</span>
-              <span class="spec-v">${moto.cilindrada}</span>
+          
+          <div class="moto-card-body">
+            <div class="moto-brand-row">
+              <span class="moto-brand-label">${moto.marca}</span>
+              <span class="moto-category-label">${moto.categoriaLabel}</span>
             </div>
-            <div class="spec-item">
-              <span class="spec-k">Consumo</span>
-              <span class="spec-v">${moto.consumo}</span>
+
+            <h3 class="moto-title-h3">${moto.modelo}</h3>
+            <p class="moto-tagline">${moto.tagline}</p>
+
+            <div class="moto-specs-strip">
+              <div class="spec-item">
+                <span class="spec-k">Motor</span>
+                <span class="spec-v">${moto.cilindrada}</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-k">Consumo</span>
+                <span class="spec-v">${moto.consumo}</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-k">Frenos</span>
+                <span class="spec-v">${moto.frenos.split('/')[0]}</span>
+              </div>
             </div>
-            <div class="spec-item">
-              <span class="spec-k">Frenos</span>
-              <span class="spec-v">${moto.frenos.split('/')[0]}</span>
+
+            <div class="moto-card-actions">
+              <a href="${buildWhatsAppUrl(directWaMsg)}" class="btn-card-whatsapp" target="_blank" rel="noopener">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                <span>Consultar Stock 0km</span>
+              </a>
             </div>
           </div>
+        `;
 
-          <div class="moto-card-actions">
-            <a href="${buildWhatsAppUrl(directWaMsg)}" class="btn-card-whatsapp" target="_blank" rel="noopener">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-              <span>Consultar Stock 0km</span>
-            </a>
-          </div>
-        </div>
-      `;
+        card.addEventListener("click", (e) => {
+          if (e.target.closest(".btn-card-whatsapp")) return;
+          window.location.href = `catalogo.html`;
+        });
 
-      card.addEventListener("click", (e) => {
-        if (e.target.closest(".btn-card-whatsapp")) return;
-        window.location.href = `catalogo.html`;
+        featuredContainer.appendChild(card);
       });
+    }
 
-      featuredContainer.appendChild(card);
-    });
+    // Dynamic CRM Promo Poster Initialization
+    if (typeof PROMO_CRM !== "undefined" && PROMO_CRM && PROMO_CRM.activo) {
+      const promoImg = document.getElementById("promo-poster-img");
+      const promoTitle = document.getElementById("promo-poster-title");
+      const promoDesc = document.getElementById("promo-poster-desc");
+      const promoBadge = document.getElementById("promo-poster-badge");
+      const promoBtn = document.getElementById("promo-poster-btn");
+      const promoBtnText = document.getElementById("promo-poster-btn-text");
+
+      if (promoImg && PROMO_CRM.imagen) promoImg.src = PROMO_CRM.imagen;
+      if (promoTitle && PROMO_CRM.titulo) promoTitle.textContent = PROMO_CRM.titulo;
+      if (promoDesc && PROMO_CRM.subtitulo) promoDesc.textContent = PROMO_CRM.subtitulo;
+      if (promoBadge && PROMO_CRM.badge) promoBadge.textContent = PROMO_CRM.badge;
+      if (promoBtnText && PROMO_CRM.textoBoton) promoBtnText.textContent = PROMO_CRM.textoBoton;
+      if (promoBtn && PROMO_CRM.mensajeWhatsApp) {
+        promoBtn.href = buildWhatsAppUrl(PROMO_CRM.mensajeWhatsApp);
+      }
+    }
 
     // FAQ Accordion Interactivity
     const faqItems = document.querySelectorAll(".faq-item");
@@ -185,8 +203,8 @@
 
       list.forEach((moto, idx) => {
         const card = document.createElement("article");
-        card.className = "moto-card-modern reveal-on-scroll";
-        card.style.transitionDelay = `${idx * 50}ms`;
+        card.className = "moto-card-modern visible";
+        card.style.transitionDelay = `${idx * 40}ms`;
 
         const directWaMsg = `Hola Motobox! Quiero consultar por disponibilidad y entrega inmediata de la ${moto.marca} ${moto.modelo} 0km (${moto.cilindrada}).`;
 
@@ -278,10 +296,6 @@
             slides[i]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
           });
         });
-      });
-
-      requestAnimationFrame(() => {
-        document.querySelectorAll(".reveal-on-scroll").forEach(el => observer.observe(el));
       });
     }
 
@@ -520,26 +534,27 @@
     }
   }, { passive: true });
 
+  // Init page-specific module FIRST so elements exist in DOM
+  if (currentPage === "home") {
+    initHomePage();
+  } else if (currentPage === "catalogo") {
+    initCatalogPage();
+  }
+
+  // Safe reveal observer (ensures no element stays invisible)
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry, i) => {
       if (entry.isIntersecting) {
-        const delay = parseInt(entry.target.style.transitionDelay, 10) || (i * 60);
+        const delay = parseInt(entry.target.style.transitionDelay, 10) || (i * 50);
         setTimeout(() => {
           entry.target.classList.add("visible");
         }, delay);
         observer.unobserve(entry.target);
       }
     });
-  }, { threshold: 0.05, rootMargin: "0px 0px -30px 0px" });
+  }, { threshold: 0.02, rootMargin: "0px 0px 50px 0px" });
 
   document.querySelectorAll(".reveal-on-scroll").forEach(el => observer.observe(el));
-
-  // Init page-specific module
-  if (currentPage === "home") {
-    initHomePage();
-  } else if (currentPage === "catalogo") {
-    initCatalogPage();
-  }
 
   handleScroll();
 
