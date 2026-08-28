@@ -27,7 +27,9 @@ const CAT_LABELS = {
 let supabaseClient = null;
 if (typeof window !== "undefined" && window.supabase && typeof window.supabase.createClient === "function") {
   try {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: false }
+    });
   } catch (e) {
     console.warn("[MotoBox] Error initializing Supabase client:", e);
   }
@@ -50,26 +52,18 @@ async function supabaseFetch(table, query = '') {
   }
 }
 
-// --- Fetch motos from CRM (with automatic fallback) ---
+// --- Fetch motos from CRM ---
 async function fetchMotosFromCRM() {
-  // Try filtered query first
-  let data = await supabaseFetch('inventario_motos', 'visible_web=eq.true&estado=neq.vendida&order=destacada.desc,created_at.desc');
-  
-  // If filtered query fails (columns may not exist), try simple query
-  if (!data) {
-    console.log('[MotoBox] Intentando query simple sin filtros...');
-    data = await supabaseFetch('inventario_motos', 'select=*&order=created_at.desc');
-  }
-  
-  // Last resort: bare query
-  if (!data) {
-    console.log('[MotoBox] Intentando query mínima...');
-    data = await supabaseFetch('inventario_motos');
-  }
-
+  // Direct select with order, filtering performed in JS for 100% resilience across all schema versions
+  let data = await supabaseFetch('inventario_motos', 'select=*&order=created_at.desc');
   if (!data || data.length === 0) return null;
 
-  return data.map((m, idx) => ({
+  // Filter visible & available motos, sort featured first
+  const visibleList = data
+    .filter(m => (m.visible_web !== false) && (m.estado !== 'vendida'))
+    .sort((a, b) => (b.destacada ? 1 : 0) - (a.destacada ? 1 : 0));
+
+  return visibleList.map((m, idx) => ({
     id: m.id || idx + 1,
     marca: m.marca || '',
     modelo: m.modelo || '',
@@ -84,7 +78,7 @@ async function fetchMotosFromCRM() {
     frenos: m.frenos || '',
     tanque: m.tanque || '',
     arranque: m.arranque || '',
-    destacada: m.destacada || false,
+    destacada: Boolean(m.destacada),
     badge: m.destacada ? 'Destacada' : (m.estado === 'reservada' ? 'Reservada' : ''),
     tagline: m.tagline || `${m.marca} ${m.modelo} — disponible en nuestro showroom.`,
     precio: m.precio || null,
@@ -195,11 +189,13 @@ async function initDataFromCRM() {
  * Listens for INSERT, UPDATE, DELETE on inventario_motos and configuracion_web
  * and dispatches events to instantly update UI without full page refresh.
  */
+let realtimeChannel = null;
+
 function setupRealtimeSubscriptions() {
-  if (!supabaseClient) return;
+  if (!supabaseClient || realtimeChannel) return;
 
   try {
-    supabaseClient
+    realtimeChannel = supabaseClient
       .channel('motobox-realtime-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'inventario_motos' }, async (payload) => {
         console.log('[MotoBox Realtime] ⚡ Actualización detectada en inventario:', payload.eventType);
@@ -225,4 +221,13 @@ function setupRealtimeSubscriptions() {
   } catch (err) {
     console.warn('[MotoBox Realtime] Error configurando suscripciones:', err);
   }
+}
+
+// Handle Back-Forward Cache (bfcache) navigation
+if (typeof window !== "undefined") {
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      initDataFromCRM();
+    }
+  });
 }
