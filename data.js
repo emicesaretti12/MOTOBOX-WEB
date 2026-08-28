@@ -50,9 +50,23 @@ async function supabaseFetch(table, query = '') {
   }
 }
 
-// --- Fetch motos from CRM ---
+// --- Fetch motos from CRM (with automatic fallback) ---
 async function fetchMotosFromCRM() {
-  const data = await supabaseFetch('inventario_motos', 'visible_web=eq.true&estado=neq.vendida&order=destacada.desc,created_at.desc');
+  // Try filtered query first
+  let data = await supabaseFetch('inventario_motos', 'visible_web=eq.true&estado=neq.vendida&order=destacada.desc,created_at.desc');
+  
+  // If filtered query fails (columns may not exist), try simple query
+  if (!data) {
+    console.log('[MotoBox] Intentando query simple sin filtros...');
+    data = await supabaseFetch('inventario_motos', 'select=*&order=created_at.desc');
+  }
+  
+  // Last resort: bare query
+  if (!data) {
+    console.log('[MotoBox] Intentando query mínima...');
+    data = await supabaseFetch('inventario_motos');
+  }
+
   if (!data || data.length === 0) return null;
 
   return data.map((m, idx) => ({
