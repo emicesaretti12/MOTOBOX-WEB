@@ -91,6 +91,35 @@
 
       homeGrid.appendChild(card);
     });
+
+    // CRM Promo Poster Initialization
+    initPromoPoster();
+  }
+
+  function initPromoPoster() {
+    if (typeof PROMO_CRM === "undefined" || !PROMO_CRM || !PROMO_CRM.activo) return;
+
+    const promoImg = document.getElementById("promo-poster-img");
+    const promoTitle = document.getElementById("promo-poster-title");
+    const promoDesc = document.getElementById("promo-poster-desc");
+    const promoBadge = document.getElementById("promo-poster-badge");
+    const promoBtn = document.getElementById("promo-poster-btn");
+    const promoBtnText = document.getElementById("promo-poster-btn-text");
+
+    if (promoImg && PROMO_CRM.imagen) promoImg.src = PROMO_CRM.imagen;
+    if (promoTitle && PROMO_CRM.titulo) promoTitle.textContent = PROMO_CRM.titulo;
+    if (promoDesc && PROMO_CRM.subtitulo) promoDesc.textContent = PROMO_CRM.subtitulo;
+    if (promoBadge && PROMO_CRM.badge) promoBadge.textContent = PROMO_CRM.badge;
+    if (promoBtnText && PROMO_CRM.textoBoton) promoBtnText.textContent = PROMO_CRM.textoBoton;
+    if (promoBtn && PROMO_CRM.mensajeWhatsApp) {
+      promoBtn.href = buildWhatsAppUrl(PROMO_CRM.mensajeWhatsApp);
+    }
+
+    // Listen to Realtime CRM updates for the promo poster
+    document.addEventListener("motobox:promo-updated", () => {
+      console.log("[MotoBox Realtime] 🔄 Actualizando poster promocional...");
+      initPromoPoster();
+    });
   }
 
   // ==========================================================================
