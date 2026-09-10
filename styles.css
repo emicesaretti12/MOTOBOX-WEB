@@ -2705,6 +2705,10 @@ input:focus-visible {
     background-image: url('https://res.cloudinary.com/di9j6zwyz/image/upload/v1789083273/WhatsApp_Image_2026-09-10_at_8.34.08_PM_ygfs6g.jpg');
     background-position: center center;
   }
+  .simple-hero-overlay {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
   .simple-hero-content {
     padding: 2rem 1.2rem 2.5rem;
   }
@@ -2758,6 +2762,13 @@ input:focus-visible {
   /* Footer mobile spacing for bottom dock */
   .simple-footer {
     padding-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .simple-hero-overlay {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 
