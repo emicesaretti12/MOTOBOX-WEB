@@ -5,14 +5,14 @@
 
 const SUPABASE_URL = "https://szgencxcwhhjwonubika.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_C4tFvXzQJi_o8TWPpdVg3A_f0X0aGss";
-const WHATSAPP_NUMBER = "5493511234567";
+const WHATSAPP_NUMBER = "5493516312930";
 
 const CONFIG = {
   nombreAgencia: "Motobox Córdoba",
   slogan: "Concesionaria Multimarca de Motos 0km",
   direccion: "Santa Rosa 4227, Córdoba Capital",
   horarios: "Lunes a Sábados de 09:00 a 20:30 hs",
-  telefono: "(0351) 123-4567",
+  telefono: "(351) 631-2930",
   email: "ventas@motoboxcordoba.com.ar",
   whatsappUrl: `https://wa.me/${WHATSAPP_NUMBER}`
 };
