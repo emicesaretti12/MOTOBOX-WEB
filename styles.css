@@ -167,10 +167,20 @@ ul, ol { list-style: none; }
 
 .brand-logo {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.35rem;
 }
 .brand-logo:hover { opacity: 0.85; }
+
+/* El logo ya trae el nombre y la bajada, así que reemplaza al texto. */
+.brand-logo-img {
+  height: 34px;
+  width: auto;
+  flex: none;
+}
+@media (min-width: 768px) {
+  .brand-logo-img { height: 38px; }
+}
 
 .brand-name {
   font-family: var(--font-heading);
@@ -446,7 +456,7 @@ ul, ol { list-style: none; }
 .hero-media-wrapper {
   position: relative;
   overflow: hidden;
-  background: #000;
+  background: #fff;
 }
 
 .hero-image-card {
@@ -454,29 +464,20 @@ ul, ol { list-style: none; }
   width: 100%;
   height: 100%;
   overflow: hidden;
+  /* Franja reservada para la tarjeta del showroom, que va superpuesta:
+     sin esto se apoya sobre el flyer y tapa la palabra MotoBox. */
+  padding-bottom: 3.9rem;
 }
 
+/* El flyer se muestra completo: la caja toma su misma proporción para que
+   no queden ni recortes ni franjas vacías a los costados. */
 .hero-main-img {
   width: 100%;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
+  aspect-ratio: 1672 / 941;
+  object-fit: contain;
   transition: transform 0.5s var(--ease-spring);
 }
-@media (min-width: 900px) {
-  .hero-main-img {
-    aspect-ratio: 1 / 1;
-    height: 100%;
-  }
-}
 .hero-image-card:hover .hero-main-img { transform: scale(1.03); }
-
-.hero-image-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.45) 0%, transparent 45%);
-  pointer-events: none;
-}
 
 .hero-floating-stat {
   position: absolute;
@@ -484,9 +485,7 @@ ul, ol { list-style: none; }
   left: 0.65rem;
   right: 0.65rem;
   z-index: 2;
-  background: rgba(255, 255, 255, 0.94);
-  -webkit-backdrop-filter: blur(15px);
-  backdrop-filter: blur(15px);
+  background: #ffffff;
   padding: 0.5rem 0.75rem;
   border-radius: var(--radius-xs);
   border: 1px solid rgba(255, 255, 255, 0.6);

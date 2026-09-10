@@ -169,15 +169,15 @@
             <div class="moto-specs-strip">
               <div class="spec-item">
                 <span class="spec-k">Motor</span>
-                <span class="spec-v">${moto.cilindrada}</span>
+                <span class="spec-v">${moto.cilindrada || '-'}</span>
               </div>
               <div class="spec-item">
                 <span class="spec-k">Consumo</span>
-                <span class="spec-v">${moto.consumo}</span>
+                <span class="spec-v">${moto.consumo || '-'}</span>
               </div>
               <div class="spec-item">
                 <span class="spec-k">Frenos</span>
-                <span class="spec-v">${moto.frenos.split('/')[0]}</span>
+                <span class="spec-v">${moto.frenos ? moto.frenos.split('/')[0] : '-'}</span>
               </div>
             </div>
 
@@ -275,27 +275,27 @@
           <div class="moto-detail-specs-grid">
             <div class="moto-detail-spec-card">
               <span class="spec-k">Cilindrada</span>
-              <span class="spec-v">${moto.cilindrada}</span>
+              <span class="spec-v">${moto.cilindrada || '-'}</span>
             </div>
             <div class="moto-detail-spec-card">
               <span class="spec-k">Potencia</span>
-              <span class="spec-v">${moto.potencia}</span>
+              <span class="spec-v">${moto.potencia || '-'}</span>
             </div>
             <div class="moto-detail-spec-card">
               <span class="spec-k">Consumo</span>
-              <span class="spec-v">${moto.consumo}</span>
+              <span class="spec-v">${moto.consumo || '-'}</span>
             </div>
             <div class="moto-detail-spec-card">
               <span class="spec-k">Frenos</span>
-              <span class="spec-v">${moto.frenos}</span>
+              <span class="spec-v">${moto.frenos || '-'}</span>
             </div>
             <div class="moto-detail-spec-card">
               <span class="spec-k">Tanque</span>
-              <span class="spec-v">${moto.tanque}</span>
+              <span class="spec-v">${moto.tanque || '-'}</span>
             </div>
             <div class="moto-detail-spec-card">
               <span class="spec-k">Arranque</span>
-              <span class="spec-v">${moto.arranque}</span>
+              <span class="spec-v">${moto.arranque || '-'}</span>
             </div>
           </div>
 
@@ -422,6 +422,12 @@
 
     // Initial render
     renderCatalogCards();
+
+    // Listen to Realtime updates from CRM
+    document.addEventListener("motobox:motos-updated", () => {
+      console.log("[MotoBox Realtime] 🔄 Re-renderizando catálogo en vivo...");
+      renderCatalogCards();
+    });
   }
 
   // ==========================================================================
@@ -463,28 +469,44 @@
     }
   }, { passive: true });
 
-  // Init page-specific module FIRST so elements exist in DOM
-  if (currentPage === "home") {
-    initHomePage();
-  } else if (currentPage === "catalogo") {
-    initCatalogPage();
+  // Async initialization to load CRM data from Supabase before rendering
+  async function initApp() {
+    if (typeof initDataFromCRM === "function") {
+      try {
+        await initDataFromCRM();
+      } catch (e) {
+        console.error("Error loading CRM data:", e);
+      }
+    }
+
+    if (currentPage === "home") {
+      initHomePage();
+    } else if (currentPage === "catalogo") {
+      initCatalogPage();
+    }
+
+    // Safe reveal observer (ensures no element stays invisible)
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          const delay = parseInt(entry.target.style.transitionDelay, 10) || (i * 50);
+          setTimeout(() => {
+            entry.target.classList.add("visible");
+          }, delay);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.02, rootMargin: "0px 0px 50px 0px" });
+
+    document.querySelectorAll(".reveal-on-scroll").forEach(el => observer.observe(el));
+
+    handleScroll();
   }
 
-  // Safe reveal observer (ensures no element stays invisible)
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, i) => {
-      if (entry.isIntersecting) {
-        const delay = parseInt(entry.target.style.transitionDelay, 10) || (i * 50);
-        setTimeout(() => {
-          entry.target.classList.add("visible");
-        }, delay);
-        observer.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.02, rootMargin: "0px 0px 50px 0px" });
-
-  document.querySelectorAll(".reveal-on-scroll").forEach(el => observer.observe(el));
-
-  handleScroll();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initApp);
+  } else {
+    initApp();
+  }
 
 })();
