@@ -2379,7 +2379,7 @@ input:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: url('img/hero.jpg') center center / cover no-repeat;
+  background: url('https://res.cloudinary.com/di9j6zwyz/image/upload/v1789083192/WhatsApp_Image_2026-09-10_at_8.31.32_PM_d0pzl7.jpg') center center / cover no-repeat;
   overflow: hidden;
 }
 
@@ -2700,6 +2700,8 @@ input:focus-visible {
   .simple-hero {
     min-height: 85vh;
     min-height: 85dvh;
+    background-image: url('https://res.cloudinary.com/di9j6zwyz/image/upload/v1789083273/WhatsApp_Image_2026-09-10_at_8.34.08_PM_ygfs6g.jpg');
+    background-position: center center;
   }
   .simple-hero-content {
     padding: 2rem 1.2rem 2.5rem;

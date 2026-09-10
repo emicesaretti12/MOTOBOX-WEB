@@ -11,7 +11,7 @@ const CONFIG = {
   nombreAgencia: "Motobox Córdoba",
   slogan: "Concesionaria Multimarca de Motos 0km",
   direccion: "Santa Rosa 4227, Córdoba Capital",
-  horarios: "Lunes a Sábados de 09:00 a 20:30 hs",
+  horarios: "Lunes a Sábados de 09:00 a 19:00 hs",
   telefono: "(351) 631-2930",
   email: "ventas@motoboxcordoba.com.ar",
   whatsappUrl: `https://wa.me/${WHATSAPP_NUMBER}`
