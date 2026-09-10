@@ -2754,3 +2754,197 @@ input:focus-visible {
     max-height: 170px;
   }
 }
+
+/* ==========================================================================
+   ANIMACIONES MEJORADAS — Toda la web
+   ========================================================================== */
+
+/* ── HERO: entrada secuencial de elementos ── */
+.simple-hero-tag,
+.simple-hero-title,
+.simple-hero-subtitle,
+.simple-hero-btns {
+  opacity: 0;
+  transform: translateY(24px);
+  animation: heroFadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.simple-hero-tag       { animation-delay: 0.15s; }
+.simple-hero-title     { animation-delay: 0.35s; }
+.simple-hero-subtitle  { animation-delay: 0.55s; }
+.simple-hero-btns      { animation-delay: 0.75s; }
+
+@keyframes heroFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── CATÁLOGO TÍTULO: slide suave ── */
+.simple-catalog-title,
+.simple-catalog-sub {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: sectionReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.simple-catalog-title { animation-delay: 0.1s; }
+.simple-catalog-sub   { animation-delay: 0.25s; }
+
+@keyframes sectionReveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── CARDS: entrada escalonada con rebote suave ── */
+.moto-card-modern {
+  opacity: 0;
+  transform: translateY(30px) scale(0.97);
+  animation: cardSlideIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[data-page="home"] .catalog-cards-grid .moto-card-modern:nth-child(1) { animation-delay: 0.2s; }
+[data-page="home"] .catalog-cards-grid .moto-card-modern:nth-child(2) { animation-delay: 0.35s; }
+[data-page="home"] .catalog-cards-grid .moto-card-modern:nth-child(3) { animation-delay: 0.5s; }
+
+@keyframes cardSlideIn {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── CARD HOVER mejorado ── */
+.moto-card-modern {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+}
+.moto-card-modern:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+/* ── CARD IMAGE zoom al hover ── */
+.moto-card-header img {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.moto-card-modern:hover .moto-card-header img {
+  transform: scale(1.06);
+}
+.moto-card-header {
+  overflow: hidden;
+}
+
+/* ── BOTONES: transiciones suaves ── */
+.btn-hero-red,
+.btn-hero-outline,
+.btn-card-whatsapp,
+.btn-promo-whatsapp {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s ease,
+              box-shadow 0.2s ease,
+              border-color 0.2s ease;
+}
+
+.btn-hero-red:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(224, 46, 36, 0.35);
+}
+
+.btn-hero-outline:hover {
+  transform: translateY(-2px);
+}
+
+.btn-card-whatsapp:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.3);
+}
+
+/* ── PROMO BANNER: entrada deslizante ── */
+.promo-poster-section {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: promoReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+}
+
+@keyframes promoReveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.promo-poster-card {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+}
+.promo-poster-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+}
+
+/* ── WHATSAPP FAB: pulso suave ── */
+.floating-fab-desktop {
+  animation: fabPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes fabPulse {
+  0%, 100% {
+    box-shadow: 0 4px 14px rgba(37, 211, 102, 0.28);
+  }
+  50% {
+    box-shadow: 0 6px 24px rgba(37, 211, 102, 0.45);
+  }
+}
+
+.floating-fab-desktop:hover {
+  animation: none;
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 8px 28px rgba(37, 211, 102, 0.4);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── FOOTER: fade in suave ── */
+.simple-footer {
+  opacity: 0;
+  animation: footerFade 0.5s ease 0.5s forwards;
+}
+
+@keyframes footerFade {
+  to { opacity: 1; }
+}
+
+/* ── HEADER: transición más suave al scroll ── */
+.site-header {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.25s ease,
+              box-shadow 0.25s ease;
+}
+
+/* ── MOBILE BOTTOM DOCK: entrada desde abajo ── */
+.mobile-bottom-dock {
+  animation: dockSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both;
+}
+
+@keyframes dockSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── RESPETAR preferencias de usuario ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+}
