@@ -2386,7 +2386,9 @@ input:focus-visible {
 .simple-hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(10, 12, 18, 0.65) 0%, rgba(10, 12, 18, 0.82) 100%);
+  background: linear-gradient(180deg, rgba(8, 10, 15, 0.78) 0%, rgba(8, 10, 15, 0.90) 100%);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
   z-index: 1;
 }
 
