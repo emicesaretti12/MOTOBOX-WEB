@@ -18,9 +18,9 @@ const CONFIG = {
 };
 
 const CAT_LABELS = {
-  economica: "Económica & Urbana",
-  diario: "Uso Diario & Sport",
-  viajar: "Aventura & Sierras"
+  economica: "Urbana",
+  diario: "Touring",
+  viajar: "On-Off"
 };
 
 // --- Initialize Supabase Client for REST & Realtime ---
@@ -109,7 +109,7 @@ async function fetchPromoFromCRM() {
 const STATIC_MOTOS = [
   {
     id: 1, marca: "Keller", modelo: "Crono Classic 110", categoria: "economica",
-    categoriaLabel: "Económica & Urbana", estado: "0km Nueva", imagen: "img/motos/keller-110.jpg",
+    categoriaLabel: "Urbana", estado: "0km Nueva", imagen: "img/motos/keller-110.jpg",
     imagenes: ["img/motos/keller-110.jpg"], disponible: true, cilindrada: "110 cc",
     consumo: "2.1 L / 100km", potencia: "7.0 HP", frenos: "Disco delantero / Tambor",
     tanque: "4.0 Litros", arranque: "Eléctrico y a pedal", destacada: true,
@@ -127,7 +127,7 @@ const STATIC_MOTOS = [
   },
   {
     id: 5, marca: "Honda", modelo: "XR 250 Tornado", categoria: "viajar",
-    categoriaLabel: "On-Off / Aventura & Sierras", estado: "0km Nueva", imagen: "img/motos/honda-tornado.jpg",
+    categoriaLabel: "On-Off", estado: "0km Nueva", imagen: "img/motos/honda-tornado.jpg",
     imagenes: ["img/motos/honda-tornado.jpg"], disponible: true, cilindrada: "249 cc",
     consumo: "3.4 L / 100km", potencia: "23.3 HP DOHC", frenos: "Disco delantero / Tambor",
     tanque: "11.5 Litros", arranque: "Eléctrico", destacada: true,
@@ -148,9 +148,9 @@ const STATIC_PROMO = {
 
 // --- Categorías ---
 const categoriasInfo = [
-  { slug: "economica", nombre: "Económicas & Trabajo", descripcion: "Bajo consumo, agilidad y repuestos económicos.", imagen: "img/cat-economicas.jpg", badge: "Consumo 2L/100km" },
-  { slug: "diario", nombre: "Uso Diario & Sport", descripcion: "Potencia superior, refrigeración líquida y diseño deportivo.", imagen: "img/cat-diario.jpg", badge: "Hasta 24.5 HP" },
-  { slug: "viajar", nombre: "Aventura & Sierras", descripcion: "Suspensión de largo recorrido y robustez off-road.", imagen: "img/cat-viajar.jpg", badge: "Todo Terreno" }
+  { slug: "economica", nombre: "Urbana", descripcion: "Bajo consumo, agilidad y repuestos económicos.", imagen: "img/cat-economicas.jpg", badge: "Consumo 2L/100km" },
+  { slug: "diario", nombre: "Touring", descripcion: "Potencia superior, refrigeración líquida y diseño deportivo.", imagen: "img/cat-diario.jpg", badge: "Hasta 24.5 HP" },
+  { slug: "viajar", nombre: "On-Off", descripcion: "Suspensión de largo recorrido y robustez off-road.", imagen: "img/cat-viajar.jpg", badge: "Todo Terreno" }
 ];
 
 // --- Global variables (populated async) ---
