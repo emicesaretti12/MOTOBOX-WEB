@@ -156,7 +156,21 @@
       }
     });
 
+    // Keep the number on every filter pill in sync with the real inventory
+    function updateFilterCounts() {
+      filterPills.forEach(pill => {
+        const countEl = pill.querySelector(".pill-count");
+        if (!countEl) return;
+        const filter = pill.dataset.filter;
+        countEl.textContent = filter === "todas"
+          ? motos.length
+          : motos.filter(m => m.categoria === filter).length;
+      });
+    }
+
     function renderCatalogCards() {
+      updateFilterCounts();
+
       let list = currentFilter === "todas" ? motos : motos.filter(m => m.categoria === currentFilter);
 
       if (currentSearch.trim()) {
