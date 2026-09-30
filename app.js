@@ -211,6 +211,7 @@
         const card = document.createElement("article");
         card.className = "moto-card-modern visible";
         card.style.transitionDelay = `${idx * 40}ms`;
+        card.style.animationDelay = `${Math.min(idx * 40, 400)}ms`;
 
         const directWaMsg = `Hola Motobox! Quiero consultar por disponibilidad y entrega inmediata de la ${moto.marca} ${moto.modelo} 0km (${moto.cilindrada}).`;
 
@@ -546,6 +547,104 @@
     }
   }, { passive: true });
 
+  // ==========================================================================
+  // 4. 3D TILT — las tarjetas se inclinan hacia el mouse
+  // ==========================================================================
+  // Resorte estilo Apple (respuesta 0,5 s, rebote 0,2 → rigidez 157,9 y amortiguación 20,1):
+  // la tarjeta sigue al mouse con inercia en vez de pegarse al cursor.
+  function initCardTilt() {
+    const canHover = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (!canHover.matches || reduceMotion.matches) return;
+
+    const SELECTOR = ".moto-card-modern, .promo-poster-card";
+    const springs = new Map();
+    let raf = 0;
+    let last = null;
+
+    function springFor(el) {
+      let s = springs.get(el);
+      if (!s) {
+        s = { x: 0, y: 0, l: 0, vx: 0, vy: 0, vl: 0, tx: 0, ty: 0, tl: 0 };
+        springs.set(el, s);
+        el.classList.add("is-tilting");
+      }
+      return s;
+    }
+
+    function step(now) {
+      const dt = last === null ? 1 / 60 : Math.min(0.032, (now - last) / 1000);
+      last = now;
+      let moving = false;
+      springs.forEach((s, el) => {
+        s.vx += (157.9 * (s.tx - s.x) - 20.1 * s.vx) * dt;
+        s.vy += (157.9 * (s.ty - s.y) - 20.1 * s.vy) * dt;
+        s.vl += (157.9 * (s.tl - s.l) - 20.1 * s.vl) * dt;
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+        s.l += s.vl * dt;
+        const settled = Math.abs(s.tx - s.x) < 0.01 && Math.abs(s.ty - s.y) < 0.01 && Math.abs(s.tl - s.l) < 0.005 &&
+          Math.abs(s.vx) < 0.01 && Math.abs(s.vy) < 0.01 && Math.abs(s.vl) < 0.01;
+        if (settled && s.tl === 0) {
+          el.classList.remove("is-tilting");
+          el.style.removeProperty("--rx");
+          el.style.removeProperty("--ry");
+          el.style.removeProperty("--lift");
+          springs.delete(el);
+          return;
+        }
+        if (settled) {
+          s.x = s.tx;
+          s.y = s.ty;
+          s.l = s.tl;
+          s.vx = s.vy = s.vl = 0;
+        } else {
+          moving = true;
+        }
+        el.style.setProperty("--rx", s.x.toFixed(2) + "deg");
+        el.style.setProperty("--ry", s.y.toFixed(2) + "deg");
+        el.style.setProperty("--lift", s.l.toFixed(3));
+      });
+      if (moving) {
+        raf = requestAnimationFrame(step);
+      } else {
+        raf = 0;
+        last = null;
+      }
+    }
+
+    function kick() {
+      if (!raf) raf = requestAnimationFrame(step);
+    }
+
+    document.addEventListener("pointermove", (e) => {
+      if (e.pointerType !== "mouse") return;
+      const el = e.target.closest ? e.target.closest(SELECTOR) : null;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const amp = el.classList.contains("promo-poster-card") ? 0.35 : 1;
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      const s = springFor(el);
+      s.tx = -y * 8 * amp;
+      s.ty = x * 10 * amp;
+      s.tl = 1;
+      kick();
+    }, { passive: true });
+
+    document.addEventListener("pointerout", (e) => {
+      const el = e.target.closest ? e.target.closest(SELECTOR) : null;
+      if (!el || (e.relatedTarget && el.contains(e.relatedTarget))) return;
+      const s = springs.get(el);
+      if (!s) return;
+      s.tx = 0;
+      s.ty = 0;
+      s.tl = 0;
+      kick();
+    });
+  }
+
   // Async initialization to load CRM data from Supabase before rendering
   async function initApp() {
     if (typeof initDataFromCRM === "function") {
@@ -577,6 +676,7 @@
 
     document.querySelectorAll(".reveal-on-scroll").forEach(el => observer.observe(el));
 
+    initCardTilt();
     handleScroll();
   }
 

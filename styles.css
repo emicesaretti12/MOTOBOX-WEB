@@ -64,6 +64,9 @@
 
   /* Transitions & Physics */
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --transition-fast: 0.18s cubic-bezier(0.25, 0.1, 0.25, 1);
   --transition-smooth: 0.32s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -2831,11 +2834,11 @@ input:focus-visible {
   }
 }
 
-/* ── CARDS: entrada escalonada con rebote suave ── */
+/* ── CARDS: entrada escalonada con rebote suave ──
+   Solo el estado inicial vive en la animación (fill "backwards"): al terminar,
+   la tarjeta vuelve a su estilo base y el hover / la inclinación 3D funcionan. */
 .moto-card-modern {
-  opacity: 0;
-  transform: translateY(30px) scale(0.97);
-  animation: cardSlideIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: cardSlideIn 0.55s var(--ease-out) backwards;
 }
 
 [data-page="home"] .catalog-cards-grid .moto-card-modern:nth-child(1) { animation-delay: 0.2s; }
@@ -2843,9 +2846,9 @@ input:focus-visible {
 [data-page="home"] .catalog-cards-grid .moto-card-modern:nth-child(3) { animation-delay: 0.5s; }
 
 @keyframes cardSlideIn {
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.97);
   }
 }
 
@@ -2967,6 +2970,46 @@ input:focus-visible {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* ── PRESIÓN: respuesta inmediata al tocar botones ── */
+.btn-hero-red:active,
+.btn-hero-outline:active,
+.btn-card-whatsapp:active,
+.btn-promo-whatsapp:active,
+.btn-match-whatsapp:active,
+.btn-whatsapp-header:active,
+.filter-pill:active {
+  transform: scale(0.97);
+  transition-duration: 0.16s;
+}
+
+/* ── 3D: las tarjetas se inclinan hacia el mouse (lo mueve un resorte en app.js) ── */
+@media (hover: hover) and (pointer: fine) {
+  .moto-card-modern.is-tilting {
+    transform: perspective(900px) translateY(calc(var(--lift, 0) * -6px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transition: box-shadow 0.3s ease, border-color 0.25s ease;
+    will-change: transform;
+  }
+  .moto-card-modern.is-tilting:active {
+    transform: perspective(900px) translateY(calc(var(--lift, 0) * -6px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(0.985);
+  }
+  .promo-poster-card.is-tilting {
+    transform: perspective(1400px) translateY(calc(var(--lift, 0) * -4px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transition: box-shadow 0.3s ease;
+    will-change: transform;
+  }
+}
+
+/* ── FICHA DE MOTO: hoja con curva tipo iOS en mobile, zoom corto en desktop ── */
+.assistant-modal-card {
+  transition: transform 0.5s var(--ease-drawer);
+}
+@media (min-width: 768px) {
+  .assistant-modal-card {
+    transform: scale(0.96);
+    transition: transform 0.25s var(--ease-out);
   }
 }
 
