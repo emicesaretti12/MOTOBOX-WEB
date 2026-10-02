@@ -1,665 +1,518 @@
-/* c:\Users\User01\MOTOBOX-WEB\sorteo.css */
+/* sorteo.css */
 
-/* ==========================================================================
-   SORTEO PAGE STYLES
-   ========================================================================== */
+/* Keyframes */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes prizePulse {
+  from { opacity: 0.5; transform: translate(-50%, -50%) scale(0.8); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+}
 
 /* 1. Sorteo Hero */
 .sorteo-hero {
   background-color: #111113;
   width: 100%;
-  padding: 3rem 1.5rem;
+  padding: 2.5rem 0;
   text-align: center;
-  color: #fff;
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
 }
 
-@media (min-width: 768px) {
-  .sorteo-hero {
-    padding: 5rem 2rem;
-  }
+.sorteo-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  height: 100%;
+  background: radial-gradient(ellipse at 50% 0%, rgba(224,46,36,0.08) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
 }
 
+.sorteo-hero > * {
+  position: relative;
+  z-index: 1;
+  animation: fadeUp var(--transition-smooth, 0.32s cubic-bezier(0.16,1,0.3,1)) backwards;
+}
+
+/* 2. Hero Badge */
 .sorteo-hero-badge {
   display: inline-block;
   background-color: var(--accent-orange, #e02e24);
-  color: #fff;
+  color: #ffffff;
   text-transform: uppercase;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-xl, 20px);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  border-radius: var(--radius-pill, 100px);
+  padding: 0.2rem 0.65rem;
   margin-bottom: 1rem;
-  letter-spacing: 0.05em;
 }
 
+/* 3. Hero Title */
 .sorteo-hero-title {
-  color: #fff;
+  color: #ffffff;
   font-family: var(--font-heading, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif);
   font-weight: 800;
-  font-size: clamp(1.8rem, 5vw, 3rem);
-  line-height: 1.1;
+  font-size: clamp(1.65rem, 5vw, 2.85rem);
+  line-height: 1.08;
   letter-spacing: -0.04em;
-  margin-bottom: 1rem;
-  max-width: 800px;
+  max-width: 720px;
+  margin: 0 auto 0.75rem;
 }
 
+/* 4. Hero Subtitle */
 .sorteo-hero-subtitle {
-  color: #a1a1a6;
-  font-family: var(--font-body, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif);
-  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.92rem;
   line-height: 1.5;
-  max-width: 600px;
-  margin: 0 auto 2rem;
+  max-width: 540px;
+  margin: 0 auto 1.5rem;
 }
 
+/* 5. Hero Price */
 .sorteo-hero-price {
   display: flex;
-  align-items: baseline;
   justify-content: center;
-  gap: 0.75rem;
-  margin-bottom: 2rem;
+  align-items: baseline;
+  gap: 0.65rem;
+  margin-bottom: 1.5rem;
 }
 
+/* 6. Old Price */
 .price-old {
-  color: #6e6e73;
+  color: rgba(255, 255, 255, 0.35);
   text-decoration: line-through;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 500;
 }
 
+/* 7. Current Price */
 .price-current {
-  color: #fff;
-  font-size: 2.5rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  color: #ffffff;
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
 }
 
+/* 8. CTA Button */
 .btn-sorteo-cta {
+  background-color: var(--accent-orange, #e02e24);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.85rem 2rem;
+  border-radius: var(--radius-pill, 100px);
+  box-shadow: 0 4px 18px rgba(224, 46, 36, 0.35);
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  background-color: var(--accent-orange, #e02e24);
-  color: #fff;
-  font-weight: 700;
-  font-size: 1.1rem;
-  padding: 1rem 2.5rem;
-  border-radius: var(--radius-xl, 20px);
-  text-decoration: none;
-  box-shadow: 0 4px 14px rgba(224, 46, 36, 0.4);
-  transition: transform var(--transition-fast, 0.18s), box-shadow var(--transition-fast, 0.18s);
-  border: none;
-  cursor: pointer;
-  margin-bottom: 2.5rem;
+  gap: 0.4rem;
+  transition: transform var(--transition-fast, 0.18s cubic-bezier(0.25,0.1,0.25,1)), box-shadow var(--transition-fast, 0.18s cubic-bezier(0.25,0.1,0.25,1));
+  margin-bottom: 1.5rem;
 }
 
 .btn-sorteo-cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(224, 46, 36, 0.6);
+  box-shadow: 0 6px 24px rgba(224, 46, 36, 0.5);
+}
+
+/* 9. Hero Trust Badges */
+.sorteo-hero-trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem 1.25rem;
 }
 
 .sorteo-hero-trust span {
-  color: rgba(255,255,255,0.65);
-  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.78rem;
   font-weight: 500;
 }
-.trust-sep {
-  color: rgba(255,255,255,0.3);
+
+.sorteo-hero-trust .trust-sep {
+  color: rgba(255, 255, 255, 0.2);
 }
 
-/* 2. Sorteo Steps Section */
+/* 10. Steps Section */
 .sorteo-steps-section {
-  padding: 2rem 0;
+  padding: 1.75rem 0;
   background-color: var(--bg-primary, #f5f5f7);
 }
 
+/* 11. Steps Grid */
 .sorteo-steps-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
-@media (min-width: 768px) {
-  .sorteo-steps-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-}
-
+/* 12. Step Card */
 .sorteo-step-card {
-  background-color: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
-  border-radius: var(--radius-lg, 16px);
-  padding: 1.5rem 1.25rem;
-  box-shadow: var(--shadow-card);
+  background-color: #ffffff;
+  border: 1px solid var(--border-subtle, rgba(0,0,0,0.06));
+  border-radius: var(--radius-md, 12px);
+  box-shadow: var(--shadow-card, 0 2px 8px rgba(0,0,0,0.04));
+  padding: 1.25rem 1rem;
   text-align: center;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition: transform var(--transition-fast, 0.18s cubic-bezier(0.25,0.1,0.25,1)), box-shadow var(--transition-fast, 0.18s cubic-bezier(0.25,0.1,0.25,1));
 }
 
 .sorteo-step-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
 }
 
-.step-number {
+.sorteo-step-card .step-number {
   color: var(--accent-orange, #e02e24);
-  font-size: 1.5rem;
+  font-family: var(--font-mono, "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace);
+  font-size: 1.15rem;
   font-weight: 800;
-  line-height: 1;
-  margin-bottom: 0.65rem;
-  font-family: var(--font-mono, monospace);
+  margin-bottom: 0.5rem;
 }
 
 .sorteo-step-card h3 {
-  font-size: 0.98rem;
+  font-size: 0.92rem;
+  font-weight: 800;
   color: var(--text-primary, #1d1d1f);
-  margin-bottom: 0.4rem;
-  font-weight: 700;
   letter-spacing: -0.02em;
+  margin-bottom: 0.25rem;
 }
 
 .sorteo-step-card p {
+  font-size: 0.8rem;
   color: var(--text-secondary, #6e6e73);
-  font-size: 0.82rem;
   line-height: 1.45;
+  margin: 0;
 }
 
-/* 3. Sorteo Manual Section */
+/* 13. Manual Section */
 .sorteo-manual-section {
-  padding: 1.5rem 0;
+  padding: 1.25rem 0;
   background-color: var(--bg-secondary, #ffffff);
 }
 
+/* 14. Manual Card */
 .sorteo-manual-card {
-  background-color: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
-  border-radius: var(--radius-lg, 16px);
-  box-shadow: var(--shadow-md);
-  overflow: hidden;
-  max-width: 900px;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--border-medium, rgba(0,0,0,0.12));
+  border-radius: var(--radius-lg, 16px);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+  overflow: hidden;
+  max-width: 860px;
+  margin: 0 auto;
 }
 
-@media (min-width: 768px) {
-  .sorteo-manual-card {
-    flex-direction: row;
-    align-items: stretch;
-  }
-}
-
+/* 15. Manual Cover */
 .manual-cover {
-  aspect-ratio: 1;
-  background: linear-gradient(135deg, #111113 0%, #2a2a2d 100%);
+  background: linear-gradient(145deg, #1a1a1e 0%, #111113 50%, #0a0a0c 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
-  position: relative;
-  min-height: 220px;
+  padding: 2.5rem 2rem;
+  min-height: 240px;
 }
 
-@media (min-width: 768px) {
-  .manual-cover {
-    flex: 0 0 40%;
-    aspect-ratio: auto;
-  }
-}
-
+/* 16. Manual Cover Content */
 .manual-cover-content {
   text-align: center;
-  color: #fff;
-}
-.manual-cover-icon {
-  font-size: 3.5rem;
-  display: block;
-  margin-bottom: 1rem;
-}
-.manual-cover-content h3 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 0.3rem;
-}
-.manual-cover-content p {
-  font-size: 0.78rem;
-  color: rgba(255,255,255,0.5);
+  color: #ffffff;
 }
 
+.manual-cover-content .manual-cover-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 0.75rem;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+}
+
+.manual-cover-content h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.2rem;
+}
+
+.manual-cover-content p {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+}
+
+/* 17. Manual Details */
 .manual-details {
-  padding: 1.5rem 1.25rem;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
-@media (min-width: 768px) {
-  .manual-details {
-    flex: 1;
-    padding: 2rem;
-  }
-}
-
 .manual-details h2 {
-  font-family: var(--font-heading);
-  font-size: 1.15rem;
+  font-family: var(--font-heading, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif);
+  font-size: 1.05rem;
   font-weight: 800;
   color: var(--text-primary, #1d1d1f);
-  margin-bottom: 1rem;
   letter-spacing: -0.02em;
+  margin-bottom: 0.75rem;
 }
 
+/* 18. Manual Checklist */
 .manual-checklist {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 1rem 0;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
 }
 
+.manual-checklist li {
+  color: var(--text-primary, #1d1d1f);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.manual-checklist li strong {
+  color: var(--accent-whatsapp, #25d366);
+  margin-right: 0.25rem;
+}
+
+/* 19. Manual Format Badge */
+.manual-format-badge {
+  display: inline-block;
+  background-color: var(--bg-tertiary, #f0f0f2);
+  color: var(--text-secondary, #6e6e73);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--radius-sm, 8px);
+  margin-top: 0.75rem;
+  align-self: flex-start;
+}
+
+/* 20. Prize Section */
+.sorteo-prize-section {
+  padding: 2rem 0;
+  background-color: #111113;
+  overflow: hidden;
+  position: relative;
+}
+
+.sorteo-prize-section::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(224,46,36,0.12) 0%, transparent 70%);
+  animation: prizePulse 4s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* 21. Prize Card */
+.sorteo-prize-card {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg, 16px);
+  padding: 2rem 1.25rem;
+  max-width: 600px;
+  margin: 0.75rem auto 0;
+  position: relative;
+  text-align: center;
+}
+
+.sorteo-prize-card h2 {
+  color: #ffffff;
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 0.5rem 0 0.35rem;
+}
+
+.sorteo-prize-card .prize-value {
+  font-size: clamp(2rem, 6vw, 3.2rem);
+  font-weight: 900;
+  background: linear-gradient(90deg, #e02e24, #ff5e3a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+}
+
+.sorteo-prize-card .prize-subtitle {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.sorteo-prize-card .prize-terms {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  max-width: 480px;
+  margin: 0.75rem auto 0;
+}
+
+/* 22. Counter Section */
+.sorteo-counter-section {
+  padding: 1.25rem 0;
+}
+
+/* 23. Counter Card */
+.sorteo-counter-card {
+  max-width: 480px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  border: 1px solid var(--border-subtle, rgba(0,0,0,0.06));
+  border-radius: var(--radius-lg, 16px);
+  padding: 1.25rem;
+  text-align: center;
+  box-shadow: var(--shadow-card, 0 2px 8px rgba(0,0,0,0.04));
+}
+
+.sorteo-counter-card h3 {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary, #1d1d1f);
+  margin-bottom: 0.75rem;
+  margin-top: 0;
+}
+
+/* 24. Counter Numbers */
+.counter-numbers {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.2rem;
+  margin-bottom: 0.2rem;
+}
+
+.counter-current {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--accent-orange, #e02e24);
+  font-family: var(--font-heading, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif);
+  font-variant-numeric: tabular-nums;
+}
+
+.counter-sep {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-muted, #86868b);
+}
+
+.counter-total {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-secondary, #6e6e73);
+}
+
+/* 25. Counter Label */
+.counter-label {
+  font-size: 0.75rem;
+  color: var(--text-muted, #86868b);
+  margin-bottom: 0.75rem;
+}
+
+/* 26. Counter Bar */
+.counter-bar {
+  background-color: var(--bg-tertiary, #f0f0f2);
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.65rem;
+}
+
+/* 27. Counter Bar Fill */
+.counter-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #e02e24, #ff5e3a);
+  border-radius: 4px;
+  transition: width 2s var(--ease-spring, cubic-bezier(0.16,1,0.3,1));
+}
+
+/* 28. Counter Note */
+.counter-note {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #6e6e73);
+  margin: 0;
+}
+
+/* 29. Final CTA */
+.sorteo-final-cta {
+  padding: 2.5rem 0;
+  background-color: #111113;
+  text-align: center;
+  color: #ffffff;
+}
+
+.sorteo-final-cta h2 {
+  font-family: var(--font-heading, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif);
+  font-size: clamp(1.35rem, 3.5vw, 1.85rem);
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.03em;
+}
+
+.sorteo-final-cta p {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.9rem;
+  max-width: 460px;
+  margin: 0 auto 1.25rem;
+}
+
+/* Desktop Breakpoints */
 @media (min-width: 480px) {
   .manual-checklist {
     grid-template-columns: 1fr 1fr;
   }
 }
 
-.manual-checklist li {
-  color: var(--text-primary, #1d1d1f);
-  font-size: 0.85rem;
-  line-height: 1.4;
-}
-.manual-checklist li strong {
-  color: var(--accent-whatsapp, #25d366);
-  margin-right: 0.3rem;
-}
+@media (min-width: 768px) {
+  .sorteo-hero {
+    padding: 4rem 0;
+  }
 
-.manual-format-badge {
-  display: inline-block;
-  background-color: var(--bg-tertiary, #f0f0f2);
-  color: var(--text-secondary, #6e6e73);
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.3rem 0.65rem;
-  border-radius: var(--radius-sm, 8px);
-}
+  .sorteo-steps-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 
-/* 4. Sorteo Prize Section */
-.sorteo-prize-section {
-  padding: 2rem 0;
-  background-color: #111113;
-}
+  .sorteo-manual-card {
+    flex-direction: row;
+  }
 
-.sorteo-prize-card {
-  background-color: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: var(--radius-lg, 16px);
-  padding: 2.5rem 1.5rem;
-  max-width: 650px;
-  margin: 1rem auto 0;
-  position: relative;
-  overflow: hidden;
-}
+  .manual-cover {
+    flex: 0 0 38%;
+    aspect-ratio: auto;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+  }
 
-.sorteo-prize-card h2 {
-  color: #fff;
-  font-size: 1.35rem;
-  font-weight: 800;
-  margin: 0.75rem 0 0.5rem;
-  letter-spacing: -0.02em;
-}
-
-.prize-value {
-  font-size: clamp(2.5rem, 7vw, 4rem);
-  font-weight: 900;
-  line-height: 1;
-  margin: 0.5rem 0;
-  background: linear-gradient(135deg, #ff5e3a 0%, #e02e24 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.prize-subtitle {
-  color: rgba(255,255,255,0.6);
-  font-size: 1rem;
-  margin-bottom: 1rem;
-}
-
-.prize-terms {
-  color: rgba(255,255,255,0.4);
-  font-size: 0.78rem;
-  line-height: 1.5;
-  max-width: 500px;
-  margin: 1rem auto 0;
-}
-
-/* 5. Sorteo Counter Section */
-.sorteo-counter-section {
-  padding: 1.5rem 0;
-}
-
-.sorteo-counter-card {
-  max-width: 500px;
-  margin: 0 auto;
-  background-color: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg, 16px);
-  padding: 1.5rem;
-  text-align: center;
-  box-shadow: var(--shadow-card);
-}
-
-.sorteo-counter-card h3 {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 1rem;
-}
-
-.counter-numbers {
-  display: flex;
-  justify-content: center;
-  align-items: baseline;
-  gap: 0.3rem;
-  margin-bottom: 0.3rem;
-}
-
-.counter-current {
-  font-size: 2.5rem;
-  font-weight: 900;
-  color: var(--accent-orange, #e02e24);
-  font-family: var(--font-heading);
-}
-
-.counter-sep {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.counter-total {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-}
-
-.counter-label {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin-bottom: 1rem;
-}
-
-.counter-bar {
-  background-color: var(--bg-tertiary, #f0f0f2);
-  height: 10px;
-  border-radius: 5px;
-  overflow: hidden;
-  margin-bottom: 0.75rem;
-}
-
-.counter-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #e02e24, #ff5e3a);
-  border-radius: 5px;
-  transition: width 2s var(--ease-spring, cubic-bezier(0.16, 1, 0.3, 1));
-}
-
-.counter-note {
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-}
-
-/* 7. Sorteo Final CTA */
-.sorteo-final-cta {
-  padding: 3rem 0;
-  background-color: #111113;
-  text-align: center;
-  color: #fff;
-}
-
-.sorteo-final-cta h2 {
-  font-family: var(--font-heading);
-  font-size: clamp(1.5rem, 4vw, 2.2rem);
-  font-weight: 800;
-  margin-bottom: 0.75rem;
-  letter-spacing: -0.03em;
-}
-
-.sorteo-final-cta p {
-  color: rgba(255,255,255,0.6);
-  font-size: 1rem;
-  max-width: 500px;
-  margin: 0 auto 1.5rem;
-}
-
-
-/* ==========================================================================
-   SPIN-THE-WHEEL POPUP (Ruleta de Beneficios)
-   ========================================================================== */
-
-.wheel-modal-backdrop {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  animation: wheelFadeIn var(--transition-smooth, 0.32s) forwards;
-}
-
-.wheel-modal-card {
-  background-color: var(--bg-card, #ffffff);
-  border-radius: var(--radius-xl, 20px);
-  max-width: 420px;
-  width: 92%;
-  padding: 2rem 1.5rem;
-  text-align: center;
-  box-shadow: var(--shadow-lg, 0 20px 50px rgba(0,0,0,0.1));
-  position: relative;
-  animation: wheelScaleUp var(--transition-smooth, 0.32s) var(--ease-spring, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
-  overflow: hidden;
-}
-
-.wheel-close-btn {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--text-muted, #86868b);
-  cursor: pointer;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background-color: var(--bg-tertiary, #f0f0f2);
-  transition: background-color 0.2s, color 0.2s;
-  z-index: 10;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.wheel-close-btn.visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.wheel-close-btn:hover {
-  background-color: #e5e5ea;
-  color: var(--text-primary, #1d1d1f);
-}
-
-.wheel-modal-title {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--text-primary, #1d1d1f);
-  margin-bottom: 0.5rem;
-  font-family: var(--font-heading);
-}
-
-.wheel-modal-subtitle {
-  font-size: 0.95rem;
-  color: var(--text-secondary, #6e6e73);
-  margin-bottom: 1.5rem;
-}
-
-.wheel-container {
-  width: 240px;
-  height: 240px;
-  margin: 0 auto 1.5rem;
-  position: relative;
-}
-
-@media (min-width: 480px) {
-  .wheel-container {
-    width: 280px;
-    height: 280px;
+  .manual-details {
+    flex: 1;
+    padding: 1.75rem;
   }
 }
 
-.wheel-pointer {
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 5;
-  width: 0;
-  height: 0;
-  border-left: 15px solid transparent;
-  border-right: 15px solid transparent;
-  border-top: 25px solid var(--accent-orange, #e02e24);
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-}
-
-.wheel-canvas {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  box-shadow: 0 0 0 6px var(--bg-tertiary, #f0f0f2), 0 4px 12px rgba(0,0,0,0.1);
-  background-color: #fff;
-  transition: transform 4s cubic-bezier(0.1, 0, 0, 1);
-}
-
-.wheel-spin-btn {
-  background-color: var(--accent-orange, #e02e24);
-  color: #fff;
-  border: none;
-  padding: 1rem 2rem;
-  font-size: 1.1rem;
-  font-weight: 700;
-  border-radius: var(--radius-xl, 20px);
-  cursor: pointer;
-  width: 100%;
-  box-shadow: 0 4px 12px rgba(224, 46, 36, 0.3);
-  transition: background-color 0.2s, transform 0.2s;
-  animation: wheelPulse 2s infinite;
-}
-
-.wheel-spin-btn:hover:not(:disabled) {
-  background-color: #c9241d;
-  transform: translateY(-2px);
-  animation: none;
-}
-
-.wheel-spin-btn:disabled {
-  background-color: var(--text-muted, #86868b);
-  cursor: not-allowed;
-  animation: none;
-  box-shadow: none;
-  transform: none;
-}
-
-.wheel-result-overlay {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(255, 255, 255, 0.95);
-  border-radius: var(--radius-xl, 20px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  z-index: 20;
+/* ── Reveal on Scroll ── */
+[data-reveal] {
   opacity: 0;
-  pointer-events: none;
-  transform: scale(0.9);
-  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(20px);
+  transition: opacity 0.65s var(--ease-spring, cubic-bezier(0.16, 1, 0.3, 1)),
+              transform 0.65s var(--ease-spring, cubic-bezier(0.16, 1, 0.3, 1));
 }
-
-.wheel-result-overlay.active {
-  opacity: 1;
-  pointer-events: auto;
-  transform: scale(1);
-}
-
-.result-emoji {
-  font-size: 3.5rem;
-  margin-bottom: 1rem;
-  line-height: 1;
-}
-
-.result-title {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--text-primary, #1d1d1f);
-  margin-bottom: 0.5rem;
-}
-
-.result-description {
-  font-size: 1rem;
-  color: var(--text-secondary, #6e6e73);
-  margin-bottom: 1.5rem;
-  line-height: 1.4;
-}
-
-.result-cta {
-  background-color: var(--accent-whatsapp, #25d366);
-  color: #fff;
-  border: none;
-  padding: 0.875rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 700;
-  border-radius: var(--radius-xl, 20px);
-  cursor: pointer;
-  width: 100%;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
-  transition: transform 0.2s;
-}
-
-.result-cta:hover {
-  transform: translateY(-2px);
-  background-color: #20bc5a;
-}
-
-/* Animations */
-@keyframes wheelFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes wheelScaleUp {
-  from { opacity: 0; transform: scale(0.8); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes wheelPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
+[data-reveal].revealed { opacity: 1; transform: translateY(0); }
+[data-reveal="delay-1"] { transition-delay: 0.1s; }
+[data-reveal="delay-2"] { transition-delay: 0.2s; }
+[data-reveal="delay-3"] { transition-delay: 0.3s; }
