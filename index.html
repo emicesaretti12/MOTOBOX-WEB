@@ -12,6 +12,7 @@
   
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23DC2626'/%3E%3Ctext y='65' x='50' text-anchor='middle' font-size='50' font-weight='900' fill='white' font-family='sans-serif'%3EMB%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="sorteo.css">
 </head>
 <body data-page="home">
 
@@ -26,6 +27,7 @@
         <nav class="nav-desktop">
           <a href="index.html" class="nav-desktop-link active">Inicio</a>
           <a href="catalogo.html" class="nav-desktop-link">Catálogo</a>
+          <a href="sorteo.html" class="nav-desktop-link nav-highlight"><span class="nav-badge-dot"></span>Sorteo</a>
           <a href="nosotros.html" class="nav-desktop-link">Nosotros</a>
         </nav>
 
@@ -136,6 +138,11 @@
       <span>Catálogo</span>
     </a>
 
+    <a href="sorteo.html" class="btn-dock-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+      <span>Sorteo</span>
+    </a>
+
     <a href="nosotros.html" class="btn-dock-item">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       <span>Nosotros</span>
@@ -157,5 +164,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="data.js"></script>
   <script src="app.js"></script>
+  <script src="sorteo.js"></script>
 </body>
 </html>
