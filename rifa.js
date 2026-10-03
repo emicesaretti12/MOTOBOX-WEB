@@ -805,6 +805,14 @@
     else if (t.classList.contains("rf-cell")) toggleNumber(t);
   });
 
+  // Los links "Sorteo" del menú abren el popup en vez de navegar.
+  document.addEventListener("click", (e) => {
+    const link = e.target.closest && e.target.closest("[data-rifa-open]");
+    if (!link) return;
+    e.preventDefault();
+    open();
+  });
+
   pill.addEventListener("click", (e) => {
     if (e.target.closest("[data-rf-hide-pill]")) {
       writeKey("sessionStorage", KEY + "_pill", "1");
@@ -856,7 +864,10 @@
     bindTilt($("[data-rf-flip-btn]"), $("[data-rf-ticket-tilt]"));
     loadSales();
 
-    if (readKey("sessionStorage", KEY + "_visto") !== "1") {
+    if (window.location.hash === "#rifa") {
+      writeKey("sessionStorage", KEY + "_visto", "1");
+      later(open, 300);
+    } else if (readKey("sessionStorage", KEY + "_visto") !== "1") {
       writeKey("sessionStorage", KEY + "_visto", "1");
       later(open, 900);
     } else if (readKey("sessionStorage", KEY + "_pill") !== "1") {
