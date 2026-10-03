@@ -146,33 +146,31 @@ const STATIC_PROMO = {
   mensajeWhatsApp: "Hola Motobox! Quiero aprovechar la promoción de Casco y Patente Bonificados que vi en la web."
 };
 
-// --- Rifa (popup que aparece al entrar a la web) ---
-// Completá los datos entre [corchetes] antes de publicar. Con activo: false el popup no aparece.
-const RIFA_CONFIG = {
+// --- Sorteo promocional (popup que aparece al entrar a la web) ---
+// Sorteo gratuito, sin obligación de compra: se participa gratis o con la compra del manual,
+// siempre con las mismas chances. Las bases completas están en sorteo.html.
+// Con activo: false el popup no aparece.
+const SORTEO_CONFIG = {
   activo: true,
-  id: "01",                                   // Se muestra como "Rifa N.º 01"
-  titulo: "Ganate esta moto 0km",
-  premio: "Moto 0km",
-  marcaModelo: "[Marca y modelo]",
-  imagen: "img/motos/honda-tornado.jpg",
-  precioNumero: 10000,
-  totalNumeros: 1000,                         // Números del 000 al 999
-  fechaSorteo: "[fecha del sorteo]",
-  modalidad: "Quiniela de Córdoba",
-  organismo: "[organismo]",
-  resolucion: "[N.º]",
-  basesUrl: "#",                              // Link a las bases y condiciones
-  // Premios de la ruleta. peso = probabilidad relativa (a mayor peso, más sale).
-  // tipo: "descuento" (valor = %), "regalo" (valor = números gratis) o "2x1".
+  id: "01",                                   // Se muestra como "Sorteo N.º 01"
+  titulo: "Ganate una moto 0km",
+  premios: [
+    { nombre: "Honda Wave full", imagen: "" },  // Sin foto todavía: subila a img/motos/ y poné la ruta acá
+    { nombre: "Keller full", imagen: "img/motos/keller-110.jpg" }
+  ],
+  manual: { nombre: "Manual de Cuidado y Mantenimiento", precio: 10000 },
+  fechaSorteo: "",                            // Vacío = "a confirmar"
+  basesUrl: "sorteo.html",
+  // Chances extra de la ruleta. peso = probabilidad relativa (a mayor peso, más sale).
   ruleta: [
-    { texto: "10%", sub: "OFF", tipo: "descuento", valor: 10, peso: 18 },
-    { texto: "+1", sub: "CHANCE", tipo: "regalo", valor: 1, peso: 16 },
-    { texto: "5%", sub: "OFF", tipo: "descuento", valor: 5, peso: 20 },
-    { texto: "2x1", sub: "NÚMEROS", tipo: "2x1", valor: 0, peso: 6 },
-    { texto: "15%", sub: "OFF", tipo: "descuento", valor: 15, peso: 12 },
-    { texto: "+2", sub: "CHANCES", tipo: "regalo", valor: 2, peso: 8 },
-    { texto: "20%", sub: "OFF", tipo: "descuento", valor: 20, peso: 4 },
-    { texto: "+1", sub: "CHANCE", tipo: "regalo", valor: 1, peso: 16 }
+    { valor: 1, peso: 26 },
+    { valor: 2, peso: 16 },
+    { valor: 1, peso: 26 },
+    { valor: 3, peso: 8 },
+    { valor: 1, peso: 26 },
+    { valor: 2, peso: 16 },
+    { valor: 5, peso: 3 },
+    { valor: 2, peso: 16 }
   ]
 };
 

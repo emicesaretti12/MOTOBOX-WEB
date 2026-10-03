@@ -1,46 +1,29 @@
 /**
- * MOTOBOX — Rifa
- * Popup que aparece al entrar a la web: presentación del premio, ruleta de beneficios,
- * elección de números y reserva por WhatsApp. Se configura con RIFA_CONFIG (data.js).
- *
- * Si existe la tabla "rifa_numeros" en Supabase (ver supabase/rifa_numeros.sql), los números
- * reservados y vendidos se leen de ahí y se actualizan en vivo. Si no existe, todos los números
- * figuran libres y no se muestran cifras de venta.
+ * MOTOBOX — Sorteo promocional
+ * Popup que aparece al entrar a la web: premios, ruleta de chances extra y participación
+ * por WhatsApp (gratis o con la compra del manual, siempre con las mismas chances).
+ * Se configura con SORTEO_CONFIG (data.js). Las bases completas están en sorteo.html.
  */
 (function () {
   "use strict";
 
-  if (typeof RIFA_CONFIG === "undefined" || !RIFA_CONFIG || !RIFA_CONFIG.activo) return;
+  if (typeof SORTEO_CONFIG === "undefined" || !SORTEO_CONFIG || !SORTEO_CONFIG.activo) return;
 
-  const C = RIFA_CONFIG;
-  const SEGS = Array.isArray(C.ruleta) ? C.ruleta.filter((s) => s && s.texto) : [];
-  if (SEGS.length < 2) return;
+  const C = SORTEO_CONFIG;
+  const SEGS = Array.isArray(C.ruleta) ? C.ruleta.filter((s) => s && Number(s.valor) > 0) : [];
+  const PRIZES = Array.isArray(C.premios) ? C.premios.filter((p) => p && p.nombre) : [];
+  if (SEGS.length < 2 || !PRIZES.length) return;
 
   const SEG = 360 / SEGS.length;
-  const TOTAL = Math.max(1, Math.floor(Number(C.totalNumeros) || 1000));
-  const DIGITS = Math.max(2, String(TOTAL - 1).length);
-  const PRICE = Math.max(0, Number(C.precioNumero) || 0);
-  const RANGE_SIZE = 100;
-  const RANGE_COUNT = Math.ceil(TOTAL / RANGE_SIZE);
+  const MANUAL = C.manual || {};
   const SPIN_MS = 4800;
-  const STEPS = ["intro", "wheel", "numbers", "ticket"];
+  const STEPS = ["intro", "wheel", "ticket"];
   const WA_NUMBER = typeof WHATSAPP_NUMBER !== "undefined" ? WHATSAPP_NUMBER : "5493516312930";
-  const KEY = "motobox_rifa_" + C.id;
+  const KEY = "motobox_sorteo_" + C.id;
   const desktopMq = window.matchMedia("(min-width: 900px)");
   const reduceMq = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-  const state = {
-    open: false,
-    step: "intro",
-    phase: "idle", // idle | windup | spin | won
-    rot: 0,
-    prize: null,
-    mine: [],
-    range: 0,
-    sold: new Set(),
-    hasSales: false,
-    flipped: false
-  };
+  const state = { open: false, step: "intro", phase: "idle", rot: 0, prize: null, flipped: false };
 
   // --- Helpers ---
   function readKey(kind, key) {
@@ -49,34 +32,15 @@
   function writeKey(kind, key, value) {
     try { if (window[kind]) window[kind].setItem(key, value); } catch (e) { /* almacenamiento bloqueado */ }
   }
-  const pad = (n) => String(n).padStart(DIGITS, "0");
   const fmt = (x) => String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   const money = (x) => "$" + fmt(x);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const numbersLabel = (n) => (n === 1 ? "1 número" : n + " números");
+  const chancesLabel = (n) => (n === 1 ? "1 chance" : n + " chances");
+  const bonus = () => (state.prize !== null ? Number(SEGS[state.prize].valor) : 0);
+  const fecha = C.fechaSorteo ? String(C.fechaSorteo) : "a confirmar";
+  const prizeNames = PRIZES.map((p) => p.nombre);
+  const prizeList = prizeNames.length > 1 ? prizeNames.slice(0, -1).join(", ") + " y " + prizeNames[prizeNames.length - 1] : prizeNames[0];
 
-  function prizeTitle(s) {
-    if (s.tipo === "descuento") return s.valor + "% OFF";
-    if (s.tipo === "regalo") return s.valor === 1 ? "+1 número gratis" : "+" + s.valor + " números gratis";
-    if (s.tipo === "2x1") return "2x1 en números";
-    return String(s.texto);
-  }
-  function prizeDesc(s) {
-    if (s.tipo === "descuento") return "Se descuenta del total de tus números.";
-    if (s.tipo === "regalo") return s.valor === 1 ? "Te regalamos 1 número extra al azar." : "Te regalamos " + s.valor + " números extra al azar.";
-    if (s.tipo === "2x1") return "Pagás la mitad de los números que elijas.";
-    return "";
-  }
-  function prizesNote() {
-    const parts = [];
-    const maxOff = Math.max(0, ...SEGS.filter((s) => s.tipo === "descuento").map((s) => Number(s.valor) || 0));
-    if (maxOff) parts.push("hasta " + maxOff + "% OFF");
-    if (SEGS.some((s) => s.tipo === "2x1")) parts.push("2x1");
-    if (SEGS.some((s) => s.tipo === "regalo")) parts.push("números de regalo");
-    if (!parts.length) return "";
-    const last = parts.pop();
-    return "Premios: " + (parts.length ? parts.join(", ") + " o " + last : last) + ".";
-  }
   function pickPrize() {
     const weights = SEGS.map((s) => Math.max(0, Number(s.peso) || 0));
     const sum = weights.reduce((a, b) => a + b, 0);
@@ -100,36 +64,35 @@
   }
 
   // --- Markup ---
-  const title = esc(C.titulo || "Ganate esta moto 0km");
-  const sorteoTxt = [C.modalidad ? "con la " + C.modalidad : "", C.fechaSorteo ? "el " + C.fechaSorteo : ""].filter(Boolean).join(" ");
-  const subTxt = [C.marcaModelo, sorteoTxt ? "Se sortea " + sorteoTxt + "." : ""].filter(Boolean).map(esc).join(" · ");
-  const legalParts = ['<a href="' + esc(C.basesUrl || "#") + '" target="_blank" rel="noopener">Bases y condiciones</a>'];
-  if (C.organismo) legalParts.push("Rifa autorizada por " + esc(C.organismo));
-  if (C.resolucion) legalParts.push("Resolución " + esc(C.resolucion));
-  const legal = legalParts.join(" · ");
-  const ticketMeta = esc([C.premio, C.modalidad, C.fechaSorteo].filter(Boolean).join(" · "));
-  const backLines = [
-    C.organismo ? "Rifa autorizada por " + C.organismo : "",
-    C.resolucion ? "Resolución " + C.resolucion : "",
-    sorteoTxt ? "Sorteo " + sorteoTxt : "",
-    "Precio por número: " + money(PRICE)
-  ].filter(Boolean).map((l) => "<p>" + esc(l) + "</p>").join("");
+  const title = esc(C.titulo || "Ganate una moto 0km");
+  const manualTxt = MANUAL.nombre ? esc(MANUAL.nombre) + (MANUAL.precio ? " (" + money(MANUAL.precio) + ")" : "") : "";
+  const legal = '<strong>Sin obligación de compra.</strong> <a href="' + esc(C.basesUrl || "sorteo.html") + '">Bases y condiciones</a>';
 
   const ICON_BACK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
   const ICON_CLOSE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  const ICON_MOTO = '<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5l4-7h4l3 7"/><path d="M13.5 9.5l1.5-3h2.5"/><path d="M9 9.5H6.5"/></svg>';
+
+  const prizeCards = PRIZES.slice(0, 2).map((p, i) =>
+    '<div class="rf-prize-card rf-prize-card--' + (i + 1) + '">' +
+      (p.imagen
+        ? '<img src="' + esc(p.imagen) + '" alt="' + esc(p.nombre) + ' 0km">'
+        : '<div class="rf-prize-ph">' + ICON_MOTO + "</div>") +
+      '<span class="rf-prize-name">' + esc(p.nombre) + "</span>" +
+      (i === PRIZES.length - 1 || i === 1 ? '<div class="rf-glare"></div><div class="rf-sheen"></div>' : "") +
+    "</div>"
+  ).join("");
 
   const segColors = SEGS.map((_, i) => (SEGS.length % 2 === 1 && i === SEGS.length - 1 ? "#3a3a3c" : i % 2 ? "#1d1d1f" : "#e02e24"));
   const discBg = "conic-gradient(" + segColors.map((c, i) => c + " " + (i * SEG).toFixed(3) + "deg " + ((i + 1) * SEG).toFixed(3) + "deg").join(", ") + ")";
   const labelsHtml = SEGS.map((s, i) =>
-    '<div class="rf-label' + (String(s.texto).length > 3 ? " is-word" : "") + '" style="--a:' + (i * SEG + SEG / 2).toFixed(3) + 'deg"><b>' + esc(s.texto) + "</b><small>" + esc(s.sub || "") + "</small></div>"
+    '<div class="rf-label" style="--a:' + (i * SEG + SEG / 2).toFixed(3) + 'deg"><b>+' + Number(s.valor) + "</b><small>" + (Number(s.valor) === 1 ? "CHANCE" : "CHANCES") + "</small></div>"
   ).join("");
   const pegsHtml = SEGS.map((_, i) => '<i class="rf-peg" style="--a:' + (i * SEG).toFixed(3) + 'deg"></i>').join("");
   let bulbsHtml = "";
   for (let i = 0; i < 16; i++) {
     bulbsHtml += '<i class="rf-bulb" style="--a:' + i * 22.5 + "deg;--d:" + (i % 2 ? "-0.8s" : "0s") + ";--dc:-" + i * 40 + 'ms"></i>';
   }
-  let digitStrip = "";
-  for (let i = 0; i < 10; i++) digitStrip += "<span>" + i + "</span>";
+  const maxBonus = Math.max(...SEGS.map((s) => Number(s.valor)));
 
   const root = document.createElement("div");
   root.className = "rf";
@@ -141,7 +104,7 @@
       <div class="rf-grabber" aria-hidden="true"></div>
       <div class="rf-top">
         <button type="button" class="rf-icon-btn" data-rf-back aria-label="Volver">${ICON_BACK}</button>
-        <div class="rf-progress" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <div class="rf-progress" aria-hidden="true"><span></span><span></span><span></span></div>
         <button type="button" class="rf-icon-btn" data-rf-close aria-label="Cerrar">${ICON_CLOSE}</button>
       </div>
 
@@ -149,38 +112,27 @@
         <div class="rf-stage rf-st">
           <div class="rf-stage-shadow"></div>
           <div class="rf-float" data-rf-tilt-hit>
-            <div class="rf-card3d" data-rf-tilt>
-              <div class="rf-card3d-img">
-                <img src="${esc(C.imagen)}" alt="${esc(C.premio || "Premio")} que se sortea">
-                <div class="rf-glare"></div>
-                <div class="rf-sheen"></div>
-              </div>
-              <span class="rf-chip">Premio 0KM</span>
-              <span class="rf-price-tag">${money(PRICE)} el número</span>
-            </div>
+            <div class="rf-card3d" data-rf-tilt>${prizeCards}</div>
           </div>
         </div>
         <div class="rf-prize-text rf-st rf-d1">
+          <p class="rf-kicker">Sorteo N.º ${esc(C.id)} · ${PRIZES.length === 1 ? "1 premio" : PRIZES.length + " premios"}</p>
           <h2 class="rf-title" id="rf-title">${title}</h2>
-          <p class="rf-sub">${subTxt}</p>
+          <p class="rf-sub">Sorteamos ${esc(prizeList)} 0km. Participás gratis${manualTxt ? " o con la compra del " + manualTxt : ""}, con las mismas chances.</p>
         </div>
         <div class="rf-stats rf-st rf-d2">
-          <div class="rf-stat"><strong>${money(PRICE)}</strong><span>por número</span></div>
-          <div class="rf-stat"><strong>${fmt(TOTAL)}</strong><span>números</span></div>
-          <div class="rf-stat" data-rf-sales><strong data-rf-sold>0</strong><span>vendidos</span></div>
-        </div>
-        <div class="rf-meter-block rf-st rf-d3" data-rf-sales>
-          <div class="rf-meter"><i data-rf-meter></i></div>
-          <div class="rf-meter-row"><span data-rf-left></span><span data-rf-pct></span></div>
+          <div class="rf-stat"><strong>${PRIZES.length}</strong><span>${PRIZES.length === 1 ? "moto 0km" : "motos 0km"}</span></div>
+          <div class="rf-stat"><strong>Gratis</strong><span>sin obligación de compra</span></div>
+          <div class="rf-stat"><strong>${C.fechaSorteo ? esc(C.fechaSorteo) : "A confirmar"}</strong><span>fecha del sorteo</span></div>
         </div>
         <p class="rf-legal rf-legal--desk">${legal}</p>
       </aside>
 
       <div class="rf-steps">
         <section class="rf-step" data-step="intro">
-          <div class="rf-cta-block rf-st rf-d4">
+          <div class="rf-cta-block rf-st rf-d3">
             <button type="button" class="rf-btn rf-btn-red rf-btn-shine" data-rf-go="wheel"><span>Girar la ruleta y participar</span></button>
-            <p class="rf-caption">Antes de elegir tus números, girá y ganá un descuento o chances extra.</p>
+            <p class="rf-caption">Girá gratis y sumá hasta ${maxBonus} chances extra para el sorteo.</p>
             <p class="rf-legal">${legal}</p>
           </div>
         </section>
@@ -188,7 +140,7 @@
         <section class="rf-step" data-step="wheel">
           <div class="rf-head">
             <h3 class="rf-h">Girá la ruleta</h3>
-            <p class="rf-p">Un giro por persona. Lo que salga se aplica a tus números.</p>
+            <p class="rf-p">Un giro por persona. Las chances que ganes se suman a tu participación.</p>
           </div>
           <div class="rf-wheel-area">
             <div class="rf-glow" data-rf-glow></div>
@@ -208,55 +160,23 @@
           </div>
           <div class="rf-wheel-actions" data-rf-actions>
             <button type="button" class="rf-btn rf-btn-red rf-btn-shine" data-rf-spin><span>Girar la ruleta</span></button>
-            <p class="rf-note">${esc(prizesNote())}</p>
+            <p class="rf-note">Girar es gratis. Podés ganar de +1 a +${maxBonus} chances.</p>
           </div>
           <div class="rf-result" data-rf-result aria-live="polite" hidden>
             <div class="rf-result-row">
               <div class="rf-badge" data-rf-badge></div>
               <div>
                 <p class="rf-result-title" data-rf-result-title></p>
-                <p class="rf-result-desc" data-rf-result-desc></p>
+                <p class="rf-result-desc">Se suman a tu participación en el sorteo.</p>
               </div>
             </div>
-            <button type="button" class="rf-btn rf-btn-white" data-rf-go="numbers">Elegir mis números</button>
-          </div>
-        </section>
-
-        <section class="rf-step" data-step="numbers">
-          <div class="rf-head">
-            <h3 class="rf-h">Elegí tus números</h3>
-            <p class="rf-p" data-rf-hint></p>
-          </div>
-          <div class="rf-ranges" data-rf-ranges></div>
-          <div class="rf-legend">
-            <span><i class="rf-sw-free"></i>Libre</span>
-            <span><i class="rf-sw-mine"></i>Tuyo</span>
-            <span><i class="rf-sw-sold"></i>Vendido</span>
-            <button type="button" class="rf-lucky" data-rf-lucky>+1 al azar</button>
-          </div>
-          <div class="rf-grid" data-rf-grid></div>
-          <div class="rf-sum">
-            <div class="rf-sum-row">
-              <div>
-                <p class="rf-sum-label">Tus chances</p>
-                <div class="rf-odo is-empty" data-rf-odo aria-hidden="true">
-                  <div class="rf-odo-col"><div class="rf-odo-strip">${digitStrip}</div></div>
-                  <div class="rf-odo-col"><div class="rf-odo-strip">${digitStrip}</div></div>
-                </div>
-              </div>
-              <div class="rf-sum-right" aria-live="polite">
-                <p class="rf-count" data-rf-count></p>
-                <p class="rf-strike" data-rf-sub hidden></p>
-                <p class="rf-total" data-rf-total></p>
-              </div>
-            </div>
-            <button type="button" class="rf-btn rf-btn-red" data-rf-go="ticket" data-rf-continue disabled>Elegí al menos 1 número</button>
+            <button type="button" class="rf-btn rf-btn-white" data-rf-go="ticket">Ver mi participación</button>
           </div>
         </section>
 
         <section class="rf-step" data-step="ticket">
           <div class="rf-head">
-            <h3 class="rf-h">Tu reserva</h3>
+            <h3 class="rf-h">Tu participación</h3>
             <p class="rf-p">Tocá el ticket para ver el dorso.</p>
           </div>
           <div class="rf-ticket-stage">
@@ -264,20 +184,26 @@
               <div class="rf-ticket-tilt" data-rf-ticket-tilt>
                 <div class="rf-ticket-flip" data-rf-flip>
                   <div class="rf-tk-face rf-tk-front">
-                    <div class="rf-tk-top"><span class="rf-tk-brand"><em>Moto</em>Box</span><span class="rf-tk-id">RIFA N.º ${esc(C.id)}</span></div>
-                    <p class="rf-tk-meta">${ticketMeta}</p>
-                    <div class="rf-tk-chips" data-rf-chips></div>
+                    <div class="rf-tk-top"><span class="rf-tk-brand"><em>Moto</em>Box</span><span class="rf-tk-id">SORTEO N.º ${esc(C.id)}</span></div>
+                    <p class="rf-tk-meta">${esc(prizeNames.join(" · "))}</p>
+                    <p class="rf-tk-chances"><strong data-rf-tk-chances></strong><span data-rf-tk-chances-label></span></p>
                     <div class="rf-tk-perf"><i></i><i></i></div>
                     <div class="rf-tk-bottom">
-                      <div><small>Beneficio ruleta</small><strong data-rf-tk-prize></strong></div>
-                      <div class="rf-tk-right"><small>Total</small><strong class="rf-tk-total" data-rf-tk-total></strong></div>
+                      <div><small>Ruleta</small><strong data-rf-tk-bonus></strong></div>
+                      <div class="rf-tk-right"><small>Fecha del sorteo</small><strong>${esc(fecha.charAt(0).toUpperCase() + fecha.slice(1))}</strong></div>
                     </div>
                     <div class="rf-glare"></div>
                     <div class="rf-sheen"></div>
                   </div>
                   <div class="rf-tk-face rf-tk-back">
-                    <div class="rf-tk-back-list"><p class="rf-tk-small">BASES DE LA RIFA</p>${backLines}</div>
-                    <div class="rf-tk-back-foot"><span data-rf-tk-nums></span><span>Rifa N.º ${esc(C.id)}</span></div>
+                    <div class="rf-tk-back-list">
+                      <p class="rf-tk-small">BASES (RESUMEN)</p>
+                      <p>Participación gratuita, sin obligación de compra.</p>
+                      <p>Una participación por persona. Comprando o gratis, las mismas chances.</p>
+                      <p>Premios: ${esc(prizeList)} 0km.</p>
+                      <p>Fecha del sorteo: ${esc(fecha)}.</p>
+                    </div>
+                    <div class="rf-tk-back-foot"><span>Bases completas en la web</span><span>Sorteo N.º ${esc(C.id)}</span></div>
                   </div>
                 </div>
                 <button type="button" class="rf-ticket-hit" data-rf-flip-btn aria-label="Dar vuelta el ticket"></button>
@@ -285,21 +211,18 @@
             </div>
           </div>
           <div class="rf-summary">
-            <div><span data-rf-s-count></span><span data-rf-s-sub></span></div>
-            <div class="rf-sum-benefit"><span data-rf-s-prize></span><span data-rf-s-benefit></span></div>
-            <div class="rf-sum-total"><span data-rf-s-chances></span><span data-rf-s-total></span></div>
+            <div><span>Participación</span><span>1 chance</span></div>
+            <div class="rf-sum-benefit"><span>Ruleta</span><span data-rf-s-bonus></span></div>
+            <div class="rf-sum-total"><span>Total</span><span data-rf-s-total></span></div>
           </div>
           <div class="rf-next">
-            <p class="rf-next-title">Cómo sigue</p>
-            <ol>
-              <li><b>1</b>Reservás tus números por WhatsApp.</li>
-              <li><b>2</b>Pagás por transferencia.</li>
-              <li><b>3</b>Quedan a tu nombre y participás del sorteo.</li>
-            </ol>
+            <p class="rf-next-title">Elegí cómo participar</p>
+            <p class="rf-next-note">Las dos opciones suman exactamente las mismas chances.</p>
           </div>
           <div class="rf-ticket-actions">
-            <a class="rf-btn rf-btn-wa" data-rf-wa href="#" target="_blank" rel="noopener">Reservar por WhatsApp</a>
-            <button type="button" class="rf-btn rf-btn-ghost" data-rf-close>Volver al sitio</button>
+            ${MANUAL.nombre ? '<a class="rf-btn rf-btn-red" data-rf-wa-buy href="#" target="_blank" rel="noopener">Comprar el manual' + (MANUAL.precio ? " · " + money(MANUAL.precio) : "") + "</a>" : ""}
+            <a class="rf-btn rf-btn-outline" data-rf-wa-free href="#" target="_blank" rel="noopener">Participar gratis</a>
+            <p class="rf-legal">${legal}</p>
           </div>
         </section>
       </div>
@@ -308,16 +231,17 @@
   const pill = document.createElement("div");
   pill.className = "rf-pill";
   pill.hidden = true;
+  const pillImg = (PRIZES.find((p) => p.imagen) || {}).imagen;
   pill.innerHTML = `
     <button type="button" class="rf-pill-main" data-rf-open aria-haspopup="dialog">
-      <span class="rf-pill-thumb"><img src="${esc(C.imagen)}" alt=""></span>
+      <span class="rf-pill-thumb">${pillImg ? '<img src="' + esc(pillImg) + '" alt="">' : ""}</span>
       <span class="rf-pill-text">
-        <span class="rf-pill-kicker"><i class="rf-live"></i>Rifa N.º ${esc(C.id)}</span>
-        <span class="rf-pill-title">${esc(C.premio || "Premio")} · ${money(PRICE)}</span>
+        <span class="rf-pill-kicker"><i class="rf-live"></i>Sorteo N.º ${esc(C.id)}</span>
+        <span class="rf-pill-title">${PRIZES.length === 1 ? "1 moto 0km" : PRIZES.length + " motos 0km"} · participá gratis</span>
       </span>
       <span class="rf-pill-cta">Participar</span>
     </button>
-    <button type="button" class="rf-pill-x" data-rf-hide-pill aria-label="Ocultar la rifa">${ICON_CLOSE}</button>`;
+    <button type="button" class="rf-pill-x" data-rf-hide-pill aria-label="Ocultar el sorteo">${ICON_CLOSE}</button>`;
 
   const $ = (sel) => root.querySelector(sel);
   const dialog = $(".rf-dialog");
@@ -333,11 +257,6 @@
   const spinBtn = $("[data-rf-spin]");
   const actions = $("[data-rf-actions]");
   const result = $("[data-rf-result]");
-  const grid = $("[data-rf-grid]");
-  const ranges = $("[data-rf-ranges]");
-  const odo = $("[data-rf-odo]");
-  const odoStrips = Array.from(odo.querySelectorAll(".rf-odo-strip"));
-  const continueBtn = $("[data-rf-continue]");
   const flip = $("[data-rf-flip]");
 
   const timers = [];
@@ -349,6 +268,7 @@
   function go(step, dir) {
     if (STEPS.indexOf(step) < 0) return;
     if (step === "intro" && desktopMq.matches) step = "wheel";
+    if (step === "ticket" && state.prize === null) step = "wheel";
     state.step = step;
     root.dataset.step = step;
     const idx = STEPS.indexOf(step);
@@ -364,9 +284,7 @@
     progressEls.forEach((el, i) => el.classList.toggle("is-done", i <= idx));
     backBtn.classList.toggle("is-hidden", idx <= STEPS.indexOf(firstStep()));
     resetTilt();
-    if (step === "intro") playSales();
     if (step === "wheel") renderWheel(false);
-    if (step === "numbers") { renderRanges(); renderGrid(true); renderSummary(); }
     if (step === "ticket") renderTicket();
     dialog.scrollTop = 0;
     stepsBox.scrollTop = 0;
@@ -386,8 +304,7 @@
     root.classList.remove("is-closing");
     root.hidden = false;
     document.documentElement.classList.add("rf-lock");
-    go(state.prize === null ? firstStep() : state.mine.length ? "ticket" : "numbers");
-    if (desktopMq.matches) playSales();
+    go(state.prize === null ? firstStep() : "ticket");
     requestAnimationFrame(() => {
       try { dialog.focus({ preventScroll: true }); } catch (e) { dialog.focus(); }
     });
@@ -411,35 +328,6 @@
     }
   }
 
-  // --- Cifras de venta (solo con datos reales) ---
-  let countRaf = 0;
-  function playSales() {
-    if (!state.hasSales) return;
-    const sold = Math.min(TOTAL, state.sold.size);
-    const soldEl = $("[data-rf-sold]"), leftEl = $("[data-rf-left]"), pctEl = $("[data-rf-pct]"), meter = $("[data-rf-meter]");
-    const paint = (v) => {
-      const left = TOTAL - v;
-      soldEl.textContent = fmt(v);
-      leftEl.textContent = left === 1 ? "Queda 1 número" : "Quedan " + fmt(left) + " números";
-      pctEl.textContent = Math.round((v * 100) / TOTAL) + "% vendido";
-    };
-    cancelAnimationFrame(countRaf);
-    meter.style.transition = "none";
-    meter.style.transform = "scaleX(0)";
-    void meter.offsetWidth;
-    meter.style.transition = "";
-    requestAnimationFrame(() => { meter.style.transform = "scaleX(" + (sold / TOTAL).toFixed(4) + ")"; });
-    if (reduceMq.matches) { paint(sold); return; }
-    let start = null;
-    const frame = (now) => {
-      if (start === null) start = now;
-      const t = Math.min(1, (now - start) / 900);
-      paint(Math.round(sold * (1 - Math.pow(1 - t, 3))));
-      if (t < 1) countRaf = requestAnimationFrame(frame);
-    };
-    countRaf = requestAnimationFrame(frame);
-  }
-
   // --- Ruleta ---
   function setRotation(deg, transition) {
     state.rot = deg;
@@ -459,12 +347,9 @@
     spinBtn.firstElementChild.textContent = p === "idle" ? "Girar la ruleta" : "Girando…";
     result.hidden = p !== "won";
     if (p === "won" && state.prize !== null) {
-      const s = SEGS[state.prize];
-      const badge = $("[data-rf-badge]");
-      badge.textContent = s.texto;
-      badge.classList.toggle("is-word", String(s.texto).length > 3);
-      $("[data-rf-result-title]").textContent = "¡Ganaste " + prizeTitle(s) + "!";
-      $("[data-rf-result-desc]").textContent = prizeDesc(s);
+      const n = bonus();
+      $("[data-rf-badge]").textContent = "+" + n;
+      $("[data-rf-result-title]").textContent = "¡Ganaste +" + chancesLabel(n) + "!";
     }
   }
 
@@ -540,142 +425,24 @@
     later(() => { confetti.innerHTML = ""; }, 1600);
   }
 
-  // --- Números ---
-  function totals() {
-    const n = state.mine.length;
-    const s = state.prize !== null ? SEGS[state.prize] : null;
-    const subtotal = n * PRICE;
-    let discount = 0, gift = 0;
-    if (s && s.tipo === "descuento") discount = Math.round((subtotal * (Number(s.valor) || 0)) / 100);
-    if (s && s.tipo === "2x1") discount = Math.floor(n / 2) * PRICE;
-    if (s && s.tipo === "regalo" && n > 0) gift = Number(s.valor) || 0;
-    return { n, s, subtotal, discount, gift, total: subtotal - discount, chances: n + gift };
-  }
-
-  function benefitText(t) {
-    if (!t.s) return "—";
-    if (t.s.tipo === "regalo") return "+" + t.s.valor + " gratis";
-    if (t.discount > 0) return "−" + money(t.discount);
-    return t.s.tipo === "2x1" ? "Pagás la mitad" : "$0";
-  }
-
-  function hintText() {
-    const s = state.prize !== null ? SEGS[state.prize] : null;
-    if (!s) return "Cada número es una chance.";
-    if (s.tipo === "regalo") return "Cada número es una chance. Tu premio suma " + numbersLabel(Number(s.valor) || 0) + " de regalo.";
-    if (s.tipo === "2x1") return "Cada número es una chance. Con el 2x1 pagás la mitad.";
-    return "Cada número es una chance. Tu " + prizeTitle(s) + " se aplica al total.";
-  }
-
-  function renderRanges() {
-    ranges.hidden = RANGE_COUNT <= 1;
-    if (RANGE_COUNT <= 1) return;
-    let html = "";
-    for (let r = 0; r < RANGE_COUNT; r++) {
-      const lo = r * RANGE_SIZE, hi = Math.min(TOTAL, lo + RANGE_SIZE) - 1;
-      const on = r === state.range;
-      html += '<button type="button" class="rf-range' + (on ? " is-active" : "") + '" data-rf-range="' + r + '" aria-pressed="' + on + '">' + pad(lo) + "–" + pad(hi) + "</button>";
-    }
-    ranges.innerHTML = html;
-  }
-
-  let gridTimer = 0;
-  function renderGrid(animate) {
-    const lo = state.range * RANGE_SIZE, hi = Math.min(TOTAL, lo + RANGE_SIZE);
-    let html = "";
-    for (let i = lo; i < hi; i++) {
-      const j = i - lo;
-      const sold = state.sold.has(i), mine = state.mine.indexOf(i) >= 0;
-      const d = Math.min(360, (Math.floor(j / 5) + (j % 5)) * 16);
-      html += '<button type="button" class="rf-cell' + (mine ? " is-mine" : "") + '" data-n="' + i + '" style="--d:' + d + 'ms" aria-pressed="' + mine + '"' +
-        (sold ? ' disabled aria-label="' + pad(i) + ', vendido"' : "") + ">" + pad(i) + "</button>";
-    }
-    grid.innerHTML = html;
-    grid.classList.remove("is-entering");
-    if (animate && !reduceMq.matches) {
-      void grid.offsetWidth;
-      grid.classList.add("is-entering");
-      clearTimeout(gridTimer);
-      gridTimer = setTimeout(() => grid.classList.remove("is-entering"), 700);
-    }
-  }
-
-  function setRange(r) {
-    if (r === state.range || r < 0 || r >= RANGE_COUNT) return;
-    state.range = r;
-    renderRanges();
-    renderGrid(true);
-    const btn = ranges.querySelector('[data-rf-range="' + r + '"]');
-    if (btn) {
-      const offset = btn.getBoundingClientRect().left - ranges.getBoundingClientRect().left;
-      ranges.scrollTo({ left: ranges.scrollLeft + offset - 20, behavior: reduceMq.matches ? "auto" : "smooth" });
-    }
-  }
-
-  function toggleNumber(cell) {
-    if (cell.disabled) return;
-    const n = Number(cell.dataset.n);
-    const at = state.mine.indexOf(n);
-    if (at >= 0) state.mine.splice(at, 1);
-    else state.mine.push(n);
-    const on = at < 0;
-    cell.classList.toggle("is-mine", on);
-    cell.setAttribute("aria-pressed", String(on));
-    if (on && !reduceMq.matches && cell.animate) {
-      cell.animate([{ transform: "scale(0.9)" }, { transform: "scale(1)" }], { duration: 420, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)" });
-    }
-    renderSummary();
-  }
-
-  function lucky() {
-    const free = [];
-    for (let i = 0; i < TOTAL; i++) if (!state.sold.has(i) && state.mine.indexOf(i) < 0) free.push(i);
-    if (!free.length) return;
-    const n = free[Math.floor(Math.random() * free.length)];
-    const r = Math.floor(n / RANGE_SIZE);
-    if (r !== state.range) setRange(r);
-    const cell = grid.querySelector('[data-n="' + n + '"]');
-    if (!cell) return;
-    toggleNumber(cell);
-    cell.scrollIntoView({ block: "center", behavior: reduceMq.matches ? "auto" : "smooth" });
-  }
-
-  function renderSummary() {
-    const t = totals();
-    $("[data-rf-hint]").textContent = hintText();
-    $("[data-rf-count]").textContent = numbersLabel(t.n) + " × " + money(PRICE);
-    const sub = $("[data-rf-sub]");
-    sub.hidden = t.discount <= 0;
-    sub.textContent = money(t.subtotal);
-    $("[data-rf-total]").textContent = money(t.total);
-    const shown = String(Math.min(99, t.chances)).padStart(2, "0");
-    odoStrips.forEach((strip, i) => { strip.style.transform = "translateY(" + -Number(shown[i]) * 34 + "px)"; });
-    odo.classList.toggle("is-empty", t.chances === 0);
-    continueBtn.disabled = t.n === 0;
-    continueBtn.textContent = t.n ? "Continuar" : "Elegí al menos 1 número";
-  }
-
-  // --- Ticket ---
+  // --- Ticket de participación ---
   function renderTicket() {
-    const t = totals();
-    const nums = state.mine.slice().sort((a, b) => a - b).map(pad);
-    let chips = nums.slice(0, 9).map((n) => "<span>" + n + "</span>").join("");
-    if (nums.length > 9) chips += '<span class="is-extra">+' + (nums.length - 9) + " más</span>";
-    if (t.gift > 0) chips += '<span class="is-extra">+' + t.gift + " de regalo</span>";
-    $("[data-rf-chips]").innerHTML = chips;
-    const prize = t.s ? prizeTitle(t.s) : "Sin beneficio";
-    $("[data-rf-tk-prize]").textContent = prize;
-    $("[data-rf-tk-total]").textContent = money(t.total);
-    $("[data-rf-tk-nums]").textContent = "Tus números: " + nums.slice(0, 4).join(" · ") + (nums.length > 4 ? " …" : "");
-    $("[data-rf-s-count]").textContent = numbersLabel(t.n) + " × " + money(PRICE);
-    $("[data-rf-s-sub]").textContent = money(t.subtotal);
-    $("[data-rf-s-prize]").textContent = "Ruleta · " + prize;
-    $("[data-rf-s-benefit]").textContent = benefitText(t);
-    $("[data-rf-s-chances]").textContent = "Total · " + t.chances + (t.chances === 1 ? " chance" : " chances");
-    $("[data-rf-s-total]").textContent = money(t.total);
-    const msg = "Hola Motobox! Quiero reservar en la Rifa N.º " + C.id + " los números " + nums.join(", ") +
-      ". Beneficio de la ruleta: " + prize + ". Total: " + money(t.total) + ".";
-    $("[data-rf-wa]").href = "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(msg);
+    const n = bonus();
+    const total = 1 + n;
+    $("[data-rf-tk-chances]").textContent = String(total);
+    $("[data-rf-tk-chances-label]").textContent = total === 1 ? "chance" : "chances";
+    $("[data-rf-tk-bonus]").textContent = "+" + chancesLabel(n);
+    $("[data-rf-s-bonus]").textContent = "+" + chancesLabel(n);
+    $("[data-rf-s-total]").textContent = chancesLabel(total);
+    const prizeTxt = "En la ruleta gané +" + chancesLabel(n) + " (total: " + chancesLabel(total) + ").";
+    const buy = $("[data-rf-wa-buy]");
+    if (buy) {
+      buy.href = "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(
+        "Hola Motobox! Quiero comprar el " + (MANUAL.nombre || "manual") + (MANUAL.precio ? " (" + money(MANUAL.precio) + ")" : "") +
+        " y participar del Sorteo N.º " + C.id + ". " + prizeTxt + " Mi nombre y DNI: ");
+    }
+    $("[data-rf-wa-free]").href = "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(
+      "Hola Motobox! Quiero participar gratis del Sorteo N.º " + C.id + ". " + prizeTxt + " Mi nombre y DNI: ");
     state.flipped = false;
     flip.classList.remove("is-flipped");
   }
@@ -685,7 +452,7 @@
     flip.classList.toggle("is-flipped", state.flipped);
   }
 
-  // --- Inclinación 3D con resorte (tarjeta del premio y ticket, solo con mouse) ---
+  // --- Inclinación 3D con resorte (tarjetas de premios y ticket, solo con mouse) ---
   // Resorte estilo Apple: respuesta 0,5 s y rebote 0,2 → rigidez 157,9 y amortiguación 20,1.
   const spring = { el: null, x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, gx: 50, gy: 50, tgx: 50, tgy: 50, raf: 0 };
 
@@ -758,51 +525,15 @@
     });
   }
 
-  // --- Datos de venta desde Supabase (opcional) ---
-  let salesSubscribed = false;
-  async function loadSales() {
-    if (typeof supabaseFetch !== "function") return;
-    const rows = await supabaseFetch("rifa_numeros", "select=numero,estado&rifa=eq." + encodeURIComponent(C.id));
-    if (!Array.isArray(rows)) return;
-    const sold = new Set();
-    rows.forEach((row) => {
-      const n = Number(row && row.numero);
-      if (Number.isInteger(n) && n >= 0 && n < TOTAL && (row.estado === "reservado" || row.estado === "vendido")) sold.add(n);
-    });
-    state.sold = sold;
-    state.hasSales = true;
-    root.classList.add("has-sales");
-    state.mine = state.mine.filter((n) => !sold.has(n));
-    if (state.open) {
-      if (state.step === "intro" || desktopMq.matches) playSales();
-      if (state.step === "numbers") { renderGrid(false); renderSummary(); }
-      if (state.step === "ticket") renderTicket();
-    }
-    if (!salesSubscribed && typeof supabaseClient !== "undefined" && supabaseClient) {
-      salesSubscribed = true;
-      try {
-        supabaseClient
-          .channel("motobox-rifa-" + C.id)
-          .on("postgres_changes", { event: "*", schema: "public", table: "rifa_numeros" }, () => loadSales())
-          .subscribe();
-      } catch (e) {
-        /* sin tiempo real: los datos se leen al cargar la página */
-      }
-    }
-  }
-
   // --- Eventos ---
   root.addEventListener("click", (e) => {
-    const t = e.target.closest("[data-rf-close], [data-rf-back], [data-rf-go], [data-rf-spin], [data-rf-lucky], [data-rf-flip-btn], [data-rf-range], .rf-cell");
+    const t = e.target.closest("[data-rf-close], [data-rf-back], [data-rf-go], [data-rf-spin], [data-rf-flip-btn]");
     if (!t || !root.contains(t)) return;
     if (t.hasAttribute("data-rf-close")) close();
     else if (t.hasAttribute("data-rf-back")) back();
     else if (t.hasAttribute("data-rf-go")) { if (!t.disabled) go(t.getAttribute("data-rf-go"), "fwd"); }
     else if (t.hasAttribute("data-rf-spin")) spin();
-    else if (t.hasAttribute("data-rf-lucky")) lucky();
     else if (t.hasAttribute("data-rf-flip-btn")) toggleFlip();
-    else if (t.hasAttribute("data-rf-range")) setRange(Number(t.getAttribute("data-rf-range")));
-    else if (t.classList.contains("rf-cell")) toggleNumber(t);
   });
 
   // Los links "Sorteo" del menú abren el popup en vez de navegar.
@@ -859,14 +590,14 @@
       setRotation((360 - (stored * SEG + SEG / 2)) % 360, "none");
     }
     renderWheel(false);
-    renderSummary();
     bindTilt($("[data-rf-tilt-hit]"), $("[data-rf-tilt]"));
     bindTilt($("[data-rf-flip-btn]"), $("[data-rf-ticket-tilt]"));
-    loadSales();
 
-    if (window.location.hash === "#rifa") {
+    if (window.location.hash === "#sorteo") {
       writeKey("sessionStorage", KEY + "_visto", "1");
       later(open, 300);
+    } else if (document.body.dataset.page === "sorteo") {
+      // En la página de bases no se abre solo: se abre con el botón "Participar".
     } else if (readKey("sessionStorage", KEY + "_visto") !== "1") {
       writeKey("sessionStorage", KEY + "_visto", "1");
       later(open, 900);
