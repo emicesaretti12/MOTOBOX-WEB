@@ -478,6 +478,260 @@
     });
   }
 
+  // ── 10. Ruta nocturna en 3D (portada) ────────────────────────────────────
+  // Proyección en perspectiva real sobre un canvas: autos que vienen (luces blancas),
+  // autos que se alejan (luces rojas), líneas de la ruta y el resplandor de la ciudad.
+  // La cámara se inclina con el mouse; mantener apretado acelera hasta "warp".
+  function initNightRide() {
+    const hero = $('[data-page="home"] .simple-hero');
+    if (!hero || reduce) return;
+    const canvas = document.createElement("canvas");
+    canvas.className = "mx-ride";
+    hero.classList.add("has-ride");
+    canvas.setAttribute("aria-hidden", "true");
+    hero.insertBefore(canvas, hero.querySelector(".simple-hero-content"));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const small = window.innerWidth < 700;
+    const FAR = 260, CAM_H = 1.25, LIGHT_H = 0.62;
+    const COUNT = small ? 54 : 110;
+    let W = 0, H = 0;
+    const resize = () => {
+      const dpr = Math.min(small ? 1.25 : 1.6, window.devicePixelRatio || 1);
+      W = hero.clientWidth;
+      H = hero.clientHeight;
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const rand = (a, b) => a + Math.random() * (b - a);
+    const cars = [];
+    const spawn = (car, initial) => {
+      const oncoming = Math.random() < 0.5;
+      car.oncoming = oncoming;
+      car.x = oncoming ? -rand(1.6, 6.4) : rand(1.6, 6.4);
+      car.z = initial ? rand(2, FAR) : (oncoming ? FAR + rand(0, 40) : rand(1.5, 4));
+      car.len = rand(5, 16);
+      car.v = oncoming ? rand(55, 85) : rand(10, 26);
+      car.gap = rand(0.28, 0.42);
+      car.tone = oncoming ? (Math.random() < 0.8 ? "255,238,214" : "190,215,255") : (Math.random() < 0.75 ? "232,46,36" : "255,112,64");
+      return car;
+    };
+    for (let i = 0; i < COUNT; i++) cars.push(spawn({}, true));
+
+    // Estado de cámara: valores actuales, objetivos y velocidades (resorte).
+    const cam = { x: 0, pitch: 0, roll: 0, speed: 1 };
+    const goal = { x: 0, pitch: 0, roll: 0, speed: 1 };
+    const vel = { x: 0, pitch: 0, roll: 0, speed: 0 };
+    let dash = 0, running = false, raf = 0, last = 0, boost = 1, lastScroll = window.scrollY;
+
+    if (finePointer) {
+      hero.addEventListener("pointermove", (e) => {
+        const r = hero.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width - 0.5;
+        const py = (e.clientY - r.top) / r.height - 0.5;
+        goal.x = px * 2.4;
+        goal.pitch = py * -24;
+        goal.roll = px * -0.05;
+      });
+      hero.addEventListener("pointerleave", () => { goal.x = 0; goal.pitch = 0; goal.roll = 0; });
+    }
+    // Mantener apretado (o el dedo) sobre el hero = acelerar.
+    hero.addEventListener("pointerdown", (e) => { if (!e.target.closest("a, button")) boost = 4; });
+    window.addEventListener("pointerup", () => { boost = 1; });
+    window.addEventListener("pointercancel", () => { boost = 1; });
+    hero.querySelectorAll(".btn-hero-red").forEach((b) => {
+      b.addEventListener("pointerenter", () => { boost = 2.2; });
+      b.addEventListener("pointerleave", () => { boost = 1; });
+    });
+
+    const line = (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
+
+    const frame = (now) => {
+      const dt = Math.min(0.05, (now - last) / 1000 || 0.016);
+      last = now;
+      const sy = window.scrollY;
+      const scrollBoost = clamp(Math.abs(sy - lastScroll) * 0.08, 0, 2.5);
+      lastScroll = sy;
+      goal.speed = boost + scrollBoost;
+      for (const k in cam) {
+        const stiff = k === "speed" ? 18 : 40, damp = k === "speed" ? 8 : 12;
+        vel[k] += (stiff * (goal[k] - cam[k]) - damp * vel[k]) * dt;
+        cam[k] += vel[k] * dt;
+      }
+
+      const f = H * 1.05 * (1 - clamp(cam.speed - 1, 0, 3) * 0.07);
+      const cx = W / 2;
+      // El horizonte queda debajo de los botones: las luces nunca pasan detrás del texto.
+      const hy = H * (small ? 0.86 : 0.8) + cam.pitch;
+      const proj = (x, y, z) => [cx + (x - cam.x) * f / z, hy + (CAM_H - y) * f / z];
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.save();
+      ctx.translate(cx, hy);
+      ctx.rotate(cam.roll);
+      ctx.translate(-cx, -hy);
+
+      // Resplandor de la ciudad en el horizonte
+      const glow = ctx.createRadialGradient(cx, hy, 0, cx, hy, W * 0.55);
+      glow.addColorStop(0, "rgba(224,46,36,0.22)");
+      glow.addColorStop(0.35, "rgba(224,46,36,0.07)");
+      glow.addColorStop(1, "rgba(224,46,36,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, hy - W * 0.3, W, W * 0.6);
+
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
+
+      // Bordes de la ruta
+      ctx.lineWidth = 1.2;
+      [-7.6, 7.6].forEach((ex) => {
+        const a = proj(ex, 0, 1.2), b = proj(ex, 0, FAR);
+        const g = ctx.createLinearGradient(a[0], a[1], b[0], b[1]);
+        g.addColorStop(0, "rgba(255,255,255,0.28)");
+        g.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.strokeStyle = g;
+        line(a[0], a[1], b[0], b[1]);
+      });
+      // Línea central discontinua que corre hacia la cámara
+      const travel = 34 * cam.speed;
+      dash = (dash + travel * dt) % 9;
+      for (let z = 9 - dash; z < FAR * 0.7; z += 9) {
+        if (z < 3) continue;
+        const a = proj(0, 0, z), b = proj(0, 0, z + 4);
+        const alpha = 0.32 * (1 - z / (FAR * 0.7));
+        ctx.strokeStyle = "rgba(255,255,255," + alpha.toFixed(3) + ")";
+        ctx.lineWidth = clamp(0.16 * f / z, 0.6, 3);
+        line(a[0], a[1], b[0], b[1]);
+      }
+
+      // Luces de los autos: halo ancho + núcleo brillante
+      for (let i = 0; i < cars.length; i++) {
+        const c = cars[i];
+        c.z += (c.oncoming ? -(c.v + travel) : c.v * 2.2) * dt;
+        if (c.oncoming && c.z < 1) spawn(c, false);
+        else if (!c.oncoming && c.z > FAR) spawn(c, false);
+        const z1 = Math.max(1, c.z), z2 = z1 + c.len * (0.6 + cam.speed * 0.4);
+        const fade = clamp((z1 - 1) / 4, 0, 1) * clamp((FAR - z1) / (FAR * 0.35), 0, 1);
+        if (fade <= 0.01) continue;
+        const w = clamp(0.11 * f / z1, 0.5, 7);
+        for (let s = -1; s <= 1; s += 2) {
+          const lx = c.x + s * c.gap;
+          const a = proj(lx, LIGHT_H, z1), b = proj(lx, LIGHT_H, z2);
+          ctx.strokeStyle = "rgba(" + c.tone + "," + (0.1 * fade).toFixed(3) + ")";
+          ctx.lineWidth = w * 4;
+          line(a[0], a[1], b[0], b[1]);
+          ctx.strokeStyle = "rgba(" + c.tone + "," + (0.85 * fade).toFixed(3) + ")";
+          ctx.lineWidth = w;
+          line(a[0], a[1], b[0], b[1]);
+        }
+      }
+      ctx.restore();
+      ctx.globalCompositeOperation = "source-over";
+      if (running) raf = requestAnimationFrame(frame);
+    };
+
+    const start = () => {
+      if (running || document.hidden) return;
+      running = true;
+      last = performance.now();
+      raf = requestAnimationFrame(frame);
+    };
+    const stop = () => { running = false; cancelAnimationFrame(raf); };
+    let inView = true;
+    new IntersectionObserver((entries) => {
+      inView = entries[0].isIntersecting;
+      if (inView) start(); else stop();
+    }).observe(hero);
+    document.addEventListener("visibilitychange", () => { if (document.hidden) stop(); else if (inView) start(); });
+
+    const reveal = () => { canvas.classList.add("is-on"); start(); };
+    if (root.classList.contains("mx-intro-on")) document.addEventListener("motobox:intro-done", reveal, { once: true });
+    else requestAnimationFrame(reveal);
+  }
+
+  // ── 11. Cursor propio (solo mouse) ───────────────────────────────────────
+  // Un punto exacto y un anillo que lo sigue con resorte. Sobre links crece; sobre
+  // una moto se llena de rojo y dice "Ver". En campos de texto vuelve el cursor normal.
+  function initCursor() {
+    if (reduce || !finePointer) return;
+    const dot = document.createElement("div");
+    const ring = document.createElement("div");
+    dot.className = "mx-cursor-dot";
+    ring.className = "mx-cursor-ring";
+    ring.innerHTML = '<span class="mx-cursor-label"></span>';
+    dot.setAttribute("aria-hidden", "true");
+    ring.setAttribute("aria-hidden", "true");
+    document.body.append(ring, dot);
+    const label = ring.firstChild;
+    root.classList.add("mx-has-cursor");
+
+    let mode = "", shown = false;
+    const SIZE = 80;
+    const scales = { "": 0.42, link: 0.7, view: 1, text: 0, down: 0.32 };
+    const s = spring({ x: -100, y: -100, k: 0.42 }, (v) => {
+      ring.style.transform = "translate3d(" + (v.x - SIZE / 2).toFixed(1) + "px," + (v.y - SIZE / 2).toFixed(1) + "px,0) scale(" + Math.max(0, v.k).toFixed(3) + ")";
+    }, 260, 26);
+
+    const setMode = (m) => {
+      if (m === mode) return;
+      mode = m;
+      ring.dataset.mode = m;
+      dot.dataset.mode = m;
+      label.textContent = m === "view" ? "Ver" : "";
+      s.set({ k: scales[m] });
+    };
+
+    document.addEventListener("pointermove", (e) => {
+      if (e.pointerType !== "mouse") return;
+      if (!shown) {
+        shown = true;
+        root.classList.add("mx-cursor-on");
+        s.values.x = e.clientX; s.values.y = e.clientY;
+      }
+      dot.style.transform = "translate3d(" + (e.clientX - 3) + "px," + (e.clientY - 3) + "px,0)";
+      s.set({ x: e.clientX, y: e.clientY });
+      const t = e.target;
+      if (!t.closest) return;
+      if (t.closest("input, textarea, select, [contenteditable]")) setMode("text");
+      else if (t.closest(".moto-card-modern")) setMode("view");
+      else if (t.closest("a, button, [role='button'], label, summary, .filter-pill, [data-rifa-open]")) setMode("link");
+      else setMode("");
+    }, { passive: true });
+    document.addEventListener("pointerdown", () => { if (mode !== "text") s.set({ k: scales[mode] * 0.8 }); });
+    document.addEventListener("pointerup", () => s.set({ k: scales[mode] }));
+    document.documentElement.addEventListener("mouseleave", () => { root.classList.remove("mx-cursor-on"); shown = false; });
+  }
+
+  // ── 12. Marca gigante en el pie que se levanta en 3D ─────────────────────
+  function initFooterWord() {
+    const footer = $(".simple-footer, .site-footer");
+    if (!footer) return;
+    const word = document.createElement("div");
+    word.className = "mx-footer-word";
+    word.setAttribute("aria-hidden", "true");
+    word.innerHTML = "<span>MOTOBOX</span>";
+    footer.appendChild(word);
+    if (reduce) return;
+    const span = word.firstChild;
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      const r = word.getBoundingClientRect();
+      const vh = window.innerHeight;
+      // p = 0 cuando asoma por abajo, 1 cuando está entero en pantalla.
+      const p = clamp((vh - r.top) / r.height, 0, 1);
+      span.style.transform = "perspective(800px) translateY(" + ((1 - p) * 40).toFixed(1) + "%) rotateX(" + ((1 - p) * 70).toFixed(2) + "deg)";
+      span.style.opacity = (0.15 + p * 0.85).toFixed(3);
+    };
+    window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+    update();
+  }
+
   // ── Armado por página ────────────────────────────────────────────────────
   function buildSections() {
     if (page === "home") {
@@ -504,6 +758,9 @@
     initReveals();
     initCards();
     initMagnetic();
+    initNightRide();
+    initCursor();
+    initFooterWord();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

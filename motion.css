@@ -488,6 +488,149 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
   will-change: transform;
 }
 
+/* ── 9. Ruta nocturna 3D del hero (canvas) ────────────────────────────── */
+.mx-ride {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+.mx-ride.is-on { opacity: 1; }
+.simple-hero.has-ride .mx-scroll-cue { display: none; }
+/* En desktop la portada ocupa la pantalla y el texto sube para dejar la ruta abajo. */
+@media (min-width: 900px) {
+  [data-page="home"] .simple-hero { min-height: clamp(580px, calc(100svh - var(--header-height, 64px)), 940px); }
+  [data-page="home"] .simple-hero-content { padding-bottom: 16vh; }
+}
+
+/* ── 10. Cursor propio ────────────────────────────────────────────────── */
+.mx-has-cursor.mx-cursor-on,
+.mx-has-cursor.mx-cursor-on * { cursor: none !important; }
+.mx-has-cursor.mx-cursor-on input,
+.mx-has-cursor.mx-cursor-on textarea,
+.mx-has-cursor.mx-cursor-on select,
+.mx-has-cursor.mx-cursor-on [contenteditable] { cursor: text !important; }
+.mx-cursor-dot,
+.mx-cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.mx-cursor-on .mx-cursor-dot,
+.mx-cursor-on .mx-cursor-ring { opacity: 1; }
+.mx-cursor-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  mix-blend-mode: difference;
+}
+.mx-cursor-dot[data-mode="view"],
+.mx-cursor-dot[data-mode="text"] { opacity: 0 !important; }
+.mx-cursor-ring {
+  width: 80px;
+  height: 80px;
+  margin: 0;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  mix-blend-mode: difference;
+  display: grid;
+  place-items: center;
+  transform: translate3d(-100px, -100px, 0) scale(0.42);
+  will-change: transform;
+  transition: opacity 0.25s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+.mx-cursor-ring[data-mode="link"] { background: rgba(255, 255, 255, 0.12); }
+.mx-cursor-ring[data-mode="view"] {
+  mix-blend-mode: normal;
+  background: var(--mx-red);
+  border-color: var(--mx-red);
+  box-shadow: 0 10px 30px rgba(224, 46, 36, 0.35);
+}
+.mx-cursor-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+/* ── 11. Marca gigante del pie ────────────────────────────────────────── */
+.mx-footer-word {
+  overflow: hidden;
+  text-align: center;
+  line-height: 0.8;
+  padding-top: 2rem;
+  margin-bottom: -0.06em;
+  user-select: none;
+}
+.mx-footer-word span {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(4rem, 19vw, 17rem);
+  letter-spacing: -0.06em;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 10%, rgba(224, 46, 36, 0.55) 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+
+/* ── 12. Título del hero: cada palabra gira en 3D al entrar ───────────── */
+.mx-word {
+  transform-origin: 50% 100%;
+  animation-name: mxWord3d;
+  animation-duration: 0.9s;
+  animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+@keyframes mxWord3d {
+  from { opacity: 0; transform: perspective(600px) translateY(0.45em) rotateX(-80deg); filter: blur(6px); }
+}
+
+/* ── 13. Tarjetas: reflejo de luz que sigue la inclinación ────────────── */
+@media (hover: hover) and (pointer: fine) {
+  .moto-card-modern { position: relative; }
+  .moto-card-modern::after,
+  .promo-poster-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 55%);
+    mix-blend-mode: soft-light;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .moto-card-modern.is-tilting::after,
+  .promo-poster-card.is-tilting::after { opacity: calc(var(--lift, 0) * 1); }
+}
+
+/* ── 14. Cambio de página: la anterior se hunde, la nueva sube con un recorte ── */
+::view-transition-old(root) {
+  animation: mxVtOut 280ms cubic-bezier(0.77, 0, 0.175, 1) both;
+}
+::view-transition-new(root) {
+  animation: mxVtIn 640ms cubic-bezier(0.77, 0, 0.175, 1) both;
+}
+@keyframes mxVtOut {
+  to { opacity: 0.35; transform: scale(0.95); filter: blur(3px); }
+}
+@keyframes mxVtIn {
+  from { clip-path: inset(100% 0 0 0 round 40px); transform: translateY(8%); }
+  to   { clip-path: inset(0 0 0 0 round 0); transform: none; }
+}
+
 /* ── Accesibilidad: sin movimiento si el usuario lo pide ──────────────── */
 @media (prefers-reduced-motion: reduce) {
   html.mx-intro-on::after { content: none; }
@@ -495,6 +638,8 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
   .mx-hero-glow, .mx-scroll-cue, .mx-progress, .mx-stage-floor, .mx-spark { display: none; }
   .mx-prize-body, .mx-prize-body::after, .mx-sorteo-kicker::before { animation: none !important; }
   .mx-sorteo { clip-path: none; }
+  .mx-ride, .mx-cursor-dot, .mx-cursor-ring { display: none; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
   /* Menos movimiento no es cero: las entradas quedan como fundidos cortos. */
   .mx-enter { animation: mxFade 0.4s ease backwards; animation-delay: var(--mx-d, 0ms); }
 }

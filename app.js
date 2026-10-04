@@ -615,6 +615,8 @@
         el.style.setProperty("--lift", s.l.toFixed(3));
         el.style.setProperty("--px", (s.y * -0.9).toFixed(2) + "px");
         el.style.setProperty("--py", (s.x * 0.9).toFixed(2) + "px");
+        el.style.setProperty("--gx", (50 + s.y * 5).toFixed(1) + "%");
+        el.style.setProperty("--gy", (50 + s.x * 6).toFixed(1) + "%");
       });
       if (moving) {
         raf = requestAnimationFrame(step);
