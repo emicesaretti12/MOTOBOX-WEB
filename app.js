@@ -779,6 +779,9 @@
     initCardTilt();
     initMotion();
     handleScroll();
+
+    // Aviso para motion.js: los datos del CRM ya están cargados.
+    document.dispatchEvent(new CustomEvent("motobox:ready"));
   }
 
   if (document.readyState === "loading") {

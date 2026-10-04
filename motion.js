@@ -381,7 +381,7 @@
         io.unobserve(e.target);
       });
     }, { rootMargin: "0px 0px -12% 0px" });
-    document.querySelectorAll(".simple-catalog-title, .promo-poster-title, .section-header h2, .cta-strip-inner h3").forEach((el) => {
+    document.querySelectorAll(".promo-poster-title, .cta-strip-inner h3").forEach((el) => {
       if (el.getBoundingClientRect().top < vh * 0.9) return;
       el.classList.add("mx-mask", "mx-pre");
       io.observe(el.parentElement);
@@ -654,59 +654,6 @@
     else requestAnimationFrame(reveal);
   }
 
-  // ── 11. Cursor propio (solo mouse) ───────────────────────────────────────
-  // Un punto exacto y un anillo que lo sigue con resorte. Sobre links crece; sobre
-  // una moto se llena de rojo y dice "Ver". En campos de texto vuelve el cursor normal.
-  function initCursor() {
-    if (reduce || !finePointer) return;
-    const dot = document.createElement("div");
-    const ring = document.createElement("div");
-    dot.className = "mx-cursor-dot";
-    ring.className = "mx-cursor-ring";
-    ring.innerHTML = '<span class="mx-cursor-label"></span>';
-    dot.setAttribute("aria-hidden", "true");
-    ring.setAttribute("aria-hidden", "true");
-    document.body.append(ring, dot);
-    const label = ring.firstChild;
-    root.classList.add("mx-has-cursor");
-
-    let mode = "", shown = false;
-    const SIZE = 80;
-    const scales = { "": 0.42, link: 0.7, view: 1, text: 0, down: 0.32 };
-    const s = spring({ x: -100, y: -100, k: 0.42 }, (v) => {
-      ring.style.transform = "translate3d(" + (v.x - SIZE / 2).toFixed(1) + "px," + (v.y - SIZE / 2).toFixed(1) + "px,0) scale(" + Math.max(0, v.k).toFixed(3) + ")";
-    }, 260, 26);
-
-    const setMode = (m) => {
-      if (m === mode) return;
-      mode = m;
-      ring.dataset.mode = m;
-      dot.dataset.mode = m;
-      label.textContent = m === "view" ? "Ver" : "";
-      s.set({ k: scales[m] });
-    };
-
-    document.addEventListener("pointermove", (e) => {
-      if (e.pointerType !== "mouse") return;
-      if (!shown) {
-        shown = true;
-        root.classList.add("mx-cursor-on");
-        s.values.x = e.clientX; s.values.y = e.clientY;
-      }
-      dot.style.transform = "translate3d(" + (e.clientX - 3) + "px," + (e.clientY - 3) + "px,0)";
-      s.set({ x: e.clientX, y: e.clientY });
-      const t = e.target;
-      if (!t.closest) return;
-      if (t.closest("input, textarea, select, [contenteditable]")) setMode("text");
-      else if (t.closest(".moto-card-modern")) setMode("view");
-      else if (t.closest("a, button, [role='button'], label, summary, .filter-pill, [data-rifa-open]")) setMode("link");
-      else setMode("");
-    }, { passive: true });
-    document.addEventListener("pointerdown", () => { if (mode !== "text") s.set({ k: scales[mode] * 0.8 }); });
-    document.addEventListener("pointerup", () => s.set({ k: scales[mode] }));
-    document.documentElement.addEventListener("mouseleave", () => { root.classList.remove("mx-cursor-on"); shown = false; });
-  }
-
   // ── 12. Marca gigante en el pie que se levanta en 3D ─────────────────────
   function initFooterWord() {
     const footer = $(".simple-footer, .site-footer");
@@ -732,10 +679,390 @@
     update();
   }
 
+  // ── 13. Showroom 360° (portada) ──────────────────────────────────────────
+  // Las motos en un anillo 3D sobre una plataforma giratoria. Se arrastra con inercia
+  // (velocidad al soltar) y encaja en la moto más cercana con un resorte; avanza solo
+  // cada pocos segundos mientras nadie lo toca.
+  function buildShowroom(anchor) {
+    if (!anchor) return;
+    const section = document.createElement("section");
+    section.className = "mx-showroom";
+    section.setAttribute("aria-label", "Showroom 360°");
+    section.innerHTML =
+      '<div class="container mx-sr-head">' +
+        '<h2 class="mx-sr-title" data-mx-chars>Showroom 360°</h2>' +
+        '<p class="mx-sr-hint">Arrastrá para girar o usá las flechas.</p>' +
+      "</div>" +
+      '<div class="mx-sr-stage" tabindex="0" role="group" aria-roledescription="carrusel" aria-label="Motos del showroom">' +
+        '<div class="mx-sr-spot" aria-hidden="true"></div>' +
+        '<div class="mx-sr-tilt"><div class="mx-sr-ring"></div></div>' +
+      "</div>" +
+      '<div class="container mx-sr-info">' +
+        '<div class="mx-sr-meta" aria-live="polite"></div>' +
+        '<div class="mx-sr-side">' +
+          '<div class="mx-sr-ctrl">' +
+            '<button type="button" class="mx-sr-btn" data-sr="prev" aria-label="Moto anterior"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+            '<span class="mx-sr-count"></span>' +
+            '<button type="button" class="mx-sr-btn" data-sr="next" aria-label="Moto siguiente"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>' +
+          "</div>" +
+          '<div class="mx-sr-cta"></div>' +
+        "</div>" +
+      "</div>";
+    anchor.after(section);
+
+    const stage = section.querySelector(".mx-sr-stage");
+    const tiltEl = section.querySelector(".mx-sr-tilt");
+    const ring = section.querySelector(".mx-sr-ring");
+    const meta = section.querySelector(".mx-sr-meta");
+    const count = section.querySelector(".mx-sr-count");
+    const cta = section.querySelector(".mx-sr-cta");
+
+    let items = [], list = [], N = 0, step = 0, R = 0, W = 0, Hc = 0;
+    let rot = 0, target = 0, vel = 0, mode = "rest", active = -1;
+    let dragging = false, dragX = 0, dragRot = 0, moved = 0, samples = [];
+    let raf = 0, last = 0, visible = false, idleAt = performance.now(), hover = false, tiltNow = -16, tiltGoal = -16;
+
+    const wa = (m) => "https://wa.me/5493516312930?text=" + encodeURIComponent("Hola Motobox! Quiero consultar por la " + m.marca + " " + m.modelo + " 0km que vi en el showroom de la web.");
+
+    function layout() {
+      const small = window.innerWidth < 700;
+      W = small ? 200 : 300;
+      Hc = Math.round(W * 0.78);
+      R = Math.max(W * 0.9, (W + (small ? 26 : 46)) / (2 * Math.tan(Math.PI / N)));
+      stage.style.setProperty("--sr-w", W + "px");
+      stage.style.setProperty("--sr-h", Hc + "px");
+      stage.style.setProperty("--sr-r", R + "px");
+      stage.style.perspective = (small ? 900 : 1500) + "px";
+      items.forEach((el, i) => { el.style.transform = "rotateY(" + (i * step) + "deg) translateZ(" + R.toFixed(1) + "px)"; });
+      const disc = ring.querySelector(".mx-sr-disc");
+      if (disc) disc.style.setProperty("--sr-d", (R * 2 + W * 0.9).toFixed(0) + "px");
+    }
+
+    function setData(source) {
+      const base = (source || []).filter((m) => m && m.imagen);
+      if (!base.length) { section.hidden = true; return; }
+      section.hidden = false;
+      list = base.slice();
+      // Con pocas motos se repiten para que el anillo quede lleno (las copias no se anuncian).
+      const reps = Math.max(1, Math.ceil(8 / base.length));
+      const ringList = [];
+      for (let r = 0; r < reps; r++) base.forEach((m, i) => ringList.push({ m: m, i: i, copy: r > 0 }));
+      N = ringList.length;
+      step = 360 / N;
+      ring.innerHTML = '<div class="mx-sr-disc" aria-hidden="true"></div>' + ringList.map((it) =>
+        '<div class="mx-sr-item"' + (it.copy ? ' aria-hidden="true"' : "") + ' data-i="' + it.i + '">' +
+          '<div class="mx-sr-card"><img src="' + esc(it.m.imagen) + '" alt="' + (it.copy ? "" : esc(it.m.marca + " " + it.m.modelo)) + '" loading="lazy" draggable="false">' +
+          '<span class="mx-sr-tag">' + esc(it.m.marca) + "</span></div>" +
+        "</div>"
+      ).join("");
+      items = Array.from(ring.querySelectorAll(".mx-sr-item"));
+      layout();
+      active = -1;
+      rot = target = Math.round(rot / step) * step;
+      paint(true);
+      kick();
+    }
+
+    function showInfo(idx, instant) {
+      const m = list[idx % list.length];
+      if (!m) return;
+      const specs = [m.cilindrada, m.potencia, m.consumo].filter(Boolean).slice(0, 3)
+        .map((v) => "<li>" + esc(v) + "</li>").join("");
+      const html =
+        '<p class="mx-sr-brand">' + esc(m.marca) + (m.categoriaLabel ? " · " + esc(m.categoriaLabel) : "") + "</p>" +
+        '<h3 class="mx-sr-model">' + esc(m.modelo) + "</h3>" +
+        (specs ? '<ul class="mx-sr-specs">' + specs + "</ul>" : "");
+      const swap = () => {
+        meta.innerHTML = html;
+        cta.innerHTML = '<a class="btn-hero-red mx-magnetic" href="' + wa(m) + '" target="_blank" rel="noopener">Consultar esta moto</a>' +
+          '<a class="mx-sr-link" href="catalogo.html">Ver catálogo</a>';
+        count.textContent = String((idx % list.length) + 1).padStart(2, "0") + " / " + String(list.length).padStart(2, "0");
+      };
+      if (instant || reduce || !meta.animate) { swap(); return; }
+      // Fundido con un leve desenfoque: une las dos fichas en una sola transición.
+      meta.animate([{ opacity: 1, filter: "blur(0px)", transform: "none" }, { opacity: 0, filter: "blur(6px)", transform: "translateY(-6px)" }],
+        { duration: 140, easing: "ease-in-out", fill: "forwards" }).onfinish = () => {
+        swap();
+        meta.animate([{ opacity: 0, filter: "blur(6px)", transform: "translateY(8px)" }, { opacity: 1, filter: "blur(0px)", transform: "none" }],
+          { duration: 260, easing: EASE_OUT, fill: "forwards" });
+      };
+    }
+
+    function paint(force) {
+      ring.style.transform = "translateZ(" + (-R).toFixed(1) + "px) rotateY(" + rot.toFixed(3) + "deg)";
+      tiltEl.style.transform = "rotateX(" + tiltNow.toFixed(2) + "deg)";
+      for (let i = 0; i < items.length; i++) {
+        let a = ((i * step + rot) % 360 + 540) % 360 - 180;
+        const c = Math.cos(a * Math.PI / 180);
+        items[i].style.opacity = (0.12 + 0.88 * Math.pow((c + 1) / 2, 2.2)).toFixed(3);
+        items[i].classList.toggle("is-front", Math.abs(a) < step / 2);
+      }
+      const idx = ((Math.round(-rot / step) % N) + N) % N;
+      const real = items[idx] ? Number(items[idx].dataset.i) : 0;
+      if (real !== active || force) { active = real; showInfo(real, force); }
+    }
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - last) / 1000 || 0.016);
+      last = now;
+      if (!dragging) {
+        if (mode === "glide") {
+          rot += vel * dt;
+          vel *= Math.exp(-3.2 * dt);
+          if (Math.abs(vel) < 40) { mode = "snap"; target = Math.round(rot / step) * step; vel *= 0.5; }
+        }
+        if (mode === "snap" || mode === "rest") {
+          const a = 70 * (target - rot) - 13 * vel;
+          vel += a * dt;
+          rot += vel * dt;
+          if (Math.abs(target - rot) < 0.01 && Math.abs(vel) < 0.05) { rot = target; vel = 0; mode = "rest"; }
+        }
+        if (mode === "rest" && !hover && visible && !reduce && now - idleAt > 3600) {
+          target -= step; mode = "snap"; idleAt = now;
+        }
+      }
+      tiltNow += (tiltGoal - tiltNow) * Math.min(1, dt * 6);
+      paint(false);
+      const busy = dragging || mode !== "rest" || Math.abs(tiltGoal - tiltNow) > 0.02;
+      raf = (busy || (visible && !reduce)) ? requestAnimationFrame(frame) : 0;
+    }
+    function kick() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+    const go = (dir) => { target = Math.round(target / step) * step - dir * step; mode = "snap"; idleAt = performance.now(); kick(); };
+
+    stage.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      dragging = true; moved = 0; dragX = e.clientX; dragRot = rot; samples = [{ t: e.timeStamp, x: e.clientX }];
+      stage.setPointerCapture(e.pointerId);
+      stage.classList.add("is-dragging");
+      kick();
+    });
+    stage.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - dragX;
+      moved = Math.max(moved, Math.abs(dx));
+      rot = dragRot + dx * (step / (W + 40)) * 1.1;
+      samples.push({ t: e.timeStamp, x: e.clientX });
+      if (samples.length > 6) samples.shift();
+    });
+    const release = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      stage.classList.remove("is-dragging");
+      const a = samples[0], b = samples[samples.length - 1];
+      const dtv = Math.max(1, b.t - a.t);
+      // Un gesto rápido alcanza: la velocidad decide, no solo la distancia.
+      vel = ((b.x - a.x) / dtv) * 1000 * (step / (W + 40)) * 1.1;
+      mode = Math.abs(vel) > 60 ? "glide" : "snap";
+      target = Math.round(rot / step) * step;
+      idleAt = performance.now();
+      if (moved < 6 && e && e.target && e.target.closest) {
+        const item = e.target.closest(".mx-sr-item");
+        if (item && !item.classList.contains("is-front")) {
+          const i = items.indexOf(item);
+          target = -i * step + Math.round((rot + i * step) / 360) * 360;
+          mode = "snap";
+        }
+      }
+      kick();
+    };
+    stage.addEventListener("pointerup", release);
+    stage.addEventListener("pointercancel", release);
+    stage.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+    });
+    section.querySelector('[data-sr="prev"]').addEventListener("click", () => go(-1));
+    section.querySelector('[data-sr="next"]').addEventListener("click", () => go(1));
+    stage.addEventListener("pointerenter", () => { hover = true; });
+    stage.addEventListener("pointerleave", () => { hover = false; idleAt = performance.now(); });
+
+    // Al entrar en pantalla la cámara baja de una vista en picada a la altura del showroom.
+    new IntersectionObserver((entries) => {
+      visible = entries[0].isIntersecting;
+      if (visible) { tiltGoal = window.innerWidth < 700 ? -8 : -10; idleAt = performance.now(); kick(); }
+    }, { threshold: 0.25 }).observe(stage);
+    window.addEventListener("resize", () => { if (N) { layout(); paint(true); } });
+
+    setData(typeof motos !== "undefined" ? motos : []);
+    const refresh = () => setData(typeof motos !== "undefined" ? motos : []);
+    document.addEventListener("motobox:ready", refresh);
+    document.addEventListener("motobox:motos-updated", refresh);
+  }
+
+  // ── 14. Velocímetro ligado al scroll (portada) ───────────────────────────
+  // La sección queda fija mientras se scrollea: la aguja sube con un resorte, el arco
+  // rojo se completa y los tres motivos para comprar en MOTOBOX se van reemplazando.
+  // El odómetro, claro, sigue en 000000 km.
+  function buildStory(anchor) {
+    if (!anchor) return;
+    const steps = [
+      ["Nuevas de fábrica", "Solo vendemos motos 0km: el odómetro arranca en cero y la garantía es oficial."],
+      ["Stock real en el showroom", "Lo que ves en la web está en Santa Rosa 4227. Venís, la elegís y coordinás el retiro."],
+      ["Te asesora una persona", "Escribís por WhatsApp y un asesor te pasa precio, colores y tiempos de entrega."]
+    ];
+    const CX = 200, CY = 205, RAD = 150, START = 150, SWEEP = 240, MAX = 200;
+    const pt = (deg, r) => {
+      const a = deg * Math.PI / 180;
+      return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
+    };
+    const arc = (r) => {
+      const a = pt(START, r), b = pt(START + SWEEP, r);
+      return "M" + a[0].toFixed(2) + " " + a[1].toFixed(2) + " A" + r + " " + r + " 0 1 1 " + b[0].toFixed(2) + " " + b[1].toFixed(2);
+    };
+    let ticks = "", labels = "";
+    for (let v = 0; v <= MAX; v += 10) {
+      const deg = START + (v / MAX) * SWEEP;
+      const major = v % 20 === 0;
+      const a = pt(deg, RAD - 16), b = pt(deg, RAD - (major ? 34 : 25));
+      ticks += '<line x1="' + a[0].toFixed(1) + '" y1="' + a[1].toFixed(1) + '" x2="' + b[0].toFixed(1) + '" y2="' + b[1].toFixed(1) + '" class="' + (v >= 180 ? "mx-g-red" : major ? "mx-g-major" : "mx-g-minor") + '"/>';
+      if (major) {
+        const l = pt(deg, RAD - 52);
+        labels += '<text x="' + l[0].toFixed(1) + '" y="' + (l[1] + 5).toFixed(1) + '"' + (v >= 180 ? ' class="mx-g-red-t"' : "") + ">" + v + "</text>";
+      }
+    }
+    const section = document.createElement("section");
+    section.className = "mx-story";
+    section.innerHTML =
+      '<div class="mx-story-sticky"><div class="container mx-story-grid">' +
+        '<div class="mx-story-copy">' +
+          '<h2 class="mx-story-title" data-mx-chars>Por qué MOTOBOX</h2>' +
+          '<div class="mx-story-steps">' + steps.map((s, i) =>
+            '<div class="mx-step' + (i === 0 ? " is-on" : "") + '"><span class="mx-step-n">' + (i + 1) + "/3</span><h3>" + s[0] + "</h3><p>" + s[1] + "</p></div>"
+          ).join("") + "</div>" +
+          '<div class="mx-story-bar" aria-hidden="true"><i></i><i></i><i></i></div>' +
+        "</div>" +
+        '<div class="mx-gauge-wrap" aria-hidden="true"><div class="mx-gauge">' +
+          '<svg viewBox="0 0 400 400">' +
+            '<defs><linearGradient id="mxGArc" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ff7a45"/><stop offset="1" stop-color="#e02e24"/></linearGradient></defs>' +
+            '<path d="' + arc(RAD) + '" class="mx-g-track"/>' +
+            '<path d="' + arc(RAD) + '" class="mx-g-fill" pathLength="1000"/>' +
+            ticks + '<g class="mx-g-labels">' + labels + "</g>" +
+            '<g class="mx-g-needle"><path d="M196 205 L200 ' + (CY - RAD + 30) + ' L204 205 Z"/><circle cx="200" cy="205" r="13"/><circle cx="200" cy="205" r="5" class="mx-g-hub"/></g>' +
+          "</svg>" +
+          '<div class="mx-g-read"><b class="mx-g-speed">0</b><span>km/h</span></div>' +
+          '<div class="mx-g-odo"><span>000000</span> km</div>' +
+        "</div></div>" +
+      "</div></div>";
+    anchor.after(section);
+    if (reduce) { section.classList.add("is-static"); return; }
+
+    const needle = section.querySelector(".mx-g-needle");
+    const fill = section.querySelector(".mx-g-fill");
+    const speedEl = section.querySelector(".mx-g-speed");
+    const gauge = section.querySelector(".mx-gauge");
+    const stepEls = Array.from(section.querySelectorAll(".mx-step"));
+    const bars = Array.from(section.querySelectorAll(".mx-story-bar i"));
+    let cur = 0;
+    const s = spring({ v: 0, p: 0 }, (t) => {
+      const v = clamp(t.v, -4, MAX + 6);
+      needle.style.transform = "rotate(" + (-120 + (v / MAX) * SWEEP).toFixed(2) + "deg)";
+      fill.style.strokeDashoffset = (1000 - clamp(v / MAX, 0, 1) * 1000).toFixed(1);
+      speedEl.textContent = Math.max(0, Math.round(v));
+      gauge.style.transform = "rotateX(10deg) rotateY(" + (-16 + t.p * 32).toFixed(2) + "deg)";
+    }, 90, 11);
+
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      const r = section.getBoundingClientRect();
+      const total = section.offsetHeight - window.innerHeight;
+      const p = clamp(-r.top / (total || 1), 0, 1);
+      // Cada tramo acelera hasta un cambio y "pasa la marcha": la aguja cae un poco y vuelve a subir.
+      const seg = Math.min(2, Math.floor(p * 3));
+      const local = p * 3 - seg;
+      const v = (seg * 60) + local * 60 - (local < 0.12 && seg > 0 ? (0.12 - local) * 160 : 0) + (p >= 0.995 ? 20 : 0);
+      s.set({ v: v, p: p });
+      if (seg !== cur) {
+        stepEls[cur].classList.remove("is-on");
+        stepEls[seg].classList.add("is-on");
+        cur = seg;
+      }
+      bars.forEach((b, i) => { b.style.setProperty("--p", clamp(p * 3 - i, 0, 1).toFixed(3)); });
+    };
+    window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+    window.addEventListener("resize", update);
+    update();
+  }
+
+  // ── 15. Títulos letra por letra en 3D ────────────────────────────────────
+  function splitChars(el) {
+    if (el.dataset.mxSplit) return false;
+    el.dataset.mxSplit = "1";
+    el.setAttribute("aria-label", el.textContent.replace(/\s+/g, " ").trim());
+    let i = 0;
+    const walk = (node) => {
+      Array.from(node.childNodes).forEach((n) => {
+        if (n.nodeType === Node.TEXT_NODE) {
+          const frag = document.createDocumentFragment();
+          n.textContent.split(/(\s+)/).forEach((word) => {
+            if (!word) return;
+            if (/^\s+$/.test(word)) { frag.appendChild(document.createTextNode(" ")); return; }
+            const w = document.createElement("span");
+            w.className = "mx-cw";
+            w.setAttribute("aria-hidden", "true");
+            Array.from(word).forEach((ch) => {
+              const c = document.createElement("span");
+              c.className = "mx-ch";
+              c.style.setProperty("--i", i++);
+              c.textContent = ch;
+              w.appendChild(c);
+            });
+            frag.appendChild(w);
+          });
+          n.replaceWith(frag);
+        } else if (n.nodeType === Node.ELEMENT_NODE && n.tagName !== "BR") {
+          walk(n);
+        }
+      });
+    };
+    walk(el);
+    return true;
+  }
+
+  function initCharTitles() {
+    if (reduce || !("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        e.target.classList.remove("mx-pre");
+        io.unobserve(e.target);
+      });
+    }, { rootMargin: "0px 0px -10% 0px" });
+    document.querySelectorAll(".simple-catalog-title, .section-header h2, [data-mx-chars]").forEach((el) => {
+      if (!splitChars(el)) return;
+      el.classList.add("mx-chars");
+      if (el.getBoundingClientRect().top < window.innerHeight * 0.9) return;
+      el.classList.add("mx-pre");
+      io.observe(el);
+    });
+  }
+
+  // ── 16. Scroll suave (solo con mouse o trackpad) ─────────────────────────
+  function initSmoothScroll() {
+    if (reduce || !finePointer || typeof Lenis === "undefined") return;
+    const lenis = new Lenis({
+      lerp: 0.11,
+      wheelMultiplier: 1,
+      anchors: { offset: -70 },
+      prevent: (node) => !!(node.closest && node.closest(".rf, .assistant-modal-backdrop, .moto-gallery-track, [data-lenis-prevent]"))
+    });
+    const loop = (t) => { lenis.raf(t); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+    // Con el popup o la ficha abiertos, el scroll de la página se detiene.
+    const sync = () => {
+      const locked = root.classList.contains("rf-lock") || document.body.style.overflow === "hidden";
+      if (locked) lenis.stop(); else lenis.start();
+    };
+    new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ["class"] });
+    new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ["style"] });
+  }
+
   // ── Armado por página ────────────────────────────────────────────────────
   function buildSections() {
     if (page === "home") {
       buildMarquee($(".simple-hero"), "after");
+      buildShowroom($(".mx-marquee"));
+      buildStory($("#catalogo-home"));
       buildSorteo($("#promo-poster-section"), "before");
     } else if (page === "catalogo") {
       const cta = $(".catalog-cta-strip");
@@ -750,16 +1077,17 @@
   }
 
   function init() {
+    initSmoothScroll();
     runIntro();
     initHero();
     initPageEntrance();
     buildSections();
+    initCharTitles();
     initScrub();
     initReveals();
     initCards();
     initMagnetic();
     initNightRide();
-    initCursor();
     initFooterWord();
   }
 

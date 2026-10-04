@@ -11,8 +11,9 @@ app.js          — Lógica: catálogo, filtros, animaciones, WhatsApp links
 data.js         — Datos mock del catálogo (estructura para futura DB) y SORTEO_CONFIG
 rifa.js         — Popup del sorteo: premios, ruleta de chances y participación por WhatsApp
 rifa.css        — Estilos y animaciones 3D del popup del sorteo
-motion.js       — Animaciones de todas las páginas: ruta nocturna 3D, cursor propio, intro, entradas, cinta de marcas, sorteo 3D, scroll y resortes
+motion.js       — Animaciones: ruta nocturna 3D, showroom 360°, velocímetro con scroll, títulos 3D, scroll suave, intro, sorteo 3D y resortes
 motion.css      — Estilos de esas animaciones (se apagan con "reducir movimiento")
+vendor/         — Lenis (scroll suave, licencia MIT)
 sorteo.html     — Bases y condiciones del sorteo
 img/            — Imágenes del sitio
   hero.jpg

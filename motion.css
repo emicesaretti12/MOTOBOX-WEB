@@ -507,61 +507,6 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
   [data-page="home"] .simple-hero-content { padding-bottom: 16vh; }
 }
 
-/* ── 10. Cursor propio ────────────────────────────────────────────────── */
-.mx-has-cursor.mx-cursor-on,
-.mx-has-cursor.mx-cursor-on * { cursor: none !important; }
-.mx-has-cursor.mx-cursor-on input,
-.mx-has-cursor.mx-cursor-on textarea,
-.mx-has-cursor.mx-cursor-on select,
-.mx-has-cursor.mx-cursor-on [contenteditable] { cursor: text !important; }
-.mx-cursor-dot,
-.mx-cursor-ring {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 2147483000;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-}
-.mx-cursor-on .mx-cursor-dot,
-.mx-cursor-on .mx-cursor-ring { opacity: 1; }
-.mx-cursor-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #fff;
-  mix-blend-mode: difference;
-}
-.mx-cursor-dot[data-mode="view"],
-.mx-cursor-dot[data-mode="text"] { opacity: 0 !important; }
-.mx-cursor-ring {
-  width: 80px;
-  height: 80px;
-  margin: 0;
-  border-radius: 50%;
-  border: 3px solid #fff;
-  mix-blend-mode: difference;
-  display: grid;
-  place-items: center;
-  transform: translate3d(-100px, -100px, 0) scale(0.42);
-  will-change: transform;
-  transition: opacity 0.25s ease, background-color 0.2s ease, border-color 0.2s ease;
-}
-.mx-cursor-ring[data-mode="link"] { background: rgba(255, 255, 255, 0.12); }
-.mx-cursor-ring[data-mode="view"] {
-  mix-blend-mode: normal;
-  background: var(--mx-red);
-  border-color: var(--mx-red);
-  box-shadow: 0 10px 30px rgba(224, 46, 36, 0.35);
-}
-.mx-cursor-label {
-  font-size: 15px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.01em;
-}
-
 /* ── 11. Marca gigante del pie ────────────────────────────────────────── */
 .mx-footer-word {
   overflow: hidden;
@@ -631,6 +576,339 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
   to   { clip-path: inset(0 0 0 0 round 0); transform: none; }
 }
 
+/* ── 15. Showroom 360° ─────────────────────────────────────────────────── */
+.mx-showroom {
+  position: relative;
+  padding: 4.5rem 0 4rem;
+  background:
+    radial-gradient(60% 50% at 50% 38%, rgba(224, 46, 36, 0.16), transparent 70%),
+    linear-gradient(180deg, var(--mx-ink) 0%, #0d0e12 100%);
+  color: #fff;
+  overflow: hidden;
+}
+.mx-sr-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.6rem 2rem;
+}
+.mx-sr-title {
+  font-family: var(--font-heading);
+  font-size: clamp(2.4rem, 7vw, 5.2rem);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+  margin: 0;
+}
+.mx-sr-hint { color: rgba(255, 255, 255, 0.55); font-size: 0.95rem; margin: 0 0 0.5rem; }
+.mx-sr-stage {
+  position: relative;
+  height: calc(var(--sr-h, 234px) * 2.05);
+  margin-top: 1.5rem;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  outline: none;
+}
+.mx-sr-stage.is-dragging { cursor: grabbing; }
+.mx-sr-stage:focus-visible { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5); border-radius: 24px; }
+.mx-sr-spot {
+  position: absolute;
+  left: 50%;
+  top: -10%;
+  width: min(900px, 120vw);
+  height: 120%;
+  transform: translateX(-50%);
+  background: conic-gradient(from 180deg at 50% 0%, transparent 160deg, rgba(255, 255, 255, 0.07) 175deg, rgba(255, 255, 255, 0.1) 180deg, rgba(255, 255, 255, 0.07) 185deg, transparent 200deg);
+  filter: blur(8px);
+  pointer-events: none;
+}
+.mx-sr-tilt {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+.mx-sr-ring {
+  position: absolute;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.mx-sr-item {
+  position: absolute;
+  left: calc(var(--sr-w) / -2);
+  top: calc(var(--sr-h) / -2);
+  width: var(--sr-w);
+  height: var(--sr-h);
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+.mx-sr-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #ffffff 0%, #eceef1 100%);
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.8);
+  -webkit-box-reflect: below 6px linear-gradient(transparent 62%, rgba(255, 255, 255, 0.22));
+  transition: box-shadow 0.3s ease;
+}
+.mx-sr-item.is-front .mx-sr-card {
+  box-shadow: 0 40px 80px -24px rgba(0, 0, 0, 0.9), 0 0 0 2px rgba(224, 46, 36, 0.9), 0 0 60px rgba(224, 46, 36, 0.35);
+}
+.mx-sr-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8% 6% 14%;
+  pointer-events: none;
+}
+.mx-sr-tag {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+/* Plataforma giratoria: un disco plano con anillos y marcas que gira con las motos */
+.mx-sr-disc {
+  position: absolute;
+  left: calc(var(--sr-d, 900px) / -2);
+  top: calc(var(--sr-d, 900px) / -2);
+  width: var(--sr-d, 900px);
+  height: var(--sr-d, 900px);
+  border-radius: 50%;
+  transform: translateY(calc(var(--sr-h) / 2 + 26px)) rotateX(90deg);
+  background:
+    repeating-conic-gradient(rgba(255, 255, 255, 0.07) 0deg 0.6deg, transparent 0.6deg 7.5deg),
+    radial-gradient(circle, rgba(224, 46, 36, 0.28) 0%, rgba(224, 46, 36, 0.06) 45%, transparent 46%, transparent 49%, rgba(255, 255, 255, 0.06) 49.4%, transparent 50%),
+    radial-gradient(circle, #15161b 0%, #0b0c10 70%);
+  -webkit-mask: radial-gradient(circle, #000 60%, transparent 71%);
+  mask: radial-gradient(circle, #000 60%, transparent 71%);
+  pointer-events: none;
+}
+.mx-sr-info {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  align-items: end;
+  margin-top: 0.5rem;
+}
+@media (min-width: 900px) {
+  .mx-sr-info { grid-template-columns: 1fr auto; }
+}
+.mx-sr-brand { color: #ff8a80; font-size: 0.95rem; font-weight: 600; margin: 0 0 0.3rem; }
+.mx-sr-model {
+  font-family: var(--font-heading);
+  font-size: clamp(1.8rem, 4.5vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  margin: 0 0 0.9rem;
+}
+.mx-sr-specs { display: flex; flex-wrap: wrap; gap: 0.45rem; list-style: none; margin: 0; padding: 0; }
+.mx-sr-specs li {
+  font-size: 0.82rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.8);
+}
+.mx-sr-side { display: flex; flex-direction: column; gap: 1rem; align-items: flex-start; }
+@media (min-width: 900px) { .mx-sr-side { align-items: flex-end; } }
+.mx-sr-ctrl { display: flex; align-items: center; gap: 0.9rem; }
+.mx-sr-count { font-variant-numeric: tabular-nums; font-weight: 600; color: rgba(255, 255, 255, 0.7); min-width: 4.5em; text-align: center; }
+.mx-sr-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  cursor: pointer;
+  transition: transform 160ms ease-out, background-color 0.2s ease, border-color 0.2s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .mx-sr-btn:hover { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.3); }
+}
+.mx-sr-btn:active { transform: scale(0.94); }
+.mx-sr-btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.mx-sr-cta { display: flex; flex-wrap: wrap; gap: 0.9rem; align-items: center; }
+.mx-sr-link { color: rgba(255, 255, 255, 0.75); text-decoration: underline; text-underline-offset: 4px; font-size: 0.92rem; }
+.mx-sr-link:hover { color: #fff; }
+
+/* ── 16. Velocímetro con scroll ────────────────────────────────────────── */
+.mx-story {
+  position: relative;
+  height: 320vh;
+  background: #0a0b0e;
+  color: #fff;
+}
+.mx-story-sticky {
+  position: sticky;
+  top: var(--header-height, 54px);
+  height: calc(100vh - var(--header-height, 54px));
+  height: calc(100svh - var(--header-height, 54px));
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: radial-gradient(60% 60% at 70% 50%, rgba(224, 46, 36, 0.14), transparent 70%);
+}
+.mx-story-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.2rem;
+  align-items: center;
+  width: 100%;
+}
+@media (min-width: 900px) {
+  .mx-story-grid { grid-template-columns: 1fr 1fr; gap: 3rem; }
+}
+.mx-story-title {
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 5.5vw, 4rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin: 0 0 1.4rem;
+}
+.mx-story-steps { position: relative; min-height: 9.5rem; }
+.mx-step {
+  position: absolute;
+  inset: 0 0 auto 0;
+  opacity: 0;
+  transform: translateY(24px);
+  filter: blur(6px);
+  transition: opacity 0.35s ease, transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), filter 0.35s ease;
+  pointer-events: none;
+}
+.mx-step.is-on { opacity: 1; transform: none; filter: none; transition-delay: 0.08s; pointer-events: auto; }
+.mx-step-n { font-variant-numeric: tabular-nums; font-weight: 700; color: #ff8a80; font-size: 0.9rem; }
+.mx-step h3 { font-size: clamp(1.4rem, 3.4vw, 2.1rem); font-weight: 800; letter-spacing: -0.025em; margin: 0.35rem 0 0.5rem; }
+.mx-step p { color: rgba(255, 255, 255, 0.68); font-size: 1.02rem; line-height: 1.6; max-width: 40ch; margin: 0; }
+.mx-story-bar { display: flex; gap: 6px; margin-top: 1.4rem; max-width: 320px; }
+.mx-story-bar i {
+  position: relative;
+  flex: 1;
+  height: 3px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+}
+.mx-story-bar i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #e02e24, #ff7a45);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--p, 0));
+}
+.mx-gauge-wrap { perspective: 1100px; display: grid; place-items: center; }
+.mx-gauge {
+  position: relative;
+  width: min(440px, 78vw);
+  aspect-ratio: 1;
+  transform-style: preserve-3d;
+  transform: rotateX(10deg) rotateY(-16deg);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, #17181d 0%, #0c0d10 62%, transparent 63%),
+    radial-gradient(circle at 50% 50%, transparent 64%, rgba(255, 255, 255, 0.08) 64.5%, transparent 66%);
+  box-shadow: 0 50px 100px -40px rgba(0, 0, 0, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+@media (max-width: 899px) {
+  .mx-gauge { width: min(330px, 80vw); }
+  .mx-story-steps { min-height: 8.5rem; }
+  .mx-g-read { top: 51%; }
+  .mx-g-read b { font-size: 2.1rem; }
+  .mx-g-read span { font-size: 0.7rem; }
+  .mx-g-odo { bottom: 5%; font-size: 0.66rem; padding: 0.2rem 0.5rem; }
+}
+.mx-gauge svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.mx-g-track { fill: none; stroke: rgba(255, 255, 255, 0.08); stroke-width: 12; stroke-linecap: round; }
+.mx-g-fill {
+  fill: none;
+  stroke: url(#mxGArc);
+  stroke-width: 12;
+  stroke-linecap: round;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  filter: drop-shadow(0 0 8px rgba(224, 46, 36, 0.7));
+}
+.mx-g-major { stroke: rgba(255, 255, 255, 0.85); stroke-width: 3; stroke-linecap: round; }
+.mx-g-minor { stroke: rgba(255, 255, 255, 0.35); stroke-width: 1.6; stroke-linecap: round; }
+.mx-g-red { stroke: #e02e24; stroke-width: 3; stroke-linecap: round; }
+.mx-g-labels text { fill: rgba(255, 255, 255, 0.75); font-size: 15px; font-weight: 600; text-anchor: middle; font-family: var(--font-heading); }
+.mx-g-labels .mx-g-red-t { fill: #ff6a5c; }
+.mx-g-needle { transform-origin: 200px 205px; transform: rotate(-120deg); }
+.mx-g-needle path { fill: #ff3b2f; filter: drop-shadow(0 0 6px rgba(255, 59, 47, 0.8)); }
+.mx-g-needle circle { fill: #222328; stroke: rgba(255, 255, 255, 0.2); stroke-width: 1.5; }
+.mx-g-needle .mx-g-hub { fill: #ff3b2f; stroke: none; }
+.mx-g-read {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 60%;
+  text-align: center;
+  transform: translateZ(30px);
+}
+.mx-g-read b {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: clamp(2.4rem, 7vw, 3.6rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.mx-g-read span { font-size: 0.8rem; color: rgba(255, 255, 255, 0.55); }
+.mx-g-odo {
+  position: absolute;
+  left: 50%;
+  bottom: 13%;
+  transform: translateX(-50%) translateZ(20px);
+  padding: 0.3rem 0.7rem;
+  border-radius: 8px;
+  background: #050507;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+}
+.mx-g-odo span { font-variant-numeric: tabular-nums; letter-spacing: 0.18em; color: #fff; font-weight: 700; }
+/* Sin movimiento: la sección deja de ser fija y muestra los tres motivos juntos */
+.mx-story.is-static { height: auto; }
+.mx-story.is-static .mx-story-sticky { position: relative; top: 0; height: auto; padding: 4rem 0; }
+.mx-story.is-static .mx-story-steps { min-height: 0; display: grid; gap: 1.4rem; }
+.mx-story.is-static .mx-step { position: static; opacity: 1; transform: none; filter: none; }
+.mx-story.is-static .mx-story-bar { display: none; }
+
+/* ── 17. Títulos letra por letra ──────────────────────────────────────── */
+.mx-chars .mx-cw { display: inline-block; white-space: nowrap; }
+.mx-chars .mx-ch {
+  display: inline-block;
+  transform-origin: 50% 100%;
+  transition: transform 0.9s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.5s ease;
+  transition-delay: calc(var(--i, 0) * 16ms);
+}
+.mx-chars.mx-pre .mx-ch {
+  opacity: 0;
+  transform: perspective(500px) translateY(0.45em) rotateX(-95deg);
+}
+
+/* ── 18. Scroll suave (Lenis) ─────────────────────────────────────────── */
+html.lenis, html.lenis body { height: auto; }
+html.lenis { scroll-behavior: auto !important; }
+.lenis:not(.lenis-autoToggle).lenis-stopped { overflow: clip; }
+.lenis [data-lenis-prevent] { overscroll-behavior: contain; }
+
 /* ── Accesibilidad: sin movimiento si el usuario lo pide ──────────────── */
 @media (prefers-reduced-motion: reduce) {
   html.mx-intro-on::after { content: none; }
@@ -638,7 +916,8 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
   .mx-hero-glow, .mx-scroll-cue, .mx-progress, .mx-stage-floor, .mx-spark { display: none; }
   .mx-prize-body, .mx-prize-body::after, .mx-sorteo-kicker::before { animation: none !important; }
   .mx-sorteo { clip-path: none; }
-  .mx-ride, .mx-cursor-dot, .mx-cursor-ring { display: none; }
+  .mx-ride { display: none; }
+  .mx-sr-ring, .mx-sr-tilt { transition: none; }
   ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
   /* Menos movimiento no es cero: las entradas quedan como fundidos cortos. */
   .mx-enter { animation: mxFade 0.4s ease backwards; animation-delay: var(--mx-d, 0ms); }
