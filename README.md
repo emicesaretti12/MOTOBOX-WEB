@@ -11,6 +11,8 @@ app.js          — Lógica: catálogo, filtros, animaciones, WhatsApp links
 data.js         — Datos mock del catálogo (estructura para futura DB) y SORTEO_CONFIG
 rifa.js         — Popup del sorteo: premios, ruleta de chances y participación por WhatsApp
 rifa.css        — Estilos y animaciones 3D del popup del sorteo
+motion.js       — Intro de marca, cinta de marcas, sorteo 3D en la portada, revelados al scroll y botones magnéticos
+motion.css      — Estilos de esas animaciones (se apagan con "reducir movimiento")
 sorteo.html     — Bases y condiciones del sorteo
 img/            — Imágenes del sitio
   hero.jpg

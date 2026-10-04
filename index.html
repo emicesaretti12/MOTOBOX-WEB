@@ -11,8 +11,26 @@
   <meta property="og:type" content="website">
   
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23DC2626'/%3E%3Ctext y='65' x='50' text-anchor='middle' font-size='50' font-weight='900' fill='white' font-family='sans-serif'%3EMB%3C/text%3E%3C/svg%3E">
+  <script>
+    // Intro de marca: solo la primera vez por sesión y si el usuario no pidió menos movimiento.
+    try {
+      if (!sessionStorage.getItem("motobox_intro") && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        sessionStorage.setItem("motobox_intro", "1");
+        document.documentElement.classList.add("mx-intro-on");
+        // Red de seguridad: si motion.js no llega a cargar, la cortina no queda puesta.
+        setTimeout(function () {
+          var r = document.documentElement;
+          if (r.classList.contains("mx-intro-on") && !r.classList.contains("mx-intro-built")) {
+            r.classList.remove("mx-intro-on");
+            document.dispatchEvent(new CustomEvent("motobox:intro-done"));
+          }
+        }, 5000);
+      }
+    } catch (e) {}
+  </script>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="rifa.css">
+  <link rel="stylesheet" href="motion.css">
 </head>
 <body data-page="home">
 
@@ -165,5 +183,6 @@
   <script src="data.js"></script>
   <script src="app.js"></script>
   <script src="rifa.js"></script>
+  <script src="motion.js"></script>
 </body>
 </html>

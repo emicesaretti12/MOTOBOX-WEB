@@ -2838,7 +2838,7 @@ input:focus-visible {
    Solo el estado inicial vive en la animación (fill "backwards"): al terminar,
    la tarjeta vuelve a su estilo base y el hover / la inclinación 3D funcionan. */
 .moto-card-modern {
-  animation: cardSlideIn 0.55s var(--ease-out) backwards;
+  animation: cardSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 [data-page="home"] .catalog-cards-grid .moto-card-modern:nth-child(1) { animation-delay: 0.2s; }
@@ -2848,7 +2848,7 @@ input:focus-visible {
 @keyframes cardSlideIn {
   from {
     opacity: 0;
-    transform: translateY(30px) scale(0.97);
+    transform: perspective(1000px) translateY(56px) rotateX(22deg) scale(0.94);
   }
 }
 

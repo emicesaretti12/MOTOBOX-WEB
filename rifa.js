@@ -616,7 +616,12 @@
       // En la página de bases no se abre solo: se abre con el botón "Participar".
     } else if (readKey("sessionStorage", KEY + "_visto") !== "1") {
       writeKey("sessionStorage", KEY + "_visto", "1");
-      later(open, 900);
+      // Si está corriendo la intro de la portada, el popup espera a que termine.
+      if (document.documentElement.classList.contains("mx-intro-on")) {
+        document.addEventListener("motobox:intro-done", () => later(open, 700), { once: true });
+      } else {
+        later(open, 900);
+      }
     } else if (readKey("sessionStorage", KEY + "_pill") !== "1") {
       pill.hidden = false;
     }
