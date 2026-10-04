@@ -429,7 +429,7 @@
   function renderTicket() {
     const n = bonus();
     const total = 1 + n;
-    $("[data-rf-tk-chances]").textContent = String(total);
+    countUp($("[data-rf-tk-chances]"), total);
     $("[data-rf-tk-chances-label]").textContent = total === 1 ? "chance" : "chances";
     $("[data-rf-tk-bonus]").textContent = "+" + chancesLabel(n);
     $("[data-rf-s-bonus]").textContent = "+" + chancesLabel(n);
@@ -445,6 +445,22 @@
       "Hola Motobox! Quiero participar gratis del Sorteo N.º " + C.id + ". " + prizeTxt + " Mi nombre y DNI: ");
     state.flipped = false;
     flip.classList.remove("is-flipped");
+  }
+
+  // El número grande del ticket cuenta hasta el total de chances.
+  let countRaf = 0;
+  function countUp(el, to) {
+    cancelAnimationFrame(countRaf);
+    if (reduceMq.matches || to <= 1) { el.textContent = String(to); return; }
+    let start = null;
+    const frame = (now) => {
+      if (start === null) start = now;
+      const t = Math.min(1, (now - start - 350) / 650);
+      el.textContent = String(t <= 0 ? 1 : Math.max(1, Math.round(1 + (to - 1) * (1 - Math.pow(1 - t, 3)))));
+      if (t < 1) countRaf = requestAnimationFrame(frame);
+    };
+    el.textContent = "1";
+    countRaf = requestAnimationFrame(frame);
   }
 
   function toggleFlip() {

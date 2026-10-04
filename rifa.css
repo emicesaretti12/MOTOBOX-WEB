@@ -225,6 +225,10 @@ html.rf-lock body {
   transform: translateZ(40px) rotate(4deg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), 0 22px 40px rgba(0, 0, 0, 0.22), 0 40px 60px rgba(224, 46, 36, 0.14);
 }
+.rf-prize-card--1 { animation: rf-card-in-1 760ms var(--rf-ease-out) 140ms backwards; }
+.rf-prize-card--2 { animation: rf-card-in-2 760ms var(--rf-ease-out) 260ms backwards; }
+@keyframes rf-card-in-1 { from { opacity: 0; transform: translateY(70px) rotate(-16deg) scale(0.9); } }
+@keyframes rf-card-in-2 { from { opacity: 0; transform: translateZ(0) translateY(80px) rotate(16deg) scale(0.9); } }
 .rf-prize-card img {
   width: 100%;
   height: 100%;
@@ -1282,4 +1286,6 @@ html.rf-lock body {
     animation: none !important;
   }
   .rf-cf { display: none; }
+  .rf-prize-card--1,
+  .rf-prize-card--2 { animation: none !important; }
 }

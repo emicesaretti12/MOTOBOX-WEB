@@ -3013,7 +3013,112 @@ input:focus-visible {
   }
 }
 
+/* ── PÁGINAS: fundido suave al navegar (Chrome, Edge y Safari recientes) ── */
+@view-transition { navigation: auto; }
+.site-header { view-transition-name: site-header; }
+.mobile-bottom-dock { view-transition-name: bottom-dock; }
+::view-transition-old(root) { animation: vtOut 160ms var(--ease-out) both; }
+::view-transition-new(root) { animation: vtIn 320ms var(--ease-out) both; }
+@keyframes vtOut { to { opacity: 0; } }
+@keyframes vtIn { from { opacity: 0; transform: translateY(10px); } }
+
+/* ── SCROLL: los bloques aparecen al llegar a la pantalla (app.js) ── */
+.mx-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  filter: blur(4px);
+  transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out), filter 0.6s var(--ease-out);
+  transition-delay: var(--mx-d, 0ms);
+}
+.mx-reveal.is-in {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+/* ── HERO: el título entra palabra por palabra ── */
+.simple-hero-title.mx-split {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+.mx-word {
+  display: inline-block;
+  animation: mxWord 0.7s var(--ease-out) backwards;
+  animation-delay: var(--mx-d, 0ms);
+}
+@keyframes mxWord {
+  from { opacity: 0; transform: translateY(0.45em); filter: blur(6px); }
+}
+/* Al hacer scroll, el contenido del hero sube y se desvanece apenas */
+[data-page="home"] .simple-hero-content {
+  transform: translateY(calc(var(--hero-p, 0) * -48px));
+  opacity: calc(1 - var(--hero-p, 0) * 0.85);
+}
+
+/* ── BOTÓN PRINCIPAL: brillo que lo cruza cada tanto ── */
+.btn-hero-red {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-hero-red::after {
+  content: "";
+  position: absolute;
+  top: -20%;
+  left: 0;
+  width: 60px;
+  height: 140%;
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateX(-120%) skewX(-20deg);
+  animation: btnShine 4.2s var(--ease-in-out) 1.6s infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes btnShine {
+  0%, 74% { transform: translateX(-120%) skewX(-20deg); }
+  100% { transform: translateX(900%) skewX(-20deg); }
+}
+
+/* ── TARJETAS 3D: la foto se desplaza al revés de la inclinación (profundidad) ── */
+@media (hover: hover) and (pointer: fine) {
+  .moto-card-modern.is-tilting .moto-card-header img,
+  .moto-card-modern.is-tilting .moto-gallery-slide img {
+    transform: scale(1.08) translate(var(--px, 0px), var(--py, 0px));
+    transition: none;
+  }
+}
+
+/* ── FILTROS DEL CATÁLOGO: el fondo blanco se desliza hasta la opción elegida ── */
+.filter-pills-bar.has-indicator { position: relative; }
+.filter-pills-bar.has-indicator .filter-pill {
+  position: relative;
+  z-index: 1;
+}
+.filter-pills-bar.has-indicator .filter-pill.active {
+  background: transparent;
+  box-shadow: none;
+}
+.filter-indicator {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  height: calc(100% - 4px);
+  border-radius: 2px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.36s var(--ease-out), width 0.36s var(--ease-out);
+  pointer-events: none;
+}
+
 /* ── RESPETAR preferencias de usuario ── */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none !important; }
+  .mx-reveal { transform: none; filter: none; }
+  [data-page="home"] .simple-hero-content { transform: none; opacity: 1; }
+  .btn-hero-red::after { display: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

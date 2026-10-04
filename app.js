@@ -512,6 +512,8 @@
   // 3. GLOBAL BEHAVIORS (Scroll, Navbar, Observers)
   // ==========================================================================
   let lastScrollY = 0;
+  const heroEl = document.querySelector('[data-page="home"] .simple-hero-content');
+  const reduceMotionMq = window.matchMedia("(prefers-reduced-motion: reduce)");
   let ticking = false;
 
   function handleScroll() {
@@ -535,6 +537,11 @@
     }
 
     lastScrollY = scrollY;
+
+    if (heroEl && !reduceMotionMq.matches) {
+      const p = Math.min(1, Math.max(0, scrollY / (heroEl.offsetHeight || 1)));
+      heroEl.style.setProperty("--hero-p", p.toFixed(3));
+    }
   }
 
   window.addEventListener("scroll", () => {
@@ -590,6 +597,8 @@
           el.style.removeProperty("--rx");
           el.style.removeProperty("--ry");
           el.style.removeProperty("--lift");
+          el.style.removeProperty("--px");
+          el.style.removeProperty("--py");
           springs.delete(el);
           return;
         }
@@ -604,6 +613,8 @@
         el.style.setProperty("--rx", s.x.toFixed(2) + "deg");
         el.style.setProperty("--ry", s.y.toFixed(2) + "deg");
         el.style.setProperty("--lift", s.l.toFixed(3));
+        el.style.setProperty("--px", (s.y * -0.9).toFixed(2) + "px");
+        el.style.setProperty("--py", (s.x * 0.9).toFixed(2) + "px");
       });
       if (moving) {
         raf = requestAnimationFrame(step);
@@ -645,6 +656,93 @@
     });
   }
 
+  // ==========================================================================
+  // 5. MOVIMIENTO — título por palabras, aparición al scroll y filtros deslizantes
+  // ==========================================================================
+  function initMotion() {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Título del hero: cada palabra entra con un pequeño desenfoque, escalonada.
+    const heroTitle = document.querySelector(".simple-hero-title");
+    if (heroTitle && !reduce && !heroTitle.classList.contains("mx-split")) {
+      let i = 0;
+      Array.from(heroTitle.childNodes).forEach((node) => {
+        if (node.nodeType !== Node.TEXT_NODE || !node.textContent.trim()) return;
+        const frag = document.createDocumentFragment();
+        node.textContent.split(/(\s+)/).forEach((part) => {
+          if (!part) return;
+          if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
+          const span = document.createElement("span");
+          span.className = "mx-word";
+          span.style.setProperty("--mx-d", (300 + i * 70) + "ms");
+          span.textContent = part;
+          frag.appendChild(span);
+          i++;
+        });
+        node.replaceWith(frag);
+      });
+      heroTitle.classList.add("mx-split");
+    }
+
+    // Bloques que aparecen al llegar a la pantalla (solo los que arrancan fuera de vista).
+    if (!reduce && "IntersectionObserver" in window) {
+      const groups = [
+        ".about-pillar-card",
+        ".about-pillars-section .section-header",
+        ".location-section .section-header",
+        ".location-layout > *",
+        ".catalog-cta-strip",
+        ".simple-footer-inner > *",
+        ".simple-catalog-sub + .catalog-cards-grid ~ div"
+      ];
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const el = entry.target;
+          el.classList.add("is-in");
+          io.unobserve(el);
+          el.addEventListener("transitionend", function done(ev) {
+            if (ev.propertyName !== "opacity") return;
+            el.classList.remove("mx-reveal", "is-in");
+            el.style.removeProperty("--mx-d");
+            el.removeEventListener("transitionend", done);
+          });
+        });
+      }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+      groups.forEach((sel) => {
+        document.querySelectorAll(sel).forEach((el, idx) => {
+          if (el.getBoundingClientRect().top < window.innerHeight) return;
+          el.classList.add("mx-reveal");
+          el.style.setProperty("--mx-d", Math.min(idx, 5) * 70 + "ms");
+          io.observe(el);
+        });
+      });
+    }
+
+    // Filtros del catálogo: un fondo blanco se desliza hasta la opción activa.
+    const bar = document.querySelector(".filter-pills-bar");
+    if (bar) {
+      const indicator = document.createElement("span");
+      indicator.className = "filter-indicator";
+      indicator.setAttribute("aria-hidden", "true");
+      bar.prepend(indicator);
+      bar.classList.add("has-indicator");
+      const move = (animate) => {
+        const active = bar.querySelector(".filter-pill.active");
+        if (!active) return;
+        if (!animate || reduce) indicator.style.transition = "none";
+        indicator.style.width = active.offsetWidth + "px";
+        indicator.style.transform = "translateX(" + active.offsetLeft + "px)";
+        if (!animate || reduce) requestAnimationFrame(() => { indicator.style.transition = ""; });
+      };
+      move(false);
+      bar.addEventListener("click", (e) => {
+        if (e.target.closest(".filter-pill")) requestAnimationFrame(() => move(true));
+      });
+      window.addEventListener("resize", () => move(false));
+    }
+  }
+
   // Async initialization to load CRM data from Supabase before rendering
   async function initApp() {
     if (typeof initDataFromCRM === "function") {
@@ -677,6 +775,7 @@
     document.querySelectorAll(".reveal-on-scroll").forEach(el => observer.observe(el));
 
     initCardTilt();
+    initMotion();
     handleScroll();
   }
 
