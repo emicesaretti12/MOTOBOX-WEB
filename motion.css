@@ -655,8 +655,10 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
   background: linear-gradient(180deg, #ffffff 0%, #eceef1 100%);
   box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.8);
   -webkit-box-reflect: below 6px linear-gradient(transparent 62%, rgba(255, 255, 255, 0.22));
-  transition: box-shadow 0.3s ease;
+  transition: box-shadow 0.3s ease, transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
 }
+/* La moto de adelante se adelanta en profundidad y crece un poco */
+.mx-sr-item.is-front .mx-sr-card { transform: translateZ(44px) scale(1.05); }
 .mx-sr-item.is-front .mx-sr-card {
   box-shadow: 0 40px 80px -24px rgba(0, 0, 0, 0.9), 0 0 0 2px rgba(224, 46, 36, 0.9), 0 0 60px rgba(224, 46, 36, 0.35);
 }
@@ -824,6 +826,11 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
   box-shadow: 0 50px 100px -40px rgba(0, 0, 0, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 @media (max-width: 899px) {
+  /* La barra de abajo ocupa su lugar: la sección fija se centra en el espacio que queda. */
+  .mx-story-sticky {
+    height: calc(100vh - var(--header-height, 54px) - var(--bottom-bar-height, 56px) - env(safe-area-inset-bottom, 0px));
+    height: calc(100svh - var(--header-height, 54px) - var(--bottom-bar-height, 56px) - env(safe-area-inset-bottom, 0px));
+  }
   .mx-gauge { width: min(330px, 80vw); }
   .mx-story-steps { min-height: 8.5rem; }
   .mx-g-read { top: 51%; }
@@ -909,6 +916,63 @@ html.lenis { scroll-behavior: auto !important; }
 .lenis:not(.lenis-autoToggle).lenis-stopped { overflow: clip; }
 .lenis [data-lenis-prevent] { overscroll-behavior: contain; }
 
+/* ── 19. Celular: tarjetas en 3D ligadas al scroll ─────────────────────── */
+.mx-touch3d .moto-card-modern { animation: none; }
+.mx-touch3d .mx-s3d {
+  transition: box-shadow 0.3s ease, border-color 0.25s ease, background-color 0.25s ease;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* ── 20. Velocímetro: líneas de velocidad ──────────────────────────────── */
+.mx-story-streaks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  overflow: hidden;
+}
+.mx-story-streaks i {
+  position: absolute;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55) 60%, rgba(255, 110, 80, 0.9));
+  animation: mxStreak 1s linear infinite;
+}
+@keyframes mxStreak {
+  from { transform: translateX(110vw) scaleX(var(--sx, 1)); }
+  to   { transform: translateX(-40vw) scaleX(var(--sx, 1)); }
+}
+.mx-story-grid { position: relative; z-index: 1; }
+
+/* ── 21. Hero y Nosotros: volumen 3D ──────────────────────────────────── */
+[data-page="home"] .simple-hero-title { will-change: transform; }
+.mx-about-3d {
+  overflow: hidden;
+  border-radius: 20px;
+  will-change: transform;
+}
+.mx-about-3d img { scale: 1.08; }
+
+/* Celulares bajos: el velocímetro se achica para que entre con el texto */
+@media (max-width: 899px) and (max-height: 720px) {
+  .mx-gauge { width: min(250px, 64vw); }
+  .mx-story-title { font-size: 1.8rem; margin-bottom: 0.8rem; }
+  .mx-story-steps { min-height: 7.6rem; }
+  .mx-step p { font-size: 0.92rem; }
+  .mx-g-read { top: 58%; }
+  .mx-g-read b { font-size: 1.8rem; }
+  .mx-g-odo { bottom: 3%; }
+}
+/* Tablets: el velocímetro aprovecha el ancho */
+@media (min-width: 600px) and (max-width: 899px) {
+  .mx-gauge { width: min(430px, 58vw); }
+  .mx-g-read { top: 56%; }
+  .mx-g-read b { font-size: 3rem; }
+  .mx-g-odo { bottom: 9%; font-size: 0.78rem; }
+}
+
 /* ── Accesibilidad: sin movimiento si el usuario lo pide ──────────────── */
 @media (prefers-reduced-motion: reduce) {
   html.mx-intro-on::after { content: none; }
@@ -916,7 +980,7 @@ html.lenis { scroll-behavior: auto !important; }
   .mx-hero-glow, .mx-scroll-cue, .mx-progress, .mx-stage-floor, .mx-spark { display: none; }
   .mx-prize-body, .mx-prize-body::after, .mx-sorteo-kicker::before { animation: none !important; }
   .mx-sorteo { clip-path: none; }
-  .mx-ride { display: none; }
+  .mx-ride, .mx-story-streaks { display: none; }
   .mx-sr-ring, .mx-sr-tilt { transition: none; }
   ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
   /* Menos movimiento no es cero: las entradas quedan como fundidos cortos. */

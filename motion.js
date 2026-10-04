@@ -63,8 +63,62 @@
     };
   }
 
+  /**
+   * Giroscopio (solo celulares): inclinar el teléfono mueve las escenas 3D.
+   * Android lo da directo; iOS pide permiso, y se lo pedimos recién cuando la persona
+   * toca una zona 3D (portada, showroom, sorteo o velocímetro).
+   * La posición de reposo se recalibra despacio: no importa cómo se sostenga el teléfono.
+   */
+  const gyro = { x: 0, y: 0, on: false, subs: [] };
+  const onGyro = (fn) => { gyro.subs.push(fn); };
+  function initGyro() {
+    if (reduce || finePointer || typeof window.DeviceOrientationEvent === "undefined") return;
+    let baseB = null, baseG = null, pending = false;
+    const handle = (e) => {
+      if (e.beta == null || e.gamma == null) return;
+      let b = e.beta, g = e.gamma;
+      const ang = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+      if (ang === 90) { const t = b; b = -g; g = t; }
+      else if (ang === -90 || ang === 270) { const t = b; b = g; g = -t; }
+      if (baseB === null) { baseB = b; baseG = g; }
+      baseB += (b - baseB) * 0.006;
+      baseG += (g - baseG) * 0.006;
+      gyro.x = clamp((g - baseG) / 16, -1, 1);
+      gyro.y = clamp((b - baseB) / 16, -1, 1);
+      if (!pending) {
+        pending = true;
+        requestAnimationFrame(() => { pending = false; gyro.subs.forEach((f) => f(gyro.x, gyro.y)); });
+      }
+    };
+    const start = () => {
+      if (gyro.on) return;
+      gyro.on = true;
+      root.classList.add("mx-gyro");
+      window.addEventListener("deviceorientation", handle);
+    };
+    if (typeof window.DeviceOrientationEvent.requestPermission === "function") {
+      const ask = (e) => {
+        if (!e.target.closest || !e.target.closest(".simple-hero, .mx-sr-stage, .mx-stage, .mx-gauge-wrap")) return;
+        if (e.target.closest("a, button")) return;
+        document.removeEventListener("click", ask, true);
+        window.DeviceOrientationEvent.requestPermission().then((r) => { if (r === "granted") start(); }).catch(() => {});
+      };
+      document.addEventListener("click", ask, true);
+    } else {
+      start();
+    }
+  }
+
+  // Vibración muy corta (Android) para confirmar un cambio hecho con el dedo.
+  let lastTouchAt = 0;
+  document.addEventListener("pointerdown", (e) => { if (e.pointerType === "touch") lastTouchAt = performance.now(); }, { passive: true });
+  const tick = () => {
+    if (navigator.vibrate && performance.now() - lastTouchAt < 2500) { try { navigator.vibrate(8); } catch (err) { /* sin vibración */ } }
+  };
+
   // ── 1. Intro de marca (solo portada, una vez por sesión) ──────────────────
   let heroSpring = null;
+  let rideGoal = null;
 
   function runIntro() {
     if (!root.classList.contains("mx-intro-on")) return;
@@ -140,7 +194,43 @@
     cue.setAttribute("aria-hidden", "true");
     hero.appendChild(cue);
 
-    if (!finePointer) return;
+    // Título con volumen: capas de sombra en rojo oscuro arman un bloque extruido que
+    // gira hacia el mouse (o el giroscopio) mientras el frente queda blanco.
+    const title = hero.querySelector(".simple-hero-title");
+    const LAYERS = 8;
+    const titleSpring = title ? spring({ x: 0, y: 0 }, (t) => {
+      const dx = -t.x * 0.75, dy = 0.5 - t.y * 0.55;
+      const sh = [];
+      for (let i = 1; i <= LAYERS; i++) {
+        const k = i / LAYERS;
+        sh.push((dx * i).toFixed(2) + "px " + (dy * i).toFixed(2) + "px 0 rgb(" + Math.round(176 - 128 * k) + "," + Math.round(30 - 20 * k) + "," + Math.round(24 - 16 * k) + ")");
+      }
+      sh.push((dx * LAYERS * 1.6).toFixed(1) + "px " + (dy * LAYERS * 1.6 + 12).toFixed(1) + "px 30px rgba(0,0,0,0.55)");
+      title.style.textShadow = sh.join(",");
+      title.style.transform = "perspective(900px) rotateX(" + (t.y * -10).toFixed(2) + "deg) rotateY(" + (t.x * 14).toFixed(2) + "deg)";
+    }, 70, 12) : null;
+    if (titleSpring) titleSpring.set({ x: 0.001 });
+
+    // Una sola "inclinación" mueve todo el hero: foto, título y cámara de la ruta.
+    const lean = (x, y) => {
+      heroSpring.set({ px: x * 0.5, py: y * 0.5 });
+      if (titleSpring) titleSpring.set({ x: x, y: y });
+      if (rideGoal) { rideGoal.x = x * 1.2; rideGoal.pitch = y * -12; rideGoal.roll = x * -0.025; }
+    };
+
+    if (!finePointer) {
+      // Celular: giroscopio si hay; si no, un balanceo lento para que la escena respire.
+      let heroVisible = true;
+      new IntersectionObserver((en) => { heroVisible = en[0].isIntersecting; }).observe(hero);
+      onGyro((x, y) => { if (heroVisible) lean(x, y); });
+      setInterval(() => {
+        if (gyro.on || !heroVisible || document.hidden) return;
+        const t = performance.now() / 1000;
+        lean(Math.sin(t * 0.55) * 0.5, Math.sin(t * 0.8) * 0.3);
+      }, 140);
+      return;
+    }
+
     const glow = document.createElement("div");
     glow.className = "mx-hero-glow";
     glow.setAttribute("aria-hidden", "true");
@@ -153,10 +243,10 @@
       const r = hero.getBoundingClientRect();
       const x = (e.clientX - r.left) / r.width;
       const y = (e.clientY - r.top) / r.height;
-      heroSpring.set({ px: x - 0.5, py: y - 0.5 });
+      lean((x - 0.5) * 2, (y - 0.5) * 2);
       glowSpring.set({ x: x, y: y });
     });
-    hero.addEventListener("pointerleave", () => heroSpring.set({ px: 0, py: 0 }));
+    hero.addEventListener("pointerleave", () => lean(0, 0));
   }
 
   // ── 3. Entrada orquestada de cada página interna ─────────────────────────
@@ -310,13 +400,23 @@
       io.disconnect();
     }, { threshold: 0.2 }).observe(section);
 
-    // El escenario gira con el puntero, con resorte.
+    // El par de motos gira en 3D: con el scroll (entra mirando a un lado y sale mirando
+    // al otro), con el mouse en compu y con el giroscopio en celular. Todo con resorte.
+    const stage = section.querySelector(".mx-stage");
+    const rig = section.querySelector(".mx-stage-rig");
+    const tilt = spring({ x: 0, y: 0, s: 0 }, (t) => {
+      rig.style.transform = "rotateX(" + (t.y * -10 + t.s * -5).toFixed(3) + "deg) rotateY(" + (t.x * 14 + t.s * 26).toFixed(3) + "deg)";
+    }, 90, 14);
+    let inView = false, ticking = false;
+    new IntersectionObserver((en) => { inView = en[0].isIntersecting; }).observe(section);
+    const onScroll = () => {
+      ticking = false;
+      if (!inView) return;
+      const r = section.getBoundingClientRect(), vh = window.innerHeight;
+      tilt.set({ s: clamp((r.top + r.height / 2 - vh / 2) / (vh / 2 + r.height / 2), -1, 1) });
+    };
+    window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
     if (finePointer) {
-      const stage = section.querySelector(".mx-stage");
-      const rig = section.querySelector(".mx-stage-rig");
-      const tilt = spring({ x: 0, y: 0 }, (t) => {
-        rig.style.transform = "rotateX(" + (t.y * -10).toFixed(3) + "deg) rotateY(" + (t.x * 14).toFixed(3) + "deg)";
-      }, 90, 14);
       section.addEventListener("pointermove", (e) => {
         const r = stage.getBoundingClientRect();
         tilt.set({
@@ -325,6 +425,8 @@
         });
       });
       section.addEventListener("pointerleave", () => tilt.set({ x: 0, y: 0 }));
+    } else {
+      onGyro((x, y) => { if (inView) tilt.set({ x: x * 1.2, y: y * 1.2 }); });
     }
     return section;
   }
@@ -405,7 +507,8 @@
 
   // ── 8. Tarjetas: entran en 3D recién cuando aparecen ─────────────────────
   function initCards() {
-    if (reduce || !("IntersectionObserver" in window)) return;
+    // En celular la entrada de las tarjetas la maneja el scroll (initTouch3D).
+    if (reduce || !finePointer || !("IntersectionObserver" in window)) return;
     let batch = 0, batchTimer = 0;
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
@@ -529,17 +632,7 @@
     const vel = { x: 0, pitch: 0, roll: 0, speed: 0 };
     let dash = 0, running = false, raf = 0, last = 0, boost = 1, lastScroll = window.scrollY;
 
-    if (finePointer) {
-      hero.addEventListener("pointermove", (e) => {
-        const r = hero.getBoundingClientRect();
-        const px = (e.clientX - r.left) / r.width - 0.5;
-        const py = (e.clientY - r.top) / r.height - 0.5;
-        goal.x = px * 2.4;
-        goal.pitch = py * -24;
-        goal.roll = px * -0.05;
-      });
-      hero.addEventListener("pointerleave", () => { goal.x = 0; goal.pitch = 0; goal.roll = 0; });
-    }
+    rideGoal = goal; // la cámara la mueve la inclinación del hero (mouse o giroscopio)
     // Mantener apretado (o el dedo) sobre el hero = acelerar.
     hero.addEventListener("pointerdown", (e) => { if (!e.target.closest("a, button")) boost = 4; });
     window.addEventListener("pointerup", () => { boost = 1; });
@@ -616,14 +709,16 @@
         if (c.oncoming && c.z < 1) spawn(c, false);
         else if (!c.oncoming && c.z > FAR) spawn(c, false);
         const z1 = Math.max(1, c.z), z2 = z1 + c.len * (0.6 + cam.speed * 0.4);
-        const fade = clamp((z1 - 1) / 4, 0, 1) * clamp((FAR - z1) / (FAR * 0.35), 0, 1);
+        // Cerca de la cámara las luces se apagan antes de volverse manchones.
+        const near = small ? 7 : 4;
+        const fade = clamp((z1 - 1.5) / near, 0, 1) * clamp((FAR - z1) / (FAR * 0.35), 0, 1);
         if (fade <= 0.01) continue;
-        const w = clamp(0.11 * f / z1, 0.5, 7);
+        const w = clamp(0.11 * f / z1, 0.5, small ? 3.2 : 6);
         for (let s = -1; s <= 1; s += 2) {
           const lx = c.x + s * c.gap;
           const a = proj(lx, LIGHT_H, z1), b = proj(lx, LIGHT_H, z2);
-          ctx.strokeStyle = "rgba(" + c.tone + "," + (0.1 * fade).toFixed(3) + ")";
-          ctx.lineWidth = w * 4;
+          ctx.strokeStyle = "rgba(" + c.tone + "," + ((small ? 0.08 : 0.1) * fade).toFixed(3) + ")";
+          ctx.lineWidth = w * (small ? 3 : 4);
           line(a[0], a[1], b[0], b[1]);
           ctx.strokeStyle = "rgba(" + c.tone + "," + (0.85 * fade).toFixed(3) + ")";
           ctx.lineWidth = w;
@@ -721,12 +816,14 @@
     let rot = 0, target = 0, vel = 0, mode = "rest", active = -1;
     let dragging = false, dragX = 0, dragRot = 0, moved = 0, samples = [];
     let raf = 0, last = 0, visible = false, idleAt = performance.now(), hover = false, tiltNow = -16, tiltGoal = -16;
+    // Inclinación extra del escenario: mouse encima (compu) o giroscopio (celular).
+    const lean = { x: 0, y: 0 }, leanGoal = { x: 0, y: 0 };
 
     const wa = (m) => "https://wa.me/5493516312930?text=" + encodeURIComponent("Hola Motobox! Quiero consultar por la " + m.marca + " " + m.modelo + " 0km que vi en el showroom de la web.");
 
     function layout() {
       const small = window.innerWidth < 700;
-      W = small ? 200 : 300;
+      W = small ? Math.round(Math.min(250, window.innerWidth * 0.62)) : 340;
       Hc = Math.round(W * 0.78);
       R = Math.max(W * 0.9, (W + (small ? 26 : 46)) / (2 * Math.tan(Math.PI / N)));
       stage.style.setProperty("--sr-w", W + "px");
@@ -790,7 +887,7 @@
 
     function paint(force) {
       ring.style.transform = "translateZ(" + (-R).toFixed(1) + "px) rotateY(" + rot.toFixed(3) + "deg)";
-      tiltEl.style.transform = "rotateX(" + tiltNow.toFixed(2) + "deg)";
+      tiltEl.style.transform = "rotateX(" + (tiltNow + lean.y * -7).toFixed(2) + "deg) rotateY(" + (lean.x * 12).toFixed(2) + "deg) rotateZ(" + (lean.x * -1.5).toFixed(2) + "deg)";
       for (let i = 0; i < items.length; i++) {
         let a = ((i * step + rot) % 360 + 540) % 360 - 180;
         const c = Math.cos(a * Math.PI / 180);
@@ -799,7 +896,11 @@
       }
       const idx = ((Math.round(-rot / step) % N) + N) % N;
       const real = items[idx] ? Number(items[idx].dataset.i) : 0;
-      if (real !== active || force) { active = real; showInfo(real, force); }
+      if (real !== active || force) {
+        if (!force && active !== -1) tick();
+        active = real;
+        showInfo(real, force);
+      }
     }
 
     function frame(now) {
@@ -822,6 +923,8 @@
         }
       }
       tiltNow += (tiltGoal - tiltNow) * Math.min(1, dt * 6);
+      lean.x += (leanGoal.x - lean.x) * Math.min(1, dt * 5);
+      lean.y += (leanGoal.y - lean.y) * Math.min(1, dt * 5);
       paint(false);
       const busy = dragging || mode !== "rest" || Math.abs(tiltGoal - tiltNow) > 0.02;
       raf = (busy || (visible && !reduce)) ? requestAnimationFrame(frame) : 0;
@@ -873,6 +976,17 @@
     });
     section.querySelector('[data-sr="prev"]').addEventListener("click", () => go(-1));
     section.querySelector('[data-sr="next"]').addEventListener("click", () => go(1));
+    if (finePointer) {
+      stage.addEventListener("pointermove", (e) => {
+        if (dragging) { leanGoal.x = 0; leanGoal.y = 0; return; }
+        const r = stage.getBoundingClientRect();
+        leanGoal.x = clamp((e.clientX - r.left) / r.width * 2 - 1, -1, 1);
+        leanGoal.y = clamp((e.clientY - r.top) / r.height * 2 - 1, -1, 1);
+      });
+      stage.addEventListener("pointerleave", () => { leanGoal.x = 0; leanGoal.y = 0; });
+    } else {
+      onGyro((x, y) => { if (visible) { leanGoal.x = x; leanGoal.y = y; } });
+    }
     stage.addEventListener("pointerenter", () => { hover = true; });
     stage.addEventListener("pointerleave", () => { hover = false; idleAt = performance.now(); });
 
@@ -920,10 +1034,17 @@
         labels += '<text x="' + l[0].toFixed(1) + '" y="' + (l[1] + 5).toFixed(1) + '"' + (v >= 180 ? ' class="mx-g-red-t"' : "") + ">" + v + "</text>";
       }
     }
+    // Líneas de velocidad de fondo: aparecen y se estiran a medida que sube la aguja.
+    let streaks = '<div class="mx-story-streaks" aria-hidden="true">';
+    for (let i = 0; i < 16; i++) {
+      streaks += '<i style="top:' + (6 + Math.random() * 88).toFixed(1) + "%;width:" + (8 + Math.random() * 22).toFixed(1) +
+        "vw;animation-duration:" + (0.7 + Math.random() * 0.9).toFixed(2) + "s;animation-delay:-" + (Math.random() * 1.5).toFixed(2) + 's"></i>';
+    }
+    streaks += "</div>";
     const section = document.createElement("section");
     section.className = "mx-story";
     section.innerHTML =
-      '<div class="mx-story-sticky"><div class="container mx-story-grid">' +
+      '<div class="mx-story-sticky">' + streaks + '<div class="container mx-story-grid">' +
         '<div class="mx-story-copy">' +
           '<h2 class="mx-story-title" data-mx-chars>Por qué MOTOBOX</h2>' +
           '<div class="mx-story-steps">' + steps.map((s, i) =>
@@ -953,13 +1074,28 @@
     const stepEls = Array.from(section.querySelectorAll(".mx-step"));
     const bars = Array.from(section.querySelectorAll(".mx-story-bar i"));
     let cur = 0;
-    const s = spring({ v: 0, p: 0 }, (t) => {
+    const streakBox = section.querySelector(".mx-story-streaks");
+    const s = spring({ v: 0, p: 0, lx: 0, ly: 0 }, (t) => {
       const v = clamp(t.v, -4, MAX + 6);
-      needle.style.transform = "rotate(" + (-120 + (v / MAX) * SWEEP).toFixed(2) + "deg)";
-      fill.style.strokeDashoffset = (1000 - clamp(v / MAX, 0, 1) * 1000).toFixed(1);
+      const k = clamp(v / MAX, 0, 1);
+      needle.style.transform = "rotate(" + (-120 + k * SWEEP).toFixed(2) + "deg)";
+      fill.style.strokeDashoffset = (1000 - k * 1000).toFixed(1);
       speedEl.textContent = Math.max(0, Math.round(v));
-      gauge.style.transform = "rotateX(10deg) rotateY(" + (-16 + t.p * 32).toFixed(2) + "deg)";
+      gauge.style.transform = "rotateX(" + (10 + t.ly * -10).toFixed(2) + "deg) rotateY(" + (-16 + t.p * 32 + t.lx * 12).toFixed(2) + "deg)";
+      streakBox.style.opacity = (k * k * 0.9).toFixed(3);
+      streakBox.style.setProperty("--sx", (0.3 + k * 1.7).toFixed(3));
     }, 90, 11);
+    const sticky = section.querySelector(".mx-story-sticky");
+    if (finePointer) {
+      sticky.addEventListener("pointermove", (e) => {
+        s.set({ lx: e.clientX / window.innerWidth * 2 - 1, ly: (e.clientY - sticky.getBoundingClientRect().top) / sticky.offsetHeight * 2 - 1 });
+      });
+      sticky.addEventListener("pointerleave", () => s.set({ lx: 0, ly: 0 }));
+    } else {
+      let storyIn = false;
+      new IntersectionObserver((en) => { storyIn = en[0].isIntersecting; }).observe(sticky);
+      onGyro((x, y) => { if (storyIn) s.set({ lx: x, ly: y }); });
+    }
 
     let ticking = false;
     const update = () => {
@@ -1057,6 +1193,103 @@
     new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ["style"] });
   }
 
+  // ── 18. Nosotros: la foto del showroom se inclina en 3D ──────────────────
+  function initAboutTilt() {
+    const card = $(".about-hero-card");
+    const media = $(".about-hero-media");
+    if (!card || !media || reduce) return;
+    media.classList.add("mx-about-3d");
+    const s = spring({ x: 0, y: 0 }, (t) => {
+      media.style.transform = "perspective(1000px) rotateX(" + (t.y * -8).toFixed(2) + "deg) rotateY(" + (t.x * 11).toFixed(2) + "deg)";
+      const img = media.querySelector("img");
+      if (img) img.style.translate = (t.x * -14).toFixed(1) + "px " + (t.y * -10).toFixed(1) + "px";
+    }, 90, 14);
+    if (finePointer) {
+      card.addEventListener("pointermove", (e) => {
+        const r = media.getBoundingClientRect();
+        s.set({ x: clamp((e.clientX - r.left) / r.width * 2 - 1, -1, 1), y: clamp((e.clientY - r.top) / r.height * 2 - 1, -1, 1) });
+      });
+      card.addEventListener("pointerleave", () => s.set({ x: 0, y: 0 }));
+    } else {
+      onGyro((x, y) => s.set({ x: x, y: y }));
+    }
+  }
+
+  // ── 17. Celular: tarjetas que se levantan en 3D con el scroll ────────────
+  // Sin mouse no hay hover, así que el 3D lo maneja el scroll: cada tarjeta entra
+  // acostada y se levanta al llegar al centro (las de cada columna se abren hacia
+  // afuera, como un libro). Al tocarla se hunde hacia el dedo.
+  function initTouch3D() {
+    if (reduce || finePointer || !("IntersectionObserver" in window)) return;
+    root.classList.add("mx-touch3d");
+    const SEL = ".moto-card-modern, .promo-poster-card, .cta-strip-inner";
+    const state = new WeakMap();
+    const live = new Set();
+    let raf = 0;
+
+    const reset = (el) => { el.style.transform = ""; el.style.opacity = ""; };
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) live.add(e.target);
+        else { live.delete(e.target); reset(e.target); }
+      });
+      kick();
+    }, { rootMargin: "15% 0px 15% 0px" });
+
+    const add = (el) => {
+      if (state.has(el)) return;
+      state.set(el, { press: 0, goal: 0, px: 0, py: 0 });
+      el.classList.add("mx-s3d");
+      io.observe(el);
+      el.addEventListener("pointerdown", (e) => {
+        if (e.pointerType === "mouse") return;
+        const st = state.get(el), r = el.getBoundingClientRect();
+        st.goal = 1;
+        st.px = clamp((e.clientX - r.left) / r.width - 0.5, -0.5, 0.5) * 2;
+        st.py = clamp((e.clientY - r.top) / r.height - 0.5, -0.5, 0.5) * 2;
+        kick();
+      }, { passive: true });
+      const up = () => { const st = state.get(el); st.goal = 0; kick(); };
+      el.addEventListener("pointerup", up);
+      el.addEventListener("pointercancel", up);
+      el.addEventListener("pointerleave", up);
+    };
+    const scan = () => document.querySelectorAll(SEL).forEach(add);
+
+    const smooth = (t) => t * t * (3 - 2 * t);
+    const frame = () => {
+      raf = 0;
+      const vh = window.innerHeight, vw = window.innerWidth;
+      let busy = false;
+      live.forEach((el) => {
+        const st = state.get(el);
+        st.press += (st.goal - st.press) * 0.28;
+        if (Math.abs(st.goal - st.press) > 0.003) busy = true;
+        const r = el.getBoundingClientRect();
+        const c = (r.top + r.height / 2 - vh / 2) / (vh / 2);
+        const tin = smooth(clamp((c - 0.2) / 0.8, 0, 1));
+        const tout = smooth(clamp((-c - 0.6) / 0.6, 0, 1));
+        const mid = r.left + r.width / 2;
+        const col = r.width < vw * 0.7 ? (mid < vw / 2 - 8 ? -1 : mid > vw / 2 + 8 ? 1 : 0) : 0;
+        const rx = tin * 34 - tout * 12 - st.py * 7 * st.press;
+        const ry = -col * tin * 18 + st.px * 9 * st.press;
+        const sc = 1 - tin * 0.1 - tout * 0.05 - st.press * 0.035;
+        el.style.transform = "perspective(1000px) translate3d(0," + (tin * 50).toFixed(1) + "px," + (-tin * 80).toFixed(1) + "px) rotateX(" + rx.toFixed(2) + "deg) rotateY(" + ry.toFixed(2) + "deg) scale(" + sc.toFixed(4) + ")";
+        el.style.opacity = (1 - tin * 0.6 - tout * 0.3).toFixed(3);
+      });
+      if (busy) kick();
+    };
+    function kick() { if (!raf) raf = requestAnimationFrame(frame); }
+
+    scan();
+    document.querySelectorAll(".catalog-cards-grid").forEach((grid) => {
+      new MutationObserver(() => { scan(); kick(); }).observe(grid, { childList: true });
+    });
+    window.addEventListener("scroll", kick, { passive: true });
+    window.addEventListener("resize", kick);
+    kick();
+  }
+
   // ── Armado por página ────────────────────────────────────────────────────
   function buildSections() {
     if (page === "home") {
@@ -1078,6 +1311,7 @@
 
   function init() {
     initSmoothScroll();
+    initGyro();
     runIntro();
     initHero();
     initPageEntrance();
@@ -1089,6 +1323,8 @@
     initMagnetic();
     initNightRide();
     initFooterWord();
+    initTouch3D();
+    initAboutTilt();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
