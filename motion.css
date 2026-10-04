@@ -94,28 +94,23 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
 }
 
 /* ── 2. Hero con profundidad ──────────────────────────────────────────── */
-/* La foto pasa a una capa propia que respira (Ken Burns) y sigue al mouse. */
+/* La foto pasa a una capa propia (motion.js la mueve con un resorte) y respira (Ken Burns). */
 [data-page="home"] .simple-hero { isolation: isolate; }
-[data-page="home"] .simple-hero::before {
-  content: "";
+.mx-hero-bg {
   position: absolute;
   inset: -8%;
   z-index: 0;
   background: inherit;
-  transform:
-    translate3d(calc(var(--mx-px, 0) * -18px), calc(var(--mx-py, 0) * -14px + var(--hero-p, 0) * 70px), 0)
-    scale(var(--mx-hero-s, 1.06));
-  transition: transform var(--mx-hero-t, 0.9s) var(--mx-expo-out);
   will-change: transform;
+  pointer-events: none;
 }
-[data-page="home"] .simple-hero.mx-hero-live::before {
+.simple-hero.mx-hero-live .mx-hero-bg {
   animation: mxKenBurns 24s ease-in-out infinite alternate;
 }
 @keyframes mxKenBurns {
   from { scale: 1; }
   to   { scale: 1.08; }
 }
-html.mx-intro-on [data-page="home"] .simple-hero::before { --mx-hero-s: 1.3; }
 
 /* Luz roja que acompaña al puntero (solo con mouse). */
 .mx-hero-glow {
@@ -123,10 +118,10 @@ html.mx-intro-on [data-page="home"] .simple-hero::before { --mx-hero-s: 1.3; }
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: radial-gradient(520px circle at var(--mx-gx, 50%) var(--mx-gy, 40%), rgba(224, 46, 36, 0.28), transparent 62%);
+  background: radial-gradient(520px circle at 50% 40%, rgba(224, 46, 36, 0.24), rgba(224, 46, 36, 0.08) 40%, transparent 70%);
   opacity: 0;
   transition: opacity 0.6s ease;
-  mix-blend-mode: screen;
+  will-change: transform;
 }
 .simple-hero:hover .mx-hero-glow { opacity: 1; }
 
@@ -229,8 +224,13 @@ html.mx-intro-on [data-page="home"] .simple-hero::before { --mx-hero-s: 1.3; }
     var(--mx-ink);
   color: #fff;
   overflow: hidden;
-  clip-path: inset(var(--mx-clip, 0%) round var(--mx-round, 0px));
 }
+.mx-sorteo--compact {
+  margin: 1.8rem 0 2rem;
+  padding: 1.5rem 1rem;
+  border-radius: 24px;
+}
+.mx-sorteo--compact .mx-stage { height: clamp(260px, 60vw, 360px); }
 .mx-sorteo-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -315,8 +315,6 @@ html.mx-intro-on [data-page="home"] .simple-hero::before { --mx-hero-s: 1.3; }
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
-  transform: rotateX(calc(var(--mx-ty, 0) * -10deg)) rotateY(calc(var(--mx-tx, 0) * 14deg));
-  transition: transform 1s var(--mx-expo-out);
 }
 .mx-prize {
   position: absolute;
@@ -438,13 +436,7 @@ html.mx-intro-on [data-page="home"] .simple-hero::before { --mx-hero-s: 1.3; }
 .mx-sorteo .mx-prize--2 { transition-delay: 120ms; }
 
 /* ── 5. Revelados ligados al scroll ───────────────────────────────────── */
-.promo-poster-card.mx-scrub {
-  clip-path: inset(var(--mx-clip, 0%) round var(--mx-round, 24px));
-}
-.promo-poster-card.mx-scrub .promo-poster-img {
-  transform: scale(calc(1 + var(--mx-k, 0) * 0.18));
-  transition: none;
-}
+.mx-scrub img { transition: none; }
 
 /* Títulos de sección que suben desde una máscara */
 .mx-mask {
@@ -470,18 +462,40 @@ html.mx-intro-on [data-page="home"] .simple-hero::before { --mx-hero-s: 1.3; }
   z-index: 1001;
   background: linear-gradient(90deg, var(--mx-red), #ff6a3d);
   transform-origin: 0 50%;
-  transform: scaleX(var(--mx-scroll, 0));
+  transform: scaleX(0);
   pointer-events: none;
+}
+
+/* ── 7. Entrada orquestada de cada página ─────────────────────────────── */
+.mx-enter {
+  animation: mxEnter 0.7s cubic-bezier(0.23, 1, 0.32, 1) backwards;
+  animation-delay: var(--mx-d, 0ms);
+}
+@keyframes mxEnter {
+  from { opacity: 0; transform: translateY(14px); filter: blur(4px); }
+}
+
+/* ── 8. Respuesta al toque y tarjetas con inclinación ─────────────────── */
+.btn-primary-hero,
+.btn-secondary-hero,
+.btn-promo-catalog,
+.mx-sorteo-link { transition-property: transform, opacity, background-color, border-color, color, box-shadow; }
+.btn-primary-hero:active,
+.btn-secondary-hero:active,
+.btn-promo-catalog:active { transform: scale(0.97); transition-duration: 120ms; }
+.about-pillar-card.mx-tilt:not(.mx-reveal) {
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
+  will-change: transform;
 }
 
 /* ── Accesibilidad: sin movimiento si el usuario lo pide ──────────────── */
 @media (prefers-reduced-motion: reduce) {
   html.mx-intro-on::after { content: none; }
   .mx-intro { display: none; }
-  [data-page="home"] .simple-hero::before { animation: none !important; transform: none; transition: none; }
   .mx-hero-glow, .mx-scroll-cue, .mx-progress, .mx-stage-floor, .mx-spark { display: none; }
   .mx-prize-body, .mx-prize-body::after, .mx-sorteo-kicker::before { animation: none !important; }
-  .mx-stage-rig { transform: none; transition: none; }
   .mx-sorteo { clip-path: none; }
-  .promo-poster-card.mx-scrub { clip-path: none; }
+  /* Menos movimiento no es cero: las entradas quedan como fundidos cortos. */
+  .mx-enter { animation: mxFade 0.4s ease backwards; animation-delay: var(--mx-d, 0ms); }
 }
+@keyframes mxFade { from { opacity: 0; } }
