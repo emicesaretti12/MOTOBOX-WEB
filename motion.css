@@ -255,12 +255,24 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
   height: 8px;
   border-radius: 50%;
   background: var(--mx-red);
-  box-shadow: 0 0 0 0 rgba(224, 46, 36, 0.7);
+}
+/* Pulso del punto rojo: un aro aparte con escala y opacidad (sin repintar sombras) */
+.mx-sorteo-kicker { position: relative; }
+.mx-sorteo-kicker::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--mx-red);
   animation: mxPing 2s ease-out infinite;
 }
 @keyframes mxPing {
-  70%  { box-shadow: 0 0 0 10px rgba(224, 46, 36, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(224, 46, 36, 0); }
+  0% { transform: scale(1); opacity: 0.7; }
+  70%, 100% { transform: scale(3); opacity: 0; }
 }
 .mx-sorteo-title {
   font-family: var(--font-heading);
@@ -333,7 +345,7 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
   overflow: hidden;
   background: linear-gradient(160deg, #26262b, #121216);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 28px 44px -18px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(0, 0, 0, 0.4);
   animation: mxFloatA 6s ease-in-out infinite;
 }
 .mx-prize--2 .mx-prize-body { animation: mxFloatB 7s ease-in-out infinite; }
@@ -394,8 +406,8 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
   bottom: 2%;
   height: 30px;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(224, 46, 36, 0.45), transparent);
-  filter: blur(10px);
+  /* Degradado ya suave en vez de filtro: el escenario gira y el filtro se recalculaba */
+  background: radial-gradient(closest-side, rgba(224, 46, 36, 0.32), rgba(224, 46, 36, 0.12) 55%, transparent);
 }
 .mx-spark {
   position: absolute;
@@ -436,7 +448,6 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
 .mx-sorteo .mx-prize--2 { transition-delay: 120ms; }
 
 /* ── 5. Revelados ligados al scroll ───────────────────────────────────── */
-.mx-scrub img { transition: none; }
 
 /* Títulos de sección que suben desde una máscara */
 .mx-mask {
@@ -621,7 +632,6 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
   height: 120%;
   transform: translateX(-50%);
   background: conic-gradient(from 180deg at 50% 0%, transparent 160deg, rgba(255, 255, 255, 0.07) 175deg, rgba(255, 255, 255, 0.1) 180deg, rgba(255, 255, 255, 0.07) 185deg, transparent 200deg);
-  filter: blur(8px);
   pointer-events: none;
 }
 .mx-sr-tilt {
@@ -654,8 +664,22 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
   overflow: hidden;
   background: linear-gradient(180deg, #ffffff 0%, #eceef1 100%);
   box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.8);
-  -webkit-box-reflect: below 6px linear-gradient(transparent 62%, rgba(255, 255, 255, 0.22));
   transition: box-shadow 0.3s ease, transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+/* Sombra de apoyo en el piso (antes era un reflejo espejado, que se redibujaba entero) */
+.mx-sr-item::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -26px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.25) 60%, transparent);
+  pointer-events: none;
+}
+.mx-sr-item.is-front::after {
+  background: radial-gradient(closest-side, rgba(224, 46, 36, 0.45), rgba(0, 0, 0, 0.3) 60%, transparent);
 }
 /* La moto de adelante se adelanta en profundidad y crece un poco */
 .mx-sr-item.is-front .mx-sr-card { transform: translateZ(44px) scale(1.05); }
@@ -847,7 +871,16 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
   stroke-linecap: round;
   stroke-dasharray: 1000;
   stroke-dashoffset: 1000;
-  filter: drop-shadow(0 0 8px rgba(224, 46, 36, 0.7));
+}
+/* Brillo del arco: un trazo ancho y transparente debajo (sin filtros que recalcular) */
+.mx-g-glow {
+  fill: none;
+  stroke: #e02e24;
+  stroke-width: 28;
+  stroke-linecap: round;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  opacity: 0.16;
 }
 .mx-g-major { stroke: rgba(255, 255, 255, 0.85); stroke-width: 3; stroke-linecap: round; }
 .mx-g-minor { stroke: rgba(255, 255, 255, 0.35); stroke-width: 1.6; stroke-linecap: round; }
@@ -855,7 +888,8 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
 .mx-g-labels text { fill: rgba(255, 255, 255, 0.75); font-size: 15px; font-weight: 600; text-anchor: middle; font-family: var(--font-heading); }
 .mx-g-labels .mx-g-red-t { fill: #ff6a5c; }
 .mx-g-needle { transform-origin: 200px 205px; transform: rotate(-120deg); }
-.mx-g-needle path { fill: #ff3b2f; filter: drop-shadow(0 0 6px rgba(255, 59, 47, 0.8)); }
+.mx-g-needle path { fill: #ff3b2f; }
+.mx-g-needle .mx-g-needle-glow { fill: rgba(255, 59, 47, 0.28); }
 .mx-g-needle circle { fill: #222328; stroke: rgba(255, 255, 255, 0.2); stroke-width: 1.5; }
 .mx-g-needle .mx-g-hub { fill: #ff3b2f; stroke: none; }
 .mx-g-read {
@@ -920,9 +954,10 @@ html.lenis { scroll-behavior: auto !important; }
 .mx-touch3d .moto-card-modern { animation: none; }
 .mx-touch3d .mx-s3d {
   transition: box-shadow 0.3s ease, border-color 0.25s ease, background-color 0.25s ease;
-  will-change: transform, opacity;
   backface-visibility: hidden;
 }
+/* Capa propia solo mientras está en pantalla: muchas capas juntas agotan la memoria del teléfono */
+.mx-touch3d .mx-s3d.is-live3d { will-change: transform, opacity; }
 
 /* ── 20. Velocímetro: líneas de velocidad ──────────────────────────────── */
 .mx-story-streaks {
@@ -939,10 +974,13 @@ html.lenis { scroll-behavior: auto !important; }
   border-radius: 2px;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55) 60%, rgba(255, 110, 80, 0.9));
   animation: mxStreak 1s linear infinite;
+  will-change: transform;
 }
+/* A baja velocidad las líneas no se ven: se frenan en vez de animarse invisibles */
+.mx-story-streaks.is-idle i { animation-play-state: paused; }
 @keyframes mxStreak {
-  from { transform: translateX(110vw) scaleX(var(--sx, 1)); }
-  to   { transform: translateX(-40vw) scaleX(var(--sx, 1)); }
+  from { transform: translateX(110vw); }
+  to   { transform: translateX(-40vw); }
 }
 .mx-story-grid { position: relative; z-index: 1; }
 
@@ -973,12 +1011,69 @@ html.lenis { scroll-behavior: auto !important; }
   .mx-g-odo { bottom: 9%; font-size: 0.78rem; }
 }
 
+/* ── 22. Fluidez: pausas y capas baratas ──────────────────────────────── */
+/* Animaciones infinitas en pausa fuera de pantalla (.mx-off) o con el popup/ficha abiertos (.mx-paused) */
+.mx-off .mx-hero-bg,
+.mx-off .btn-hero-red::after,
+.mx-off .mx-prize-body,
+.mx-off .mx-prize-body::after,
+.mx-off .mx-spark,
+.mx-off .mx-sorteo-kicker::after,
+.mx-off .mx-story-streaks i,
+.mx-paused .mx-hero-bg,
+.mx-paused .btn-hero-red::after,
+.mx-paused .mx-prize-body,
+.mx-paused .mx-prize-body::after,
+.mx-paused .mx-spark,
+.mx-paused .mx-sorteo-kicker::after,
+.mx-paused .mx-story-streaks i,
+.mx-paused .floating-fab-desktop::before,
+.mx-paused .mx-scroll-cue::after {
+  animation-play-state: paused;
+}
+/* La foto del hero ya se mueve sola: el desenfoque va en su propia capa (se dibuja una vez)
+   y no como desenfoque del fondo, que se recalculaba en cada cuadro. */
+.simple-hero.has-mx-bg .simple-hero-overlay {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+@media (min-width: 769px) {
+  /* En compu la foto llevaba desenfoque. Un filtro sobre una capa que se mueve se
+     recalcula en cada cuadro, así que la foto se pide ya desenfocada a Cloudinary.
+     Si esa versión no cargara, queda visible la foto normal del hero de abajo. */
+  .mx-hero-bg {
+    background-image: url('https://res.cloudinary.com/di9j6zwyz/image/upload/e_blur:250,q_auto,f_auto/v1789083192/WhatsApp_Image_2026-09-10_at_8.31.32_PM_d0pzl7.jpg');
+  }
+}
+/* Bloques que se abren una vez al entrar (compu) */
+.mx-rise {
+  opacity: 0;
+  transform: translateY(48px) scale(0.96);
+}
+.mx-rise .promo-poster-img { transform: scale(1.14); }
+.mx-rise.is-in {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.6s ease, transform 1s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.mx-rise.is-in .promo-poster-img {
+  transform: none;
+  transition: transform 1.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* En celular las motos del sorteo ya se mueven con el scroll y el giroscopio:
+   sin flotado ni brillo continuo, que sumaban trabajo en cada cuadro. */
+@media (max-width: 899px) {
+  .mx-prize-body { animation: none; }
+  .mx-prize-body::after { animation: none; display: none; }
+}
+
 /* ── Accesibilidad: sin movimiento si el usuario lo pide ──────────────── */
 @media (prefers-reduced-motion: reduce) {
   html.mx-intro-on::after { content: none; }
   .mx-intro { display: none; }
   .mx-hero-glow, .mx-scroll-cue, .mx-progress, .mx-stage-floor, .mx-spark { display: none; }
-  .mx-prize-body, .mx-prize-body::after, .mx-sorteo-kicker::before { animation: none !important; }
+  .mx-prize-body, .mx-prize-body::after, .mx-sorteo-kicker::after { animation: none !important; }
   .mx-sorteo { clip-path: none; }
   .mx-ride, .mx-story-streaks { display: none; }
   .mx-sr-ring, .mx-sr-tilt { transition: none; }

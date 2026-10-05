@@ -512,8 +512,12 @@
   // 3. GLOBAL BEHAVIORS (Scroll, Navbar, Observers)
   // ==========================================================================
   let lastScrollY = 0;
-  const heroEl = document.querySelector('[data-page="home"] .simple-hero-content');
+  const heroContent = document.querySelector('[data-page="home"] .simple-hero-content');
   const reduceMotionMq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  // La altura se mide una vez (y al cambiar el tamaño), no en cada evento de scroll.
+  let heroHeight = heroContent ? heroContent.offsetHeight || 1 : 1;
+  let lastHeroP = -1;
+  window.addEventListener("resize", () => { if (heroContent) heroHeight = heroContent.offsetHeight || 1; });
   let ticking = false;
 
   function handleScroll() {
@@ -538,9 +542,15 @@
 
     lastScrollY = scrollY;
 
-    if (heroEl && !reduceMotionMq.matches) {
-      const p = Math.min(1, Math.max(0, scrollY / (heroEl.offsetHeight || 1)));
-      heroEl.style.setProperty("--hero-p", p.toFixed(3));
+    // El texto del hero sube y se desvanece con el scroll. Se escribe directo en el
+    // contenido (no como variable en el hero) para no recalcular toda la sección.
+    if (heroContent && !reduceMotionMq.matches) {
+      const p = Math.min(1, Math.max(0, scrollY / heroHeight));
+      if (p !== lastHeroP) {
+        lastHeroP = p;
+        heroContent.style.transform = p ? "translate3d(0," + (p * -48).toFixed(1) + "px,0)" : "";
+        heroContent.style.opacity = p ? (1 - p * 0.85).toFixed(3) : "";
+      }
     }
   }
 

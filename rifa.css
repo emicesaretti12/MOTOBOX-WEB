@@ -1119,6 +1119,15 @@ html.rf-lock body {
   height: 8px;
   border-radius: 50%;
   background: var(--rf-red);
+  position: relative;
+}
+/* El pulso es un aro aparte (escala y opacidad): no redibuja en cada cuadro. */
+.rf-live::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--rf-red);
   animation: rf-pulse 1.6s ease-out infinite;
 }
 
@@ -1269,8 +1278,8 @@ html.rf-lock body {
 @keyframes rf-deal { from { opacity: 0; transform: perspective(1200px) translateY(40px) rotateX(50deg) scale(0.94); } }
 @keyframes rf-pill-in { from { opacity: 0; transform: translateY(24px) scale(0.96); } }
 @keyframes rf-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(224, 46, 36, 0.5); }
-  100% { box-shadow: 0 0 0 10px rgba(224, 46, 36, 0); }
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.6); opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1282,6 +1291,7 @@ html.rf-lock body {
   .rf-wheel-tilt.is-won .rf-wedge,
   .rf-sheen,
   .rf-live,
+  .rf-live::after,
   .rf-btn-shine::before {
     animation: none !important;
   }

@@ -116,6 +116,31 @@
     if (navigator.vibrate && performance.now() - lastTouchAt < 2500) { try { navigator.vibrate(8); } catch (err) { /* sin vibración */ } }
   };
 
+  /**
+   * Con el popup del sorteo o la ficha de una moto abiertos, todo lo que se mueve
+   * detrás se pausa (además, el fondo del popup está desenfocado: si lo de atrás
+   * siguiera animando, el desenfoque se recalcularía en cada cuadro).
+   */
+  const lock = { on: false, subs: [] };
+  const onLock = (fn) => { lock.subs.push(fn); };
+  function initLockWatch() {
+    const sync = () => {
+      const on = root.classList.contains("rf-lock") || document.body.style.overflow === "hidden";
+      if (on === lock.on) return;
+      lock.on = on;
+      root.classList.toggle("mx-paused", on);
+      lock.subs.forEach((f) => f(on));
+    };
+    new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ["class"] });
+    new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ["style"] });
+  }
+
+  // Las animaciones infinitas de CSS de un bloque se pausan cuando no está en pantalla.
+  function pauseOffscreen(el) {
+    if (!el || !("IntersectionObserver" in window)) return;
+    new IntersectionObserver((en) => { el.classList.toggle("mx-off", !en[0].isIntersecting); }, { rootMargin: "10% 0px" }).observe(el);
+  }
+
   // ── 1. Intro de marca (solo portada, una vez por sesión) ──────────────────
   let heroSpring = null;
   let rideGoal = null;
@@ -184,32 +209,50 @@
     paint(heroSpring.values);
     if (!introOn) hero.classList.add("mx-hero-live");
 
+    let heroH = hero.offsetHeight || 1, heroTick = false;
+    window.addEventListener("resize", () => { heroH = hero.offsetHeight || 1; });
     window.addEventListener("scroll", () => {
-      scrollP = clamp(window.scrollY / (hero.offsetHeight || 1), 0, 1);
-      paint(heroSpring.values);
+      if (heroTick) return;
+      heroTick = true;
+      requestAnimationFrame(() => {
+        heroTick = false;
+        const p = clamp(window.scrollY / heroH, 0, 1);
+        if (p === scrollP || (p === 1 && scrollP === 1)) return;
+        scrollP = p;
+        paint(heroSpring.values);
+      });
     }, { passive: true });
+    pauseOffscreen(hero);
 
     const cue = document.createElement("span");
     cue.className = "mx-scroll-cue";
     cue.setAttribute("aria-hidden", "true");
     hero.appendChild(cue);
 
-    // Título con volumen: capas de sombra en rojo oscuro arman un bloque extruido que
-    // gira hacia el mouse (o el giroscopio) mientras el frente queda blanco.
+    // Título con volumen: capas de sombra en rojo oscuro arman un bloque extruido.
+    // En compu la extrusión sigue al mouse; en celular queda fija (redibujar sombras en
+    // cada cuadro traba los teléfonos) y el título solo gira, que es casi gratis.
     const title = hero.querySelector(".simple-hero-title");
-    const LAYERS = 8;
-    const titleSpring = title ? spring({ x: 0, y: 0 }, (t) => {
-      const dx = -t.x * 0.75, dy = 0.5 - t.y * 0.55;
+    const LAYERS = 7;
+    const extrude = (x, y) => {
+      const dx = -x * 0.8, dy = 0.55 - y * 0.6;
       const sh = [];
       for (let i = 1; i <= LAYERS; i++) {
         const k = i / LAYERS;
-        sh.push((dx * i).toFixed(2) + "px " + (dy * i).toFixed(2) + "px 0 rgb(" + Math.round(176 - 128 * k) + "," + Math.round(30 - 20 * k) + "," + Math.round(24 - 16 * k) + ")");
+        sh.push((dx * i).toFixed(1) + "px " + (dy * i).toFixed(1) + "px 0 rgb(" + Math.round(176 - 128 * k) + "," + Math.round(30 - 20 * k) + "," + Math.round(24 - 16 * k) + ")");
       }
-      sh.push((dx * LAYERS * 1.6).toFixed(1) + "px " + (dy * LAYERS * 1.6 + 12).toFixed(1) + "px 30px rgba(0,0,0,0.55)");
       title.style.textShadow = sh.join(",");
+    };
+    let lastShadow = "";
+    const titleSpring = title ? spring({ x: 0, y: 0 }, (t) => {
       title.style.transform = "perspective(900px) rotateX(" + (t.y * -10).toFixed(2) + "deg) rotateY(" + (t.x * 14).toFixed(2) + "deg)";
+      if (finePointer) {
+        // La sombra solo se rehace cuando el cambio se nota (pasos de 0,05).
+        const key = (Math.round(t.x * 20) / 20) + "," + (Math.round(t.y * 20) / 20);
+        if (key !== lastShadow) { lastShadow = key; extrude(Math.round(t.x * 20) / 20, Math.round(t.y * 20) / 20); }
+      }
     }, 70, 12) : null;
-    if (titleSpring) titleSpring.set({ x: 0.001 });
+    if (title) extrude(0, 0);
 
     // Una sola "inclinación" mueve todo el hero: foto, título y cámara de la ruta.
     const lean = (x, y) => {
@@ -222,9 +265,14 @@
       // Celular: giroscopio si hay; si no, un balanceo lento para que la escena respire.
       let heroVisible = true;
       new IntersectionObserver((en) => { heroVisible = en[0].isIntersecting; }).observe(hero);
-      onGyro((x, y) => { if (heroVisible) lean(x, y); });
+      let gx = 0, gy = 0;
+      onGyro((x, y) => {
+        if (!heroVisible || (Math.abs(x - gx) < 0.02 && Math.abs(y - gy) < 0.02)) return;
+        gx = x; gy = y;
+        lean(x, y);
+      });
       setInterval(() => {
-        if (gyro.on || !heroVisible || document.hidden) return;
+        if (gyro.on || !heroVisible || document.hidden || lock.on) return;
         const t = performance.now() / 1000;
         lean(Math.sin(t * 0.55) * 0.5, Math.sin(t * 0.8) * 0.3);
       }, 140);
@@ -343,13 +391,16 @@
         const skew = clamp(boost * 0.25, -8, 8) * -r.dir;
         r.el.style.transform = "translate3d(" + r.x.toFixed(2) + "px,0,0) skewX(" + skew.toFixed(2) + "deg)";
       });
-      if (visible) raf = requestAnimationFrame(tick);
+      raf = (visible && !lock.on && !document.hidden) ? requestAnimationFrame(tick) : 0;
     };
-    new IntersectionObserver((entries) => {
-      visible = entries[0].isIntersecting;
+    const run = () => {
       cancelAnimationFrame(raf);
-      if (visible) { last = performance.now(); lastY = window.scrollY; raf = requestAnimationFrame(tick); }
-    }).observe(section);
+      raf = 0;
+      if (visible && !lock.on && !document.hidden) { last = performance.now(); lastY = window.scrollY; raf = requestAnimationFrame(tick); }
+    };
+    new IntersectionObserver((entries) => { visible = entries[0].isIntersecting; run(); }).observe(section);
+    onLock(run);
+    document.addEventListener("visibilitychange", run);
   }
 
   // ── 5. Escenario 3D del sorteo ───────────────────────────────────────────
@@ -364,7 +415,9 @@
       "</div></div>"
     ).join("");
     let sparks = "";
-    for (let i = 0; i < 14; i++) {
+    // Menos destellos en celular: cada uno es una animación más en cada cuadro.
+    const sparkCount = window.innerWidth < 900 ? 6 : 12;
+    for (let i = 0; i < sparkCount; i++) {
       sparks += '<i class="mx-spark" style="left:' + (8 + Math.random() * 84).toFixed(1) + "%;top:" + (6 + Math.random() * 84).toFixed(1) +
         "%;--dur:" + (2.4 + Math.random() * 2.6).toFixed(2) + "s;--del:-" + (Math.random() * 4).toFixed(2) + 's"></i>';
     }
@@ -409,6 +462,7 @@
     }, 90, 14);
     let inView = false, ticking = false;
     new IntersectionObserver((en) => { inView = en[0].isIntersecting; }).observe(section);
+    pauseOffscreen(section);
     const onScroll = () => {
       ticking = false;
       if (!inView) return;
@@ -426,48 +480,65 @@
       });
       section.addEventListener("pointerleave", () => tilt.set({ x: 0, y: 0 }));
     } else {
-      onGyro((x, y) => { if (inView) tilt.set({ x: x * 1.2, y: y * 1.2 }); });
+      let gx = 0, gy = 0;
+      onGyro((x, y) => {
+        if (!inView || (Math.abs(x - gx) < 0.02 && Math.abs(y - gy) < 0.02)) return;
+        gx = x; gy = y;
+        tilt.set({ x: x * 1.2, y: y * 1.2 });
+      });
     }
     return section;
   }
 
-  // ── 6. Revelados ligados al scroll + barra de progreso ───────────────────
+  // ── 6. Barra de progreso + bloques que se abren al entrar ────────────────
+  // Antes el recorte se recalculaba en cada cuadro del scroll (repintaba bloques
+  // enteros). Ahora cada bloque se abre una sola vez al entrar, con transform y
+  // opacidad, que la placa de video resuelve sin trabar.
   function initScrub() {
     if (reduce) return;
     const bar = document.createElement("div");
     bar.className = "mx-progress";
     bar.setAttribute("aria-hidden", "true");
     document.body.appendChild(bar);
-
-    // Cada bloque arranca recortado y redondeado y se abre a medida que entra.
-    const scrubbed = [];
-    document.querySelectorAll(".mx-sorteo:not(.mx-sorteo--compact)").forEach((el) => scrubbed.push({ el: el, maxClip: 6, maxRound: 40, minRound: 0 }));
-    document.querySelectorAll(".promo-poster-card, .cta-strip-inner").forEach((el) => {
-      el.classList.add("mx-scrub");
-      scrubbed.push({ el: el, maxClip: 7, maxRound: 48, minRound: parseFloat(getComputedStyle(el).borderTopLeftRadius) || 20, zoom: true });
-    });
-
-    let ticking = false;
+    let max = 1, ticking = false, lastP = -1;
+    const measure = () => { max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight); };
     const update = () => {
       ticking = false;
-      const vh = window.innerHeight;
-      const max = document.documentElement.scrollHeight - vh;
-      bar.style.transform = "scaleX(" + (max > 0 ? clamp(window.scrollY / max, 0, 1) : 0).toFixed(4) + ")";
-      scrubbed.forEach((s) => {
-        const r = s.el.getBoundingClientRect();
-        // k = 1 con el borde superior al fondo de la pantalla; 0 cuando llega al 35 %.
-        const k = clamp((r.top - vh * 0.35) / (vh * 0.65), 0, 1);
-        s.el.style.clipPath = "inset(" + (k * s.maxClip).toFixed(2) + "% round " + (s.minRound + k * (s.maxRound - s.minRound)).toFixed(1) + "px)";
-        if (s.zoom) {
-          const img = s.el.querySelector("img");
-          if (img) img.style.transform = "scale(" + (1 + k * 0.18).toFixed(4) + ")";
-        }
-      });
+      const p = clamp(window.scrollY / max, 0, 1);
+      if (Math.abs(p - lastP) < 0.0005) return;
+      lastP = p;
+      bar.style.transform = "scaleX(" + p.toFixed(4) + ")";
     };
-    const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    measure();
+    window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+    window.addEventListener("resize", () => { measure(); update(); });
+    window.addEventListener("load", measure);
+    document.addEventListener("motobox:ready", () => requestAnimationFrame(measure));
+    new ResizeObserver(measure).observe(document.body);
     update();
+
+    // En celular la entrada de estos bloques la hace initTouch3D.
+    if (!finePointer || !("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        const el = e.target;
+        io.unobserve(el);
+        el.classList.add("is-in");
+        // Al terminar se quitan las clases: el hover 3D de la tarjeta vuelve a mandar.
+        const done = (ev) => {
+          if (ev.target !== el || ev.propertyName !== "transform") return;
+          el.removeEventListener("transitionend", done);
+          el.classList.remove("mx-rise", "is-in");
+        };
+        el.addEventListener("transitionend", done);
+      });
+    }, { rootMargin: "0px 0px -12% 0px" });
+    document.querySelectorAll(".promo-poster-card, .cta-strip-inner").forEach((el) => {
+      if (el.getBoundingClientRect().top < window.innerHeight * 0.9) return;
+      el.classList.add("mx-rise");
+      io.observe(el);
+    });
   }
 
   // ── 7. Títulos que suben desde una máscara e imágenes que se descubren ───
@@ -598,20 +669,38 @@
 
     const small = window.innerWidth < 700;
     const FAR = 260, CAM_H = 1.25, LIGHT_H = 0.62;
-    const COUNT = small ? 54 : 110;
-    let W = 0, H = 0;
+    // Calidad: 2 = halos y luz aditiva, 1 = sin halos, 0 = además la mitad de autos.
+    // Arranca según el equipo y baja sola si los cuadros empiezan a tardar.
+    let quality = small ? 1 : 2;
+    let W = 0, H = 0, glow = null;
     const resize = () => {
-      const dpr = Math.min(small ? 1.25 : 1.6, window.devicePixelRatio || 1);
-      W = hero.clientWidth;
-      H = hero.clientHeight;
+      const w = hero.clientWidth, h = hero.clientHeight;
+      // En celular la barra del navegador cambia el alto al scrollear: solo se rehace el
+      // canvas si cambia el ancho o el alto cambia mucho (el CSS lo estira mientras tanto).
+      if (w === W && Math.abs(h - H) < 140) return;
+      W = w; H = h;
+      const dpr = Math.min(small ? 1 : 1.5, window.devicePixelRatio || 1);
       canvas.width = Math.round(W * dpr);
       canvas.height = Math.round(H * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // El resplandor de la ciudad se pinta una vez en un canvas aparte y se reutiliza.
+      glow = document.createElement("canvas");
+      glow.width = Math.max(1, Math.round(W * 1.1));
+      glow.height = Math.max(1, Math.round(W * 0.6));
+      const g = glow.getContext("2d");
+      const rg = g.createRadialGradient(glow.width / 2, glow.height / 2, 0, glow.width / 2, glow.height / 2, glow.width / 2);
+      rg.addColorStop(0, "rgba(224,46,36,0.22)");
+      rg.addColorStop(0.35, "rgba(224,46,36,0.07)");
+      rg.addColorStop(1, "rgba(224,46,36,0)");
+      g.fillStyle = rg;
+      g.fillRect(0, 0, glow.width, glow.height);
     };
     resize();
     window.addEventListener("resize", resize);
 
     const rand = (a, b) => a + Math.random() * (b - a);
+    const TONES_ON = ["rgb(255,238,214)", "rgb(255,238,214)", "rgb(255,238,214)", "rgb(190,215,255)"];
+    const TONES_OUT = ["rgb(232,46,36)", "rgb(232,46,36)", "rgb(232,46,36)", "rgb(255,112,64)"];
     const cars = [];
     const spawn = (car, initial) => {
       const oncoming = Math.random() < 0.5;
@@ -621,18 +710,19 @@
       car.len = rand(5, 16);
       car.v = oncoming ? rand(55, 85) : rand(10, 26);
       car.gap = rand(0.28, 0.42);
-      car.tone = oncoming ? (Math.random() < 0.8 ? "255,238,214" : "190,215,255") : (Math.random() < 0.75 ? "232,46,36" : "255,112,64");
+      car.tone = (oncoming ? TONES_ON : TONES_OUT)[Math.floor(Math.random() * 4)];
       return car;
     };
-    for (let i = 0; i < COUNT; i++) cars.push(spawn({}, true));
+    for (let i = 0; i < (small ? 40 : 96); i++) cars.push(spawn({}, true));
 
-    // Estado de cámara: valores actuales, objetivos y velocidades (resorte).
+    // Cámara con resorte: la inclinación del hero (mouse o giroscopio) mueve sus objetivos.
     const cam = { x: 0, pitch: 0, roll: 0, speed: 1 };
     const goal = { x: 0, pitch: 0, roll: 0, speed: 1 };
     const vel = { x: 0, pitch: 0, roll: 0, speed: 0 };
+    rideGoal = goal;
     let dash = 0, running = false, raf = 0, last = 0, boost = 1, lastScroll = window.scrollY;
+    let slowFrames = 0, sampled = 0;
 
-    rideGoal = goal; // la cámara la mueve la inclinación del hero (mouse o giroscopio)
     // Mantener apretado (o el dedo) sobre el hero = acelerar.
     hero.addEventListener("pointerdown", (e) => { if (!e.target.closest("a, button")) boost = 4; });
     window.addEventListener("pointerup", () => { boost = 1; });
@@ -642,15 +732,24 @@
       b.addEventListener("pointerleave", () => { boost = 1; });
     });
 
-    const line = (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
-
     const frame = (now) => {
-      const dt = Math.min(0.05, (now - last) / 1000 || 0.016);
+      const ms = now - last;
+      const dt = Math.min(0.05, ms / 1000 || 0.016);
       last = now;
+      // Calidad automática: si en 90 cuadros más de un tercio tardó más de 24 ms, baja un escalón.
+      if (++sampled > 20) {
+        if (ms > 24) slowFrames++;
+        if (sampled > 110) {
+          if (slowFrames > 30 && quality > 0) {
+            quality--;
+            if (quality === 0) cars.length = Math.floor(cars.length / 2);
+          }
+          sampled = 20; slowFrames = 0;
+        }
+      }
       const sy = window.scrollY;
-      const scrollBoost = clamp(Math.abs(sy - lastScroll) * 0.08, 0, 2.5);
+      goal.speed = boost + clamp(Math.abs(sy - lastScroll) * 0.08, 0, 2.5);
       lastScroll = sy;
-      goal.speed = boost + scrollBoost;
       for (const k in cam) {
         const stiff = k === "speed" ? 18 : 40, damp = k === "speed" ? 8 : 12;
         vel[k] += (stiff * (goal[k] - cam[k]) - damp * vel[k]) * dt;
@@ -661,48 +760,44 @@
       const cx = W / 2;
       // El horizonte queda debajo de los botones: las luces nunca pasan detrás del texto.
       const hy = H * (small ? 0.86 : 0.8) + cam.pitch;
-      const proj = (x, y, z) => [cx + (x - cam.x) * f / z, hy + (CAM_H - y) * f / z];
+      const px = (x, z) => cx + (x - cam.x) * f / z;
+      const py = (y, z) => hy + (CAM_H - y) * f / z;
 
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
       ctx.clearRect(0, 0, W, H);
       ctx.save();
       ctx.translate(cx, hy);
       ctx.rotate(cam.roll);
       ctx.translate(-cx, -hy);
+      if (glow) ctx.drawImage(glow, cx - glow.width / 2, hy - glow.height / 2);
 
-      // Resplandor de la ciudad en el horizonte
-      const glow = ctx.createRadialGradient(cx, hy, 0, cx, hy, W * 0.55);
-      glow.addColorStop(0, "rgba(224,46,36,0.22)");
-      glow.addColorStop(0.35, "rgba(224,46,36,0.07)");
-      glow.addColorStop(1, "rgba(224,46,36,0)");
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, hy - W * 0.3, W, W * 0.6);
-
-      ctx.globalCompositeOperation = "lighter";
+      ctx.globalCompositeOperation = quality === 2 ? "lighter" : "source-over";
       ctx.lineCap = "round";
 
-      // Bordes de la ruta
+      // Bordes de la ruta y línea central discontinua que corre hacia la cámara
+      ctx.strokeStyle = "#fff";
       ctx.lineWidth = 1.2;
-      [-7.6, 7.6].forEach((ex) => {
-        const a = proj(ex, 0, 1.2), b = proj(ex, 0, FAR);
-        const g = ctx.createLinearGradient(a[0], a[1], b[0], b[1]);
-        g.addColorStop(0, "rgba(255,255,255,0.28)");
-        g.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.strokeStyle = g;
-        line(a[0], a[1], b[0], b[1]);
-      });
-      // Línea central discontinua que corre hacia la cámara
+      ctx.globalAlpha = 0.16;
+      ctx.beginPath();
+      ctx.moveTo(px(-7.6, 1.2), py(0, 1.2)); ctx.lineTo(px(-7.6, FAR), py(0, FAR));
+      ctx.moveTo(px(7.6, 1.2), py(0, 1.2)); ctx.lineTo(px(7.6, FAR), py(0, FAR));
+      ctx.stroke();
       const travel = 34 * cam.speed;
       dash = (dash + travel * dt) % 9;
       for (let z = 9 - dash; z < FAR * 0.7; z += 9) {
         if (z < 3) continue;
-        const a = proj(0, 0, z), b = proj(0, 0, z + 4);
-        const alpha = 0.32 * (1 - z / (FAR * 0.7));
-        ctx.strokeStyle = "rgba(255,255,255," + alpha.toFixed(3) + ")";
+        ctx.globalAlpha = 0.32 * (1 - z / (FAR * 0.7));
         ctx.lineWidth = clamp(0.16 * f / z, 0.6, 3);
-        line(a[0], a[1], b[0], b[1]);
+        ctx.beginPath();
+        ctx.moveTo(px(0, z), py(0, z));
+        ctx.lineTo(px(0, z + 4), py(0, z + 4));
+        ctx.stroke();
       }
 
-      // Luces de los autos: halo ancho + núcleo brillante
+      // Luces de los autos: un solo trazo para las dos luces de cada auto
+      // (más un halo ancho cuando la calidad lo permite).
+      const near = small ? 7 : 4;
       for (let i = 0; i < cars.length; i++) {
         const c = cars[i];
         c.z += (c.oncoming ? -(c.v + travel) : c.v * 2.2) * dt;
@@ -710,28 +805,29 @@
         else if (!c.oncoming && c.z > FAR) spawn(c, false);
         const z1 = Math.max(1, c.z), z2 = z1 + c.len * (0.6 + cam.speed * 0.4);
         // Cerca de la cámara las luces se apagan antes de volverse manchones.
-        const near = small ? 7 : 4;
         const fade = clamp((z1 - 1.5) / near, 0, 1) * clamp((FAR - z1) / (FAR * 0.35), 0, 1);
         if (fade <= 0.01) continue;
         const w = clamp(0.11 * f / z1, 0.5, small ? 3.2 : 6);
-        for (let s = -1; s <= 1; s += 2) {
-          const lx = c.x + s * c.gap;
-          const a = proj(lx, LIGHT_H, z1), b = proj(lx, LIGHT_H, z2);
-          ctx.strokeStyle = "rgba(" + c.tone + "," + ((small ? 0.08 : 0.1) * fade).toFixed(3) + ")";
-          ctx.lineWidth = w * (small ? 3 : 4);
-          line(a[0], a[1], b[0], b[1]);
-          ctx.strokeStyle = "rgba(" + c.tone + "," + (0.85 * fade).toFixed(3) + ")";
-          ctx.lineWidth = w;
-          line(a[0], a[1], b[0], b[1]);
+        const ya = py(LIGHT_H, z1), yb = py(LIGHT_H, z2);
+        ctx.beginPath();
+        ctx.moveTo(px(c.x - c.gap, z1), ya); ctx.lineTo(px(c.x - c.gap, z2), yb);
+        ctx.moveTo(px(c.x + c.gap, z1), ya); ctx.lineTo(px(c.x + c.gap, z2), yb);
+        ctx.strokeStyle = c.tone;
+        if (quality === 2) {
+          ctx.globalAlpha = 0.1 * fade;
+          ctx.lineWidth = w * 4;
+          ctx.stroke();
         }
+        ctx.globalAlpha = 0.85 * fade;
+        ctx.lineWidth = w;
+        ctx.stroke();
       }
       ctx.restore();
-      ctx.globalCompositeOperation = "source-over";
       if (running) raf = requestAnimationFrame(frame);
     };
 
     const start = () => {
-      if (running || document.hidden) return;
+      if (running || document.hidden || lock.on || !inView) return;
       running = true;
       last = performance.now();
       raf = requestAnimationFrame(frame);
@@ -742,7 +838,8 @@
       inView = entries[0].isIntersecting;
       if (inView) start(); else stop();
     }).observe(hero);
-    document.addEventListener("visibilitychange", () => { if (document.hidden) stop(); else if (inView) start(); });
+    document.addEventListener("visibilitychange", () => { if (document.hidden) stop(); else start(); });
+    onLock((on) => { if (on) stop(); else start(); });
 
     const reveal = () => { canvas.classList.add("is-on"); start(); };
     if (root.classList.contains("mx-intro-on")) document.addEventListener("motobox:intro-done", reveal, { once: true });
@@ -760,13 +857,17 @@
     footer.appendChild(word);
     if (reduce) return;
     const span = word.firstChild;
-    let ticking = false;
+    let ticking = false, near = false, lastP = -1;
+    new IntersectionObserver((en) => { near = en[0].isIntersecting; if (near) update(); }, { rootMargin: "20% 0px" }).observe(word);
     const update = () => {
       ticking = false;
+      if (!near) return;
       const r = word.getBoundingClientRect();
       const vh = window.innerHeight;
       // p = 0 cuando asoma por abajo, 1 cuando está entero en pantalla.
       const p = clamp((vh - r.top) / r.height, 0, 1);
+      if (p === lastP) return;
+      lastP = p;
       span.style.transform = "perspective(800px) translateY(" + ((1 - p) * 40).toFixed(1) + "%) rotateX(" + ((1 - p) * 70).toFixed(2) + "deg)";
       span.style.opacity = (0.15 + p * 0.85).toFixed(3);
     };
@@ -918,18 +1019,23 @@
           rot += vel * dt;
           if (Math.abs(target - rot) < 0.01 && Math.abs(vel) < 0.05) { rot = target; vel = 0; mode = "rest"; }
         }
-        if (mode === "rest" && !hover && visible && !reduce && now - idleAt > 3600) {
-          target -= step; mode = "snap"; idleAt = now;
-        }
       }
       tiltNow += (tiltGoal - tiltNow) * Math.min(1, dt * 6);
       lean.x += (leanGoal.x - lean.x) * Math.min(1, dt * 5);
       lean.y += (leanGoal.y - lean.y) * Math.min(1, dt * 5);
       paint(false);
-      const busy = dragging || mode !== "rest" || Math.abs(tiltGoal - tiltNow) > 0.02;
-      raf = (busy || (visible && !reduce)) ? requestAnimationFrame(frame) : 0;
+      // El bucle corre solo mientras algo se mueve; quieto no gasta nada.
+      const busy = dragging || mode !== "rest" || Math.abs(tiltGoal - tiltNow) > 0.02 ||
+        Math.abs(leanGoal.x - lean.x) > 0.003 || Math.abs(leanGoal.y - lean.y) > 0.003;
+      raf = busy ? requestAnimationFrame(frame) : 0;
     }
     function kick() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+    // Avance automático: un reloj liviano en vez de un bucle por cuadro.
+    setInterval(() => {
+      const now = performance.now();
+      if (mode !== "rest" || dragging || hover || !visible || reduce || lock.on || document.hidden || now - idleAt < 3600) return;
+      target -= step; mode = "snap"; idleAt = now; kick();
+    }, 400);
     const go = (dir) => { target = Math.round(target / step) * step - dir * step; mode = "snap"; idleAt = performance.now(); kick(); };
 
     stage.addEventListener("pointerdown", (e) => {
@@ -978,14 +1084,20 @@
     section.querySelector('[data-sr="next"]').addEventListener("click", () => go(1));
     if (finePointer) {
       stage.addEventListener("pointermove", (e) => {
-        if (dragging) { leanGoal.x = 0; leanGoal.y = 0; return; }
+        if (dragging) { leanGoal.x = 0; leanGoal.y = 0; kick(); return; }
         const r = stage.getBoundingClientRect();
         leanGoal.x = clamp((e.clientX - r.left) / r.width * 2 - 1, -1, 1);
         leanGoal.y = clamp((e.clientY - r.top) / r.height * 2 - 1, -1, 1);
+        kick();
       });
-      stage.addEventListener("pointerleave", () => { leanGoal.x = 0; leanGoal.y = 0; });
+      stage.addEventListener("pointerleave", () => { leanGoal.x = 0; leanGoal.y = 0; kick(); });
     } else {
-      onGyro((x, y) => { if (visible) { leanGoal.x = x; leanGoal.y = y; } });
+      onGyro((x, y) => {
+        if (!visible) return;
+        // Zona muerta: el temblor natural de la mano no despierta el bucle.
+        if (Math.abs(x - leanGoal.x) < 0.02 && Math.abs(y - leanGoal.y) < 0.02) return;
+        leanGoal.x = x; leanGoal.y = y; kick();
+      });
     }
     stage.addEventListener("pointerenter", () => { hover = true; });
     stage.addEventListener("pointerleave", () => { hover = false; idleAt = performance.now(); });
@@ -1036,7 +1148,7 @@
     }
     // Líneas de velocidad de fondo: aparecen y se estiran a medida que sube la aguja.
     let streaks = '<div class="mx-story-streaks" aria-hidden="true">';
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 10; i++) {
       streaks += '<i style="top:' + (6 + Math.random() * 88).toFixed(1) + "%;width:" + (8 + Math.random() * 22).toFixed(1) +
         "vw;animation-duration:" + (0.7 + Math.random() * 0.9).toFixed(2) + "s;animation-delay:-" + (Math.random() * 1.5).toFixed(2) + 's"></i>';
     }
@@ -1056,9 +1168,10 @@
           '<svg viewBox="0 0 400 400">' +
             '<defs><linearGradient id="mxGArc" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ff7a45"/><stop offset="1" stop-color="#e02e24"/></linearGradient></defs>' +
             '<path d="' + arc(RAD) + '" class="mx-g-track"/>' +
+            '<path d="' + arc(RAD) + '" class="mx-g-glow" pathLength="1000"/>' +
             '<path d="' + arc(RAD) + '" class="mx-g-fill" pathLength="1000"/>' +
             ticks + '<g class="mx-g-labels">' + labels + "</g>" +
-            '<g class="mx-g-needle"><path d="M196 205 L200 ' + (CY - RAD + 30) + ' L204 205 Z"/><circle cx="200" cy="205" r="13"/><circle cx="200" cy="205" r="5" class="mx-g-hub"/></g>' +
+            '<g class="mx-g-needle"><path class="mx-g-needle-glow" d="M193 205 L200 ' + (CY - RAD + 26) + ' L207 205 Z"/><path d="M196 205 L200 ' + (CY - RAD + 30) + ' L204 205 Z"/><circle cx="200" cy="205" r="13"/><circle cx="200" cy="205" r="5" class="mx-g-hub"/></g>' +
           "</svg>" +
           '<div class="mx-g-read"><b class="mx-g-speed">0</b><span>km/h</span></div>' +
           '<div class="mx-g-odo"><span>000000</span> km</div>' +
@@ -1069,21 +1182,29 @@
 
     const needle = section.querySelector(".mx-g-needle");
     const fill = section.querySelector(".mx-g-fill");
+    const fillGlow = section.querySelector(".mx-g-glow");
     const speedEl = section.querySelector(".mx-g-speed");
     const gauge = section.querySelector(".mx-gauge");
     const stepEls = Array.from(section.querySelectorAll(".mx-step"));
     const bars = Array.from(section.querySelectorAll(".mx-story-bar i"));
     let cur = 0;
     const streakBox = section.querySelector(".mx-story-streaks");
+    let lastShown = -1, streaksIdle = false;
+    pauseOffscreen(section);
     const s = spring({ v: 0, p: 0, lx: 0, ly: 0 }, (t) => {
       const v = clamp(t.v, -4, MAX + 6);
       const k = clamp(v / MAX, 0, 1);
       needle.style.transform = "rotate(" + (-120 + k * SWEEP).toFixed(2) + "deg)";
-      fill.style.strokeDashoffset = (1000 - k * 1000).toFixed(1);
-      speedEl.textContent = Math.max(0, Math.round(v));
+      const off = (1000 - k * 1000).toFixed(1);
+      fill.style.strokeDashoffset = off;
+      fillGlow.style.strokeDashoffset = off;
+      const shown = Math.max(0, Math.round(v));
+      if (shown !== lastShown) { lastShown = shown; speedEl.textContent = shown; }
       gauge.style.transform = "rotateX(" + (10 + t.ly * -10).toFixed(2) + "deg) rotateY(" + (-16 + t.p * 32 + t.lx * 12).toFixed(2) + "deg)";
-      streakBox.style.opacity = (k * k * 0.9).toFixed(3);
-      streakBox.style.setProperty("--sx", (0.3 + k * 1.7).toFixed(3));
+      const so = k * k * 0.9;
+      streakBox.style.opacity = so.toFixed(3);
+      const idle = so < 0.03;
+      if (idle !== streaksIdle) { streaksIdle = idle; streakBox.classList.toggle("is-idle", idle); }
     }, 90, 11);
     const sticky = section.querySelector(".mx-story-sticky");
     if (finePointer) {
@@ -1094,15 +1215,22 @@
     } else {
       let storyIn = false;
       new IntersectionObserver((en) => { storyIn = en[0].isIntersecting; }).observe(sticky);
-      onGyro((x, y) => { if (storyIn) s.set({ lx: x, ly: y }); });
+      let gx = 0, gy = 0;
+      onGyro((x, y) => {
+        if (!storyIn || (Math.abs(x - gx) < 0.02 && Math.abs(y - gy) < 0.02)) return;
+        gx = x; gy = y;
+        s.set({ lx: x, ly: y });
+      });
     }
 
-    let ticking = false;
+    let ticking = false, lastP = -1;
     const update = () => {
       ticking = false;
       const r = section.getBoundingClientRect();
-      const total = section.offsetHeight - window.innerHeight;
+      const total = r.height - window.innerHeight;
       const p = clamp(-r.top / (total || 1), 0, 1);
+      if (p === lastP) return;   // fuera de la sección no hay nada que actualizar
+      lastP = p;
       // Cada tramo acelera hasta un cambio y "pasa la marcha": la aguja cae un poco y vuelve a subir.
       const seg = Math.min(2, Math.floor(p * 3));
       const local = p * 3 - seg;
@@ -1227,10 +1355,16 @@
     const live = new Set();
     let raf = 0;
 
-    const reset = (el) => { el.style.transform = ""; el.style.opacity = ""; };
+    const reset = (el) => {
+      const st = state.get(el);
+      if (st) st.out = "";
+      el.style.transform = "";
+      el.style.opacity = "";
+      el.classList.remove("is-live3d");
+    };
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
-        if (e.isIntersecting) live.add(e.target);
+        if (e.isIntersecting) { live.add(e.target); e.target.classList.add("is-live3d"); }
         else { live.delete(e.target); reset(e.target); }
       });
       kick();
@@ -1238,7 +1372,7 @@
 
     const add = (el) => {
       if (state.has(el)) return;
-      state.set(el, { press: 0, goal: 0, px: 0, py: 0 });
+      state.set(el, { press: 0, goal: 0, px: 0, py: 0, out: "" });
       el.classList.add("mx-s3d");
       io.observe(el);
       el.addEventListener("pointerdown", (e) => {
@@ -1257,15 +1391,18 @@
     const scan = () => document.querySelectorAll(SEL).forEach(add);
 
     const smooth = (t) => t * t * (3 - 2 * t);
+    const rects = [];
     const frame = () => {
       raf = 0;
       const vh = window.innerHeight, vw = window.innerWidth;
       let busy = false;
-      live.forEach((el) => {
-        const st = state.get(el);
+      // Primero se leen todas las posiciones y después se escribe: una sola pasada de estilo.
+      rects.length = 0;
+      live.forEach((el) => rects.push([el, el.getBoundingClientRect()]));
+      for (let n = 0; n < rects.length; n++) {
+        const el = rects[n][0], r = rects[n][1], st = state.get(el);
         st.press += (st.goal - st.press) * 0.28;
-        if (Math.abs(st.goal - st.press) > 0.003) busy = true;
-        const r = el.getBoundingClientRect();
+        if (Math.abs(st.goal - st.press) > 0.003) busy = true; else st.press = st.goal;
         const c = (r.top + r.height / 2 - vh / 2) / (vh / 2);
         const tin = smooth(clamp((c - 0.2) / 0.8, 0, 1));
         const tout = smooth(clamp((-c - 0.6) / 0.6, 0, 1));
@@ -1274,9 +1411,12 @@
         const rx = tin * 34 - tout * 12 - st.py * 7 * st.press;
         const ry = -col * tin * 18 + st.px * 9 * st.press;
         const sc = 1 - tin * 0.1 - tout * 0.05 - st.press * 0.035;
-        el.style.transform = "perspective(1000px) translate3d(0," + (tin * 50).toFixed(1) + "px," + (-tin * 80).toFixed(1) + "px) rotateX(" + rx.toFixed(2) + "deg) rotateY(" + ry.toFixed(2) + "deg) scale(" + sc.toFixed(4) + ")";
-        el.style.opacity = (1 - tin * 0.6 - tout * 0.3).toFixed(3);
-      });
+        const out = "perspective(1000px) translate3d(0," + (tin * 50).toFixed(1) + "px," + (-tin * 80).toFixed(1) + "px) rotateX(" + rx.toFixed(1) + "deg) rotateY(" + ry.toFixed(1) + "deg) scale(" + sc.toFixed(3) + ")";
+        if (out === st.out) continue;   // nada cambió: no se toca el estilo
+        st.out = out;
+        el.style.transform = out;
+        el.style.opacity = (1 - tin * 0.6 - tout * 0.3).toFixed(2);
+      }
       if (busy) kick();
     };
     function kick() { if (!raf) raf = requestAnimationFrame(frame); }
@@ -1310,6 +1450,7 @@
   }
 
   function init() {
+    initLockWatch();
     initSmoothScroll();
     initGyro();
     runIntro();
