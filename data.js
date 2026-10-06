@@ -157,18 +157,21 @@ const SORTEO_CONFIG = {
   id: "01",                                   // Se muestra como "Sorteo N.º 01"
   titulo: "Ganate una moto 0km",
   premios: [
-    { nombre: "Honda Wave full", imagen: "" },  // Sin foto todavía: subila a img/motos/ y poné la ruta acá
-    { nombre: "Keller full", imagen: "img/motos/keller-110.jpg" }
+    // f_auto,q_auto,w_900: Cloudinary entrega la foto liviana y en el mejor formato para cada equipo.
+    { nombre: "Honda Wave full", imagen: "https://res.cloudinary.com/di9j6zwyz/image/upload/f_auto,q_auto,w_900/v1791326578/WhatsApp_Image_2026-10-06_at_7.37.04_PM_kvumvg.jpg" },
+    { nombre: "Keller full", imagen: "https://res.cloudinary.com/di9j6zwyz/image/upload/f_auto,q_auto,w_900/v1791326558/WhatsApp_Image_2026-10-06_at_7.37.05_PM_ih5jsw.jpg" }
   ],
   manual: { nombre: "Manual de Cuidado y Mantenimiento", precio: 10000 },
   fechaSorteo: "",                            // Vacío = "a confirmar"
   basesUrl: "sorteo.html",
   // Datos para el pago del manual. Mientras estén vacíos, la web avisa que se envían por WhatsApp.
   pago: {
-    alias: "",                                // Ej: "motobox.cordoba"
-    cbu: "",                                  // 22 dígitos
-    titular: "",                              // Nombre de la cuenta
-    mercadoPagoUrl: ""                        // Link de pago de Mercado Pago por el precio del manual
+    alias: "motoboxsorteo.arq",
+    cbu: "0000069708377145543005",            // 22 dígitos (CVU de Mercado Pago)
+    titular: "",                              // Nombre de la cuenta (opcional)
+    // Sin link de cobro, el botón abre Mercado Pago para transferir al alias.
+    // Si generás un link de pago por $10.000, ponelo acá y el botón lleva directo a pagar.
+    mercadoPagoUrl: "https://www.mercadopago.com.ar/"
   }
 };
 

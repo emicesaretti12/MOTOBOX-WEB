@@ -198,6 +198,7 @@
               <span class="rf-option-icon">${ICON_BOOK}</span>
               <span class="rf-option-body">
                 <span class="rf-option-title">Comprar el manual y participar</span>
+                <span class="rf-option-chip">Incluye manual en PDF</span>
                 <span class="rf-option-desc">${esc(manualNombre)} en PDF por WhatsApp + tu número para el sorteo.</span>
               </span>
               <span class="rf-option-price">${precio ? money(precio) : ""}</span>
@@ -398,19 +399,26 @@
       "</dl>";
     const hasBank = PAGO.alias || PAGO.cbu;
     $("[data-rf-bank]").innerHTML = hasBank
-      ? (PAGO.alias ? copyRow("Alias", PAGO.alias) : "") + (PAGO.cbu ? copyRow("CBU", PAGO.cbu) : "") +
+      ? (PAGO.alias ? copyRow("Alias", PAGO.alias) : "") + (PAGO.cbu ? copyRow("CBU / CVU", PAGO.cbu) : "") +
         (PAGO.titular ? '<p class="rf-bank-holder">Titular: ' + esc(PAGO.titular) + "</p>" : "")
       : '<p class="rf-bank-holder">Te enviamos el alias y el CBU por WhatsApp.</p>' +
         '<a class="rf-btn rf-btn-outline" target="_blank" rel="noopener" href="' + esc(waLink("Hola Motobox! Me inscribí al Sorteo N.º " + C.id + " (número " + pad(ins.numero) + ", DNI " + ins.dni + ") y quiero pagar el manual. ¿Me pasan los datos para transferir?")) + '">Pedir datos de pago</a>';
     const mp = $("[data-rf-mp]");
     mp.hidden = !PAGO.mercadoPagoUrl;
-    if (PAGO.mercadoPagoUrl) mp.href = PAGO.mercadoPagoUrl;
+    if (PAGO.mercadoPagoUrl) {
+      mp.href = PAGO.mercadoPagoUrl;
+      // Un link de cobro lleva directo a pagar; la página general abre la app para transferir al alias.
+      const linkDeCobro = !/^https?:\/\/(www\.)?mercadopago\.com\.ar\/?$/.test(PAGO.mercadoPagoUrl);
+      mp.textContent = linkDeCobro ? "Pagar con Mercado Pago" : "Abrir Mercado Pago y transferir";
+    }
   }
 
   function renderListo() {
     const ins = state.inscripcion;
     if (!ins) return;
-    $("[data-rf-num]").textContent = pad(ins.numero);
+    const numEl = $("[data-rf-num]");
+    if (celebrate && !reduceMq.matches) rollNumber(numEl, pad(ins.numero));
+    else numEl.textContent = pad(ins.numero);
     $("[data-rf-name]").textContent = ins.nombre;
     $("[data-rf-code]").textContent = ins.codigo;
     let status;
@@ -420,6 +428,37 @@
     $("[data-rf-status]").textContent = status;
     $("[data-rf-back-pay]").hidden = !(ins.compra && !ins.comprobante);
     $("[data-rf-verify]").href = waLink("Hola Motobox! Verifico mi WhatsApp para el Sorteo N.º " + C.id + ". Código: " + ins.codigo + ". DNI: " + ins.dni + ".");
+    if (celebrate && !reduceMq.matches) later(burstConfetti, 380);
+    celebrate = false;
+  }
+
+  // Festejo al inscribirse: el número gira como un contador y salta papel picado.
+  let celebrate = false;
+  function rollNumber(el, final) {
+    el.innerHTML = final.split("").map((d, i) =>
+      '<span class="rf-roll" style="--i:' + i + '"><span class="rf-roll-strip">' +
+        "0123456789".split("").map((n) => "<b>" + n + "</b>").join("") + "<b>" + d + "</b>" +
+      "</span></span>"
+    ).join("");
+    el.setAttribute("aria-label", final);
+  }
+  function burstConfetti() {
+    const box = $(".rf-done");
+    if (!box) return;
+    const layer = document.createElement("div");
+    layer.className = "rf-confetti-burst";
+    layer.setAttribute("aria-hidden", "true");
+    const colors = ["#e02e24", "#ff7a45", "#ffd166", "#1d1d1f", "#ffffff", "#25d366"];
+    let html = "";
+    for (let i = 0; i < 28; i++) {
+      const a = (Math.random() * 140 + 200) * Math.PI / 180;  // hacia arriba, abanico
+      const d = 120 + Math.random() * 160;
+      html += '<i style="--x:' + (Math.cos(a) * d).toFixed(0) + "px;--y:" + (Math.sin(a) * d).toFixed(0) + "px;--r:" + Math.round(Math.random() * 720 - 360) +
+        "deg;--d:" + Math.round(Math.random() * 120) + "ms;background:" + colors[i % colors.length] + '"></i>';
+    }
+    layer.innerHTML = html;
+    box.appendChild(layer);
+    later(() => layer.remove(), 1800);
   }
 
   // --- Validación del formulario ---
@@ -482,6 +521,7 @@
         domicilio: r.data.direccion + ", " + r.data.localidad + ", " + r.data.provincia + " (" + r.data.codigo_postal + ")"
       };
       saveInscripcion();
+      if (!compra) celebrate = true;
       go(compra ? "pago" : "listo", "fwd");
     } catch (err) {
       formError.textContent = err.message;
@@ -519,6 +559,7 @@
       await uploadComprobante(file, ins.token);
       ins.comprobante = true;
       saveInscripcion();
+      celebrate = true;
       go("listo", "fwd");
     } catch (err) {
       errBox.textContent = err.message;

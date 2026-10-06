@@ -913,3 +913,94 @@ html.rf-lock body {
   .rf-ticket-lite { animation: none; }
 }
 .rf-fallback-wa { margin-top: 10px; height: 48px; font-size: 15px; }
+
+/* ── Atracción: la opción de compra brilla, el acceso flotante llama la atención ── */
+.rf-option { position: relative; overflow: hidden; }
+.rf-option[data-rf-modo="compra"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  transform: translateX(-120%) skewX(-18deg);
+  animation: rf-option-shine 4.5s var(--rf-ease-in-out) 1.4s infinite;
+  pointer-events: none;
+}
+@keyframes rf-option-shine {
+  0%, 62% { transform: translateX(-120%) skewX(-18deg); }
+  85%, 100% { transform: translateX(320%) skewX(-18deg); }
+}
+.rf-option-chip {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 3px 8px;
+  border-radius: 100px;
+  background: #1d1d1f;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.rf-option.is-selected .rf-option-icon { animation: rf-pop 420ms var(--rf-ease-back); }
+@keyframes rf-pop { 40% { transform: scale(1.18); } }
+
+/* El acceso flotante da un pequeño salto cada tantos segundos */
+.rf-pill:not([hidden]) .rf-pill-main { animation: rf-nudge 7s var(--rf-ease-out) 3s infinite; }
+@keyframes rf-nudge {
+  0%, 88%, 100% { transform: none; }
+  91% { transform: translateY(-6px) rotate(-1deg); }
+  94% { transform: translateY(0) rotate(0.6deg); }
+  97% { transform: translateY(-2px); }
+}
+
+/* Número de participación: cada dígito gira como un contador y frena en el suyo */
+.rf-tl-num { display: inline-flex; justify-content: center; }
+.rf-roll {
+  display: inline-block;
+  height: 1.05em;
+  overflow: hidden;
+  line-height: 1.05;
+}
+.rf-roll-strip {
+  display: flex;
+  flex-direction: column;
+  animation: rf-roll 1.2s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--i) * 90ms + 200ms);
+  transform: translateY(calc(-100% + 1.05em));   /* el último dígito de la tira es el número real */
+}
+.rf-roll-strip b { display: block; height: 1.05em; font-weight: 800; }
+@keyframes rf-roll { from { transform: translateY(0); } }
+
+/* Papel picado */
+.rf-done { position: relative; }
+.rf-confetti-burst {
+  position: absolute;
+  left: 50%;
+  top: 46px;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.rf-confetti-burst i {
+  position: absolute;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: rf-confetti 1.3s cubic-bezier(0.16, 1, 0.3, 1) var(--d) forwards;
+}
+@keyframes rf-confetti {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0) scale(0.6); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--x), calc(var(--y) + 140px)) rotate(var(--r)) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rf-option[data-rf-modo="compra"]::after,
+  .rf-pill:not([hidden]) .rf-pill-main,
+  .rf-option.is-selected .rf-option-icon,
+  .rf-roll-strip { animation: none !important; }
+  .rf-confetti-burst { display: none; }
+}
