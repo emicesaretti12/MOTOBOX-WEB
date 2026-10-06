@@ -9,7 +9,7 @@ index.html      — Página principal
 styles.css      — Estilos (CSS vanilla, mobile-first)
 app.js          — Lógica: catálogo, filtros, animaciones, WhatsApp links
 data.js         — Datos mock del catálogo (estructura para futura DB) y SORTEO_CONFIG
-rifa.js         — Popup del sorteo: premios, ruleta de chances y participación por WhatsApp
+rifa.js         — Popup del sorteo: premios, inscripción, pago del manual y comprobante
 rifa.css        — Estilos y animaciones 3D del popup del sorteo
 motion.js       — Animaciones: ruta nocturna 3D, título con volumen, showroom 360°, velocímetro, 3D con giroscopio y scroll en celular, sorteo 3D y resortes
 motion.css      — Estilos de esas animaciones (se apagan con "reducir movimiento")
@@ -52,11 +52,19 @@ Cada moto tiene esta estructura (en `data.js`):
 
 ## Sorteo
 
-Sorteo promocional gratuito, sin obligación de compra: se participa gratis por WhatsApp o con
-la compra del manual, siempre con las mismas chances. El popup aparece la primera vez que alguien
-entra en la sesión; después queda un acceso flotante y el link "Sorteo" del menú.
-Se configura en `SORTEO_CONFIG` (`data.js`): premios y sus fotos, manual y precio, fecha del sorteo
-y chances de la ruleta. Las bases completas están en `sorteo.html` (completar los campos marcados).
+Sorteo promocional sin obligación de compra: se participa gratis o comprando el Manual de Cuidado
+y Mantenimiento, siempre con la misma chance (una participación por DNI).
+
+- **Web** (`rifa.js`): el popup ofrece las dos opciones, pide los datos (DNI, nombre, fecha de
+  nacimiento, celular, Gmail, domicilio), asigna el número de participación y, si compró el manual,
+  muestra el pedido con alias, CBU, Mercado Pago y la carga del comprobante. El celular se confirma
+  enviando por WhatsApp el código que muestra la web.
+- **Datos**: tabla `sorteo_participantes` en Supabase. La migración está en el repo del CRM
+  (`supabase/migrations/004_sorteo.sql`) y se corre una vez en el SQL Editor.
+- **CRM**: bloque "Sorteo" (solo admin) para ver inscriptos, comprobantes, verificar pagos y
+  enviar por WhatsApp el número y el manual en PDF.
+- **Configuración** en `SORTEO_CONFIG` (`data.js`): premios, precio del manual, fecha, alias, CBU,
+  titular y link de Mercado Pago. Las bases completas están en `sorteo.html`.
 
 ## WhatsApp
 

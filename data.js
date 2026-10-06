@@ -147,8 +147,10 @@ const STATIC_PROMO = {
 };
 
 // --- Sorteo promocional (popup que aparece al entrar a la web) ---
-// Sorteo gratuito, sin obligación de compra: se participa gratis o con la compra del manual,
-// siempre con las mismas chances. Las bases completas están en sorteo.html.
+// Sorteo sin obligación de compra: se participa gratis o comprando el manual, siempre con
+// la misma chance (una participación por DNI). Las bases completas están en sorteo.html.
+// Las inscripciones se guardan en Supabase (tabla sorteo_participantes) y se gestionan
+// desde el bloque "Sorteo" del CRM, que solo ve el perfil admin.
 // Con activo: false el popup no aparece.
 const SORTEO_CONFIG = {
   activo: true,
@@ -161,17 +163,13 @@ const SORTEO_CONFIG = {
   manual: { nombre: "Manual de Cuidado y Mantenimiento", precio: 10000 },
   fechaSorteo: "",                            // Vacío = "a confirmar"
   basesUrl: "sorteo.html",
-  // Chances extra de la ruleta. peso = probabilidad relativa (a mayor peso, más sale).
-  ruleta: [
-    { valor: 1, peso: 26 },
-    { valor: 2, peso: 16 },
-    { valor: 1, peso: 26 },
-    { valor: 3, peso: 8 },
-    { valor: 1, peso: 26 },
-    { valor: 2, peso: 16 },
-    { valor: 5, peso: 3 },
-    { valor: 2, peso: 16 }
-  ]
+  // Datos para el pago del manual. Mientras estén vacíos, la web avisa que se envían por WhatsApp.
+  pago: {
+    alias: "",                                // Ej: "motobox.cordoba"
+    cbu: "",                                  // 22 dígitos
+    titular: "",                              // Nombre de la cuenta
+    mercadoPagoUrl: ""                        // Link de pago de Mercado Pago por el precio del manual
+  }
 };
 
 // --- Categorías ---

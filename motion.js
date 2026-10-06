@@ -428,10 +428,10 @@
         '<p class="mx-sorteo-kicker">Sorteo N.º ' + esc(C.id || "01") + " · Participación gratuita</p>" +
         '<h2 class="mx-sorteo-title"><span class="mx-line"><span>Ganate una</span></span><span class="mx-line"><span>moto 0km</span></span></h2>' +
         '<p class="mx-sorteo-text">Sorteamos ' + prizes.map((p) => esc(p.nombre)).join(" y ") +
-          ". Girá la ruleta, sumá chances extra y anotate por WhatsApp. No hace falta comprar nada.</p>" +
+          ". Participás comprando el manual o gratis: en los dos casos, la misma chance.</p>" +
         '<ul class="mx-sorteo-facts"><li>Sin obligación de compra</li><li>Una participación por DNI</li><li>Fecha del sorteo: ' + fecha + "</li></ul>" +
         '<div class="mx-sorteo-actions">' +
-          '<a href="sorteo.html" class="btn-hero-red mx-magnetic" data-rifa-open>Girar la ruleta</a>' +
+          '<a href="sorteo.html" class="btn-hero-red mx-magnetic" data-rifa-open>Participar</a>' +
           '<a href="' + esc(C.basesUrl || "sorteo.html") + '" class="mx-sorteo-link">Ver bases y condiciones</a>' +
         "</div>" +
       "</div>" + stage +

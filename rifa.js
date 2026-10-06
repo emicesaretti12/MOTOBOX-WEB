@@ -1,7 +1,12 @@
 /**
  * MOTOBOX — Sorteo promocional
- * Popup que aparece al entrar a la web: premios, ruleta de chances extra y participación
- * por WhatsApp (gratis o con la compra del manual, siempre con las mismas chances).
+ * Popup que aparece al entrar a la web. Pasos:
+ *   1. intro  → premios y las dos formas de participar (comprando el manual o gratis).
+ *   2. datos  → formulario de inscripción (una participación por DNI, mayores de 18).
+ *   3. pago   → solo si compra el manual: datos del pedido, alias, CBU, Mercado Pago y comprobante.
+ *   4. listo  → número de participación y verificación del teléfono por WhatsApp.
+ * Comprar o no, la chance es la misma. Las inscripciones se guardan en Supabase
+ * (función sorteo_inscribir) y se gestionan desde el bloque "Sorteo" del CRM.
  * Se configura con SORTEO_CONFIG (data.js). Las bases completas están en sorteo.html.
  */
 (function () {
@@ -10,20 +15,22 @@
   if (typeof SORTEO_CONFIG === "undefined" || !SORTEO_CONFIG || !SORTEO_CONFIG.activo) return;
 
   const C = SORTEO_CONFIG;
-  const SEGS = Array.isArray(C.ruleta) ? C.ruleta.filter((s) => s && Number(s.valor) > 0) : [];
   const PRIZES = Array.isArray(C.premios) ? C.premios.filter((p) => p && p.nombre) : [];
-  if (SEGS.length < 2 || !PRIZES.length) return;
+  if (!PRIZES.length) return;
 
-  const SEG = 360 / SEGS.length;
   const MANUAL = C.manual || {};
-  const SPIN_MS = 4800;
-  const STEPS = ["intro", "wheel", "ticket"];
+  const PAGO = C.pago || {};
+  const STEPS = ["intro", "datos", "pago", "listo"];
   const WA_NUMBER = typeof WHATSAPP_NUMBER !== "undefined" ? WHATSAPP_NUMBER : "5493516312930";
+  const SB_URL = typeof SUPABASE_URL !== "undefined" ? SUPABASE_URL : "";
+  const SB_KEY = typeof SUPABASE_ANON_KEY !== "undefined" ? SUPABASE_ANON_KEY : "";
   const KEY = "motobox_sorteo_" + C.id;
   const desktopMq = window.matchMedia("(min-width: 900px)");
   const reduceMq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const MAX_FILE = 8 * 1024 * 1024;
 
-  const state = { open: false, step: "intro", phase: "idle", rot: 0, prize: null, flipped: false };
+  // modo: "compra" o "gratis". inscripcion: lo que devolvió el servidor (se guarda en el teléfono).
+  const state = { open: false, step: "intro", modo: "compra", sending: false, inscripcion: null };
 
   // --- Helpers ---
   function readKey(kind, key) {
@@ -35,42 +42,99 @@
   const fmt = (x) => String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   const money = (x) => "$" + fmt(x);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const chancesLabel = (n) => (n === 1 ? "1 chance" : n + " chances");
-  const bonus = () => (state.prize !== null ? Number(SEGS[state.prize].valor) : 0);
+  const pad = (n) => String(n).padStart(5, "0");
   const fecha = C.fechaSorteo ? String(C.fechaSorteo) : "a confirmar";
   const prizeNames = PRIZES.map((p) => p.nombre);
   const prizeList = prizeNames.length > 1 ? prizeNames.slice(0, -1).join(", ") + " y " + prizeNames[prizeNames.length - 1] : prizeNames[0];
+  const precio = Number(MANUAL.precio) || 0;
+  const manualNombre = MANUAL.nombre || "Manual de Cuidado y Mantenimiento";
+  const waLink = (text) => "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(text);
 
-  function pickPrize() {
-    const weights = SEGS.map((s) => Math.max(0, Number(s.peso) || 0));
-    const sum = weights.reduce((a, b) => a + b, 0);
-    if (!sum) return Math.floor(Math.random() * SEGS.length);
-    let r = Math.random() * sum;
-    for (let i = 0; i < weights.length; i++) {
-      r -= weights[i];
-      if (r < 0) return i;
-    }
-    return weights.length - 1;
+  function saveInscripcion() { writeKey("localStorage", KEY + "_inscripcion", JSON.stringify(state.inscripcion)); }
+  function loadInscripcion() {
+    try { const raw = readKey("localStorage", KEY + "_inscripcion"); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
   }
-  // Avance de cubic-bezier(0.23, 1, 0.32, 1) en el tiempo t: la misma curva que usa la transición del disco.
-  function easeOut(t) {
-    let lo = 0, hi = 1, s = t;
-    for (let i = 0; i < 24; i++) {
-      s = (lo + hi) / 2;
-      const x = 3 * (1 - s) * (1 - s) * s * 0.23 + 3 * (1 - s) * s * s * 0.32 + s * s * s;
-      if (x < t) lo = s; else hi = s;
+
+  // Teléfono argentino: se quitan +54, 9, el 0 del área y el 15 del número → 10 dígitos.
+  function normalizePhone(raw) {
+    let d = String(raw || "").replace(/\D/g, "");
+    if (d.startsWith("54")) d = d.slice(2);
+    if (d.length === 11 && d.startsWith("9")) d = d.slice(1);
+    if (d.startsWith("0")) d = d.slice(1);
+    if (d.length === 12) {
+      // área de 2 a 4 dígitos seguida de "15"
+      for (let a = 2; a <= 4; a++) {
+        if (d.substr(a, 2) === "15") { d = d.slice(0, a) + d.slice(a + 2); break; }
+      }
     }
-    return 1 - Math.pow(1 - s, 3);
+    return d;
+  }
+  function ageFrom(isoDate) {
+    const d = new Date(isoDate + "T12:00:00");
+    if (isNaN(d)) return -1;
+    const now = new Date();
+    let age = now.getFullYear() - d.getFullYear();
+    const m = now.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+    return age;
+  }
+
+  // --- Servidor (Supabase) ---
+  const ERRORES = {
+    DNI_YA_INSCRIPTO: "Este DNI ya está inscripto en el sorteo. Si necesitás ayuda, escribinos por WhatsApp.",
+    DNI_INVALIDO: "Revisá el DNI: tiene que tener 7 u 8 números.",
+    NOMBRE_INVALIDO: "Escribí tu nombre y apellido completos.",
+    MENOR_DE_EDAD: "Para participar tenés que ser mayor de 18 años.",
+    FECHA_INVALIDA: "Revisá la fecha de nacimiento.",
+    TELEFONO_INVALIDO: "Revisá el teléfono: código de área y número, sin 0 ni 15.",
+    EMAIL_INVALIDO: "Revisá el correo electrónico.",
+    DIRECCION_INVALIDA: "Revisá la dirección, la localidad, la provincia y el código postal.",
+    DATOS_DEMASIADO_LARGOS: "Algún dato es demasiado largo. Revisalo y probá de nuevo."
+  };
+  async function rpc(name, body) {
+    const res = await fetch(SB_URL + "/rest/v1/rpc/" + name, {
+      method: "POST",
+      headers: { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      const code = data && data.message ? String(data.message) : "";
+      // La función todavía no existe en la base (falta la migración): se ofrece WhatsApp.
+      if (res.status === 404 || (data && data.code === "PGRST202")) {
+        const err = new Error("La inscripción online se está activando. Mientras tanto, anotate por WhatsApp y te asignamos tu número.");
+        err.code = "SIN_SERVICIO";
+        throw err;
+      }
+      const err = new Error(ERRORES[code] || "No pudimos guardar tu inscripción. Revisá tu conexión y probá de nuevo.");
+      err.code = code;
+      throw err;
+    }
+    return data;
+  }
+  async function uploadComprobante(file, token) {
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "jpg";
+    const path = token + "/comprobante-" + Date.now() + "." + ext;
+    const res = await fetch(SB_URL + "/storage/v1/object/sorteo-comprobantes/" + path, {
+      method: "POST",
+      headers: { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, "Content-Type": file.type || "application/octet-stream", "x-upsert": "false" },
+      body: file
+    });
+    if (!res.ok) throw new Error("No pudimos subir el comprobante. Probá con una foto o un PDF de menos de 8 MB.");
+    const ok = await rpc("sorteo_registrar_comprobante", { p_token: token, p_path: path });
+    if (ok !== true) throw new Error("No pudimos registrar el comprobante. Escribinos por WhatsApp y lo cargamos nosotros.");
   }
 
   // --- Markup ---
   const title = esc(C.titulo || "Ganate una moto 0km");
-  const manualTxt = MANUAL.nombre ? esc(MANUAL.nombre) + (MANUAL.precio ? " (" + money(MANUAL.precio) + ")" : "") : "";
-  const legal = '<strong>Sin obligación de compra.</strong> <a href="' + esc(C.basesUrl || "sorteo.html") + '">Bases y condiciones</a>';
+  const legal = '<strong>Sin obligación de compra.</strong> Comprando o gratis, la misma chance. <a href="' + esc(C.basesUrl || "sorteo.html") + '">Bases y condiciones</a>';
 
   const ICON_BACK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
   const ICON_CLOSE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   const ICON_MOTO = '<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5l4-7h4l3 7"/><path d="M13.5 9.5l1.5-3h2.5"/><path d="M9 9.5H6.5"/></svg>';
+  const ICON_BOOK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>';
+  const ICON_TICKET = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a2 2 0 0 0 0 4v0a2 2 0 0 0 0 4v2h18v-2a2 2 0 0 0 0-4 2 2 0 0 0 0-4V6H3z"/><path d="M13 6v12" stroke-dasharray="2 2"/></svg>';
+  const ICON_COPY = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
 
   const prizeCards = PRIZES.slice(0, 2).map((p, i) =>
     '<div class="rf-prize-card rf-prize-card--' + (i + 1) + '">' +
@@ -82,29 +146,24 @@
     "</div>"
   ).join("");
 
-  const segColors = SEGS.map((_, i) => (SEGS.length % 2 === 1 && i === SEGS.length - 1 ? "#3a3a3c" : i % 2 ? "#1d1d1f" : "#e02e24"));
-  const discBg = "conic-gradient(" + segColors.map((c, i) => c + " " + (i * SEG).toFixed(3) + "deg " + ((i + 1) * SEG).toFixed(3) + "deg").join(", ") + ")";
-  const labelsHtml = SEGS.map((s, i) =>
-    '<div class="rf-label" style="--a:' + (i * SEG + SEG / 2).toFixed(3) + 'deg"><b>+' + Number(s.valor) + "</b><small>" + (Number(s.valor) === 1 ? "CHANCE" : "CHANCES") + "</small></div>"
-  ).join("");
-  const pegsHtml = SEGS.map((_, i) => '<i class="rf-peg" style="--a:' + (i * SEG).toFixed(3) + 'deg"></i>').join("");
-  let bulbsHtml = "";
-  for (let i = 0; i < 16; i++) {
-    bulbsHtml += '<i class="rf-bulb" style="--a:' + i * 22.5 + "deg;--d:" + (i % 2 ? "-0.8s" : "0s") + ";--dc:-" + i * 40 + 'ms"></i>';
-  }
-  const maxBonus = Math.max(...SEGS.map((s) => Number(s.valor)));
+  const field = (name, label, attrs, hint) =>
+    '<label class="rf-field" data-field="' + name + '"><span class="rf-label-t">' + label + "</span>" +
+      "<input " + attrs + ' name="' + name + '">' +
+      (hint ? '<small class="rf-hint">' + hint + "</small>" : "") +
+      '<small class="rf-err" aria-live="polite"></small></label>';
+
+  const PROVINCIAS = ["Córdoba", "Buenos Aires", "Ciudad Autónoma de Buenos Aires", "Catamarca", "Chaco", "Chubut", "Corrientes", "Entre Ríos", "Formosa", "Jujuy", "La Pampa", "La Rioja", "Mendoza", "Misiones", "Neuquén", "Río Negro", "Salta", "San Juan", "San Luis", "Santa Cruz", "Santa Fe", "Santiago del Estero", "Tierra del Fuego", "Tucumán"];
 
   const root = document.createElement("div");
   root.className = "rf";
   root.hidden = true;
-  root.style.setProperty("--seg", SEG + "deg");
   root.innerHTML = `
     <div class="rf-scrim" data-rf-close></div>
     <div class="rf-dialog" role="dialog" aria-modal="true" aria-labelledby="rf-title" tabindex="-1">
       <div class="rf-grabber" aria-hidden="true"></div>
       <div class="rf-top">
         <button type="button" class="rf-icon-btn" data-rf-back aria-label="Volver">${ICON_BACK}</button>
-        <div class="rf-progress" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="rf-progress" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
         <button type="button" class="rf-icon-btn" data-rf-close aria-label="Cerrar">${ICON_CLOSE}</button>
       </div>
 
@@ -118,11 +177,11 @@
         <div class="rf-prize-text rf-st rf-d1">
           <p class="rf-kicker">Sorteo N.º ${esc(C.id)} · ${PRIZES.length === 1 ? "1 premio" : PRIZES.length + " premios"}</p>
           <h2 class="rf-title" id="rf-title">${title}</h2>
-          <p class="rf-sub">Sorteamos ${esc(prizeList)} 0km. Participás gratis${manualTxt ? " o con la compra del " + manualTxt : ""}, con las mismas chances.</p>
+          <p class="rf-sub">Sorteamos ${esc(prizeList)} 0km. Participás comprando el ${esc(manualNombre)} o gratis: en los dos casos, la misma chance.</p>
         </div>
         <div class="rf-stats rf-st rf-d2">
           <div class="rf-stat"><strong>${PRIZES.length}</strong><span>${PRIZES.length === 1 ? "moto 0km" : "motos 0km"}</span></div>
-          <div class="rf-stat"><strong>Gratis</strong><span>sin obligación de compra</span></div>
+          <div class="rf-stat"><strong>1 por DNI</strong><span>misma chance para todos</span></div>
           <div class="rf-stat"><strong>${C.fechaSorteo ? esc(C.fechaSorteo) : "A confirmar"}</strong><span>fecha del sorteo</span></div>
         </div>
         <p class="rf-legal rf-legal--desk">${legal}</p>
@@ -130,100 +189,104 @@
 
       <div class="rf-steps">
         <section class="rf-step" data-step="intro">
-          <div class="rf-cta-block rf-st rf-d3">
-            <button type="button" class="rf-btn rf-btn-red rf-btn-shine" data-rf-go="wheel"><span>Girar la ruleta y participar</span></button>
-            <p class="rf-caption">Girá gratis y sumá hasta ${maxBonus} chances extra para el sorteo.</p>
+          <div class="rf-head rf-intro-head">
+            <h3 class="rf-h">Elegí cómo participar</h3>
+            <p class="rf-p">Las dos opciones tienen exactamente la misma chance.</p>
+          </div>
+          <div class="rf-options rf-st rf-d3" role="radiogroup" aria-label="Forma de participar">
+            <button type="button" class="rf-option is-selected" role="radio" aria-checked="true" data-rf-modo="compra">
+              <span class="rf-option-icon">${ICON_BOOK}</span>
+              <span class="rf-option-body">
+                <span class="rf-option-title">Comprar el manual y participar</span>
+                <span class="rf-option-desc">${esc(manualNombre)} en PDF por WhatsApp + tu número para el sorteo.</span>
+              </span>
+              <span class="rf-option-price">${precio ? money(precio) : ""}</span>
+            </button>
+            <button type="button" class="rf-option" role="radio" aria-checked="false" data-rf-modo="gratis">
+              <span class="rf-option-icon">${ICON_TICKET}</span>
+              <span class="rf-option-body">
+                <span class="rf-option-title">Participar gratis</span>
+                <span class="rf-option-desc">Te inscribís sin comprar nada y recibís tu número.</span>
+              </span>
+              <span class="rf-option-price">$0</span>
+            </button>
+          </div>
+          <div class="rf-cta-block rf-st rf-d4">
+            <button type="button" class="rf-btn rf-btn-red rf-btn-shine" data-rf-go="datos"><span data-rf-intro-cta>Continuar</span></button>
             <p class="rf-legal">${legal}</p>
           </div>
         </section>
 
-        <section class="rf-step" data-step="wheel">
+        <section class="rf-step" data-step="datos">
           <div class="rf-head">
-            <h3 class="rf-h">Girá la ruleta</h3>
-            <p class="rf-p">Un giro por persona. Las chances que ganes se suman a tu participación.</p>
+            <h3 class="rf-h">Tus datos</h3>
+            <p class="rf-p" data-rf-datos-sub>Con estos datos te inscribimos y te contactamos si ganás.</p>
           </div>
-          <div class="rf-wheel-area">
-            <div class="rf-glow" data-rf-glow></div>
-            <div class="rf-floor"></div>
-            <div class="rf-wheel-persp">
-              <div class="rf-wheel-tilt is-idle" data-rf-wheel>
-                <div class="rf-wheel-base"></div>
-                <div class="rf-wheel-ring"></div>
-                ${bulbsHtml}
-                <div class="rf-disc" data-rf-disc style="background:${discBg}">${labelsHtml}${pegsHtml}</div>
-                <div class="rf-wedge"></div>
-                <div class="rf-hub" aria-hidden="true"><span>M</span>B</div>
-                <div class="rf-confetti" data-rf-confetti></div>
-              </div>
+          <form class="rf-form" data-rf-form novalidate>
+            ${field("dni", "DNI", 'inputmode="numeric" autocomplete="off" maxlength="10" required placeholder="Solo números"')}
+            ${field("nombre_completo", "Nombre y apellido", 'autocomplete="name" maxlength="120" required')}
+            ${field("fecha_nacimiento", "Fecha de nacimiento", 'type="date" required max="' + new Date(Date.now() - 18 * 365.25 * 864e5).toISOString().slice(0, 10) + '"', "Tenés que ser mayor de 18 años.")}
+            ${field("telefono", "Celular con WhatsApp", 'type="tel" inputmode="tel" autocomplete="tel-national" required placeholder="351 6312930"', "Código de área y número, sin 0 ni 15. Es el medio por el que te vamos a contactar.")}
+            ${field("telefono2", "Repetí el celular", 'type="tel" inputmode="tel" autocomplete="off" required placeholder="351 6312930"')}
+            ${field("email", "Gmail", 'type="email" inputmode="email" autocomplete="email" maxlength="120" required placeholder="nombre@gmail.com"')}
+            <div class="rf-row">
+              ${field("localidad", "Localidad", 'autocomplete="address-level2" maxlength="80" required')}
+              ${field("codigo_postal", "Código postal", 'autocomplete="postal-code" maxlength="8" required')}
             </div>
-            <div class="rf-pointer" data-rf-pointer aria-hidden="true"><i></i><em></em><b></b></div>
+            ${field("direccion", "Dirección", 'autocomplete="street-address" maxlength="160" required placeholder="Calle, número, piso"')}
+            <label class="rf-field" data-field="provincia"><span class="rf-label-t">Provincia</span>
+              <select name="provincia" required autocomplete="address-level1">
+                ${PROVINCIAS.map((p) => '<option value="' + p + '">' + p + "</option>").join("")}
+              </select><small class="rf-err" aria-live="polite"></small></label>
+            <label class="rf-check" data-field="acepto"><input type="checkbox" name="acepto" required>
+              <span>Soy mayor de 18 años y acepto las <a href="${esc(C.basesUrl || "sorteo.html")}" target="_blank" rel="noopener">bases y condiciones</a>.</span></label>
+            <small class="rf-err rf-err-acepto" aria-live="polite"></small>
+            <p class="rf-form-error" data-rf-form-error role="alert" hidden></p>
+            <button type="submit" class="rf-btn rf-btn-red" data-rf-submit><span data-rf-submit-label>Confirmar</span></button>
+          </form>
+        </section>
+
+        <section class="rf-step" data-step="pago">
+          <div class="rf-head">
+            <h3 class="rf-h">Pagá tu manual</h3>
+            <p class="rf-p">Tu número ya está reservado. Pagá y subí el comprobante para que lo verifiquemos.</p>
           </div>
-          <div class="rf-wheel-actions" data-rf-actions>
-            <button type="button" class="rf-btn rf-btn-red rf-btn-shine" data-rf-spin><span>Girar la ruleta</span></button>
-            <p class="rf-note">Girar es gratis. Podés ganar de +1 a +${maxBonus} chances.</p>
+          <div class="rf-order" data-rf-order></div>
+          <div class="rf-paybox">
+            <div class="rf-pay-amount"><span>Total a pagar</span><strong>${precio ? money(precio) : "A confirmar"}</strong></div>
+            <div data-rf-bank></div>
+            <a class="rf-btn rf-btn-mp" data-rf-mp href="#" target="_blank" rel="noopener" hidden>Pagar con Mercado Pago</a>
           </div>
-          <div class="rf-result" data-rf-result aria-live="polite" hidden>
-            <div class="rf-result-row">
-              <div class="rf-badge" data-rf-badge></div>
-              <div>
-                <p class="rf-result-title" data-rf-result-title></p>
-                <p class="rf-result-desc">Se suman a tu participación en el sorteo.</p>
-              </div>
-            </div>
-            <button type="button" class="rf-btn rf-btn-white" data-rf-go="ticket">Ver mi participación</button>
+          <div class="rf-upload">
+            <p class="rf-upload-title">Adjuntá el comprobante</p>
+            <label class="rf-drop" data-rf-drop>
+              <input type="file" accept="image/*,application/pdf" data-rf-file>
+              <span class="rf-drop-text" data-rf-file-name>Tocá para elegir una foto o un PDF (hasta 8 MB)</span>
+            </label>
+            <p class="rf-form-error" data-rf-upload-error role="alert" hidden></p>
+            <button type="button" class="rf-btn rf-btn-red" data-rf-send-file disabled><span>Enviar comprobante</span></button>
+            <button type="button" class="rf-btn rf-btn-ghost" data-rf-go="listo">Lo subo más tarde</button>
           </div>
         </section>
 
-        <section class="rf-step" data-step="ticket">
-          <div class="rf-head">
-            <h3 class="rf-h">Tu participación</h3>
-            <p class="rf-p">Tocá el ticket para ver el dorso.</p>
-          </div>
-          <div class="rf-ticket-stage">
-            <div class="rf-ticket-deal">
-              <div class="rf-ticket-tilt" data-rf-ticket-tilt>
-                <div class="rf-ticket-flip" data-rf-flip>
-                  <div class="rf-tk-face rf-tk-front">
-                    <div class="rf-tk-top"><span class="rf-tk-brand"><em>Moto</em>Box</span><span class="rf-tk-id">SORTEO N.º ${esc(C.id)}</span></div>
-                    <p class="rf-tk-meta">${esc(prizeNames.join(" · "))}</p>
-                    <p class="rf-tk-chances"><strong data-rf-tk-chances></strong><span data-rf-tk-chances-label></span></p>
-                    <div class="rf-tk-perf"><i></i><i></i></div>
-                    <div class="rf-tk-bottom">
-                      <div><small>Ruleta</small><strong data-rf-tk-bonus></strong></div>
-                      <div class="rf-tk-right"><small>Fecha del sorteo</small><strong>${esc(fecha.charAt(0).toUpperCase() + fecha.slice(1))}</strong></div>
-                    </div>
-                    <div class="rf-glare"></div>
-                    <div class="rf-sheen"></div>
-                  </div>
-                  <div class="rf-tk-face rf-tk-back">
-                    <div class="rf-tk-back-list">
-                      <p class="rf-tk-small">BASES (RESUMEN)</p>
-                      <p>Participación gratuita, sin obligación de compra.</p>
-                      <p>Una participación por persona. Comprando o gratis, las mismas chances.</p>
-                      <p>Premios: ${esc(prizeList)} 0km.</p>
-                      <p>Fecha del sorteo: ${esc(fecha)}.</p>
-                    </div>
-                    <div class="rf-tk-back-foot"><span>Bases completas en la web</span><span>Sorteo N.º ${esc(C.id)}</span></div>
-                  </div>
-                </div>
-                <button type="button" class="rf-ticket-hit" data-rf-flip-btn aria-label="Dar vuelta el ticket"></button>
-              </div>
+        <section class="rf-step" data-step="listo">
+          <div class="rf-done">
+            <div class="rf-ticket-lite">
+              <span class="rf-tl-kicker">Sorteo N.º ${esc(C.id)}</span>
+              <span class="rf-tl-label">Tu número</span>
+              <strong class="rf-tl-num" data-rf-num>—</strong>
+              <span class="rf-tl-name" data-rf-name></span>
             </div>
+            <p class="rf-done-status" data-rf-status></p>
           </div>
-          <div class="rf-summary">
-            <div><span>Participación</span><span>1 chance</span></div>
-            <div class="rf-sum-benefit"><span>Ruleta</span><span data-rf-s-bonus></span></div>
-            <div class="rf-sum-total"><span>Total</span><span data-rf-s-total></span></div>
+          <div class="rf-verify">
+            <p class="rf-upload-title">Verificá tu WhatsApp</p>
+            <p class="rf-p">Mandanos el código desde el celular que cargaste: así confirmamos que es tuyo y por ahí te avisamos todo.</p>
+            <p class="rf-code">Código <strong data-rf-code>—</strong></p>
+            <a class="rf-btn rf-btn-wa" data-rf-verify href="#" target="_blank" rel="noopener">Enviar código por WhatsApp</a>
           </div>
-          <div class="rf-next">
-            <p class="rf-next-title">Elegí cómo participar</p>
-            <p class="rf-next-note">Las dos opciones suman exactamente las mismas chances.</p>
-          </div>
-          <div class="rf-ticket-actions">
-            ${MANUAL.nombre ? '<a class="rf-btn rf-btn-red" data-rf-wa-buy href="#" target="_blank" rel="noopener">Comprar el manual' + (MANUAL.precio ? " · " + money(MANUAL.precio) : "") + "</a>" : ""}
-            <a class="rf-btn rf-btn-outline" data-rf-wa-free href="#" target="_blank" rel="noopener">Participar gratis</a>
-            <p class="rf-legal">${legal}</p>
-          </div>
+          <button type="button" class="rf-btn rf-btn-outline" data-rf-go="pago" data-rf-back-pay hidden>Volver al pago</button>
+          <p class="rf-legal">${legal}</p>
         </section>
       </div>
     </div>`;
@@ -237,7 +300,7 @@
       <span class="rf-pill-thumb">${pillImg ? '<img src="' + esc(pillImg) + '" alt="">' : ""}</span>
       <span class="rf-pill-text">
         <span class="rf-pill-kicker"><i class="rf-live"></i>Sorteo N.º ${esc(C.id)}</span>
-        <span class="rf-pill-title">${PRIZES.length === 1 ? "1 moto 0km" : PRIZES.length + " motos 0km"} · participá gratis</span>
+        <span class="rf-pill-title">${PRIZES.length === 1 ? "1 moto 0km" : PRIZES.length + " motos 0km"} · participá</span>
       </span>
       <span class="rf-pill-cta">Participar</span>
     </button>
@@ -249,26 +312,27 @@
   const stepEls = Array.from(root.querySelectorAll(".rf-step"));
   const progressEls = Array.from(root.querySelectorAll(".rf-progress span"));
   const backBtn = $("[data-rf-back]");
-  const wheel = $("[data-rf-wheel]");
-  const disc = $("[data-rf-disc]");
-  const pointer = $("[data-rf-pointer]");
-  const glow = $("[data-rf-glow]");
-  const confetti = $("[data-rf-confetti]");
-  const spinBtn = $("[data-rf-spin]");
-  const actions = $("[data-rf-actions]");
-  const result = $("[data-rf-result]");
-  const flip = $("[data-rf-flip]");
+  const form = $("[data-rf-form]");
+  const fileInput = $("[data-rf-file]");
+  const sendFileBtn = $("[data-rf-send-file]");
 
   const timers = [];
   function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
 
   // --- Navegación entre pasos ---
-  function firstStep() { return desktopMq.matches ? "wheel" : "intro"; }
+  // Una vez inscripto no se vuelve al formulario: el número ya está asignado.
+  function allowedBack(step) {
+    if (step === "datos") return "intro";
+    if (step === "listo" && state.inscripcion && state.inscripcion.compra && !state.inscripcion.comprobante) return "pago";
+    return null;
+  }
 
   function go(step, dir) {
     if (STEPS.indexOf(step) < 0) return;
-    if (step === "intro" && desktopMq.matches) step = "wheel";
-    if (step === "ticket" && state.prize === null) step = "wheel";
+    const ins = state.inscripcion;
+    if (ins && (step === "intro" || step === "datos")) step = ins.compra && !ins.comprobante ? "pago" : "listo";
+    if (!ins && (step === "pago" || step === "listo")) step = "intro";
+    if (step === "pago" && ins && !ins.compra) step = "listo";
     state.step = step;
     root.dataset.step = step;
     const idx = STEPS.indexOf(step);
@@ -282,17 +346,187 @@
       }
     });
     progressEls.forEach((el, i) => el.classList.toggle("is-done", i <= idx));
-    backBtn.classList.toggle("is-hidden", idx <= STEPS.indexOf(firstStep()));
+    backBtn.classList.toggle("is-hidden", !allowedBack(step));
     resetTilt();
-    if (step === "wheel") renderWheel(false);
-    if (step === "ticket") renderTicket();
+    if (step === "datos") renderDatos();
+    if (step === "pago") renderPago();
+    if (step === "listo") renderListo();
     dialog.scrollTop = 0;
     stepsBox.scrollTop = 0;
   }
 
   function back() {
-    const idx = STEPS.indexOf(state.step);
-    if (idx > STEPS.indexOf(firstStep())) go(STEPS[idx - 1], "back");
+    const to = allowedBack(state.step);
+    if (to) go(to, "back");
+  }
+
+  function setModo(modo) {
+    state.modo = modo;
+    root.querySelectorAll("[data-rf-modo]").forEach((b) => {
+      const on = b.dataset.rfModo === modo;
+      b.classList.toggle("is-selected", on);
+      b.setAttribute("aria-checked", on ? "true" : "false");
+    });
+    $("[data-rf-intro-cta]").textContent = modo === "compra" ? "Continuar con la compra" + (precio ? " · " + money(precio) : "") : "Participar gratis";
+  }
+
+  function renderDatos() {
+    const compra = state.modo === "compra";
+    $("[data-rf-submit-label]").textContent = compra ? "Confirmar pedido" : "Confirmar inscripción";
+    $("[data-rf-datos-sub]").textContent = compra
+      ? "Creamos tu inscripción y después te mostramos cómo pagar el manual."
+      : "Con estos datos te inscribimos y te contactamos si ganás.";
+  }
+
+  function copyRow(label, value) {
+    return '<div class="rf-copy-row"><span><small>' + label + "</small><strong>" + esc(value) + "</strong></span>" +
+      '<button type="button" class="rf-copy" data-rf-copy="' + esc(value) + '" aria-label="Copiar ' + label + '">' + ICON_COPY + "<em>Copiar</em></button></div>";
+  }
+
+  function renderPago() {
+    const ins = state.inscripcion;
+    if (!ins) return;
+    $("[data-rf-order]").innerHTML =
+      '<div class="rf-order-head"><span>Pedido</span><strong>N.º de participación ' + pad(ins.numero) + "</strong></div>" +
+      '<dl class="rf-order-list">' +
+        "<div><dt>Producto</dt><dd>" + esc(manualNombre) + " (PDF)</dd></div>" +
+        "<div><dt>Nombre</dt><dd>" + esc(ins.nombre) + "</dd></div>" +
+        "<div><dt>DNI</dt><dd>" + esc(ins.dni) + "</dd></div>" +
+        "<div><dt>WhatsApp</dt><dd>" + esc(ins.telefono) + "</dd></div>" +
+        "<div><dt>Correo</dt><dd>" + esc(ins.email) + "</dd></div>" +
+        "<div><dt>Domicilio</dt><dd>" + esc(ins.domicilio) + "</dd></div>" +
+      "</dl>";
+    const hasBank = PAGO.alias || PAGO.cbu;
+    $("[data-rf-bank]").innerHTML = hasBank
+      ? (PAGO.alias ? copyRow("Alias", PAGO.alias) : "") + (PAGO.cbu ? copyRow("CBU", PAGO.cbu) : "") +
+        (PAGO.titular ? '<p class="rf-bank-holder">Titular: ' + esc(PAGO.titular) + "</p>" : "")
+      : '<p class="rf-bank-holder">Te enviamos el alias y el CBU por WhatsApp.</p>' +
+        '<a class="rf-btn rf-btn-outline" target="_blank" rel="noopener" href="' + esc(waLink("Hola Motobox! Me inscribí al Sorteo N.º " + C.id + " (número " + pad(ins.numero) + ", DNI " + ins.dni + ") y quiero pagar el manual. ¿Me pasan los datos para transferir?")) + '">Pedir datos de pago</a>';
+    const mp = $("[data-rf-mp]");
+    mp.hidden = !PAGO.mercadoPagoUrl;
+    if (PAGO.mercadoPagoUrl) mp.href = PAGO.mercadoPagoUrl;
+  }
+
+  function renderListo() {
+    const ins = state.inscripcion;
+    if (!ins) return;
+    $("[data-rf-num]").textContent = pad(ins.numero);
+    $("[data-rf-name]").textContent = ins.nombre;
+    $("[data-rf-code]").textContent = ins.codigo;
+    let status;
+    if (!ins.compra) status = "¡Listo, ya estás participando! Guardá tu número. Te avisamos por WhatsApp la fecha del sorteo.";
+    else if (ins.comprobante) status = "Recibimos tu comprobante. Cuando verifiquemos el pago te mandamos por WhatsApp tu número y el manual en PDF.";
+    else status = "Tu número está reservado. Falta el pago del manual: cuando subas el comprobante lo verificamos y te mandamos todo por WhatsApp.";
+    $("[data-rf-status]").textContent = status;
+    $("[data-rf-back-pay]").hidden = !(ins.compra && !ins.comprobante);
+    $("[data-rf-verify]").href = waLink("Hola Motobox! Verifico mi WhatsApp para el Sorteo N.º " + C.id + ". Código: " + ins.codigo + ". DNI: " + ins.dni + ".");
+  }
+
+  // --- Validación del formulario ---
+  function setError(name, msg) {
+    const box = name === "acepto" ? $(".rf-err-acepto") : $('[data-field="' + name + '"] .rf-err');
+    const wrap = $('[data-field="' + name + '"]');
+    if (box) box.textContent = msg || "";
+    if (wrap) wrap.classList.toggle("is-invalid", !!msg);
+  }
+
+  function validate() {
+    const v = Object.fromEntries(new FormData(form).entries());
+    const errs = {};
+    const dni = String(v.dni || "").replace(/\D/g, "");
+    if (!/^\d{7,8}$/.test(dni)) errs.dni = "Tiene que tener 7 u 8 números.";
+    const nombre = String(v.nombre_completo || "").trim().replace(/\s+/g, " ");
+    if (nombre.length < 5 || !/\s/.test(nombre)) errs.nombre_completo = "Escribí nombre y apellido.";
+    if (!v.fecha_nacimiento) errs.fecha_nacimiento = "Elegí tu fecha de nacimiento.";
+    else if (ageFrom(v.fecha_nacimiento) < 18 || ageFrom(v.fecha_nacimiento) > 110) errs.fecha_nacimiento = "Tenés que ser mayor de 18 años.";
+    const tel = normalizePhone(v.telefono);
+    if (tel.length !== 10) errs.telefono = "Revisalo: código de área y número, 10 dígitos en total.";
+    else if (normalizePhone(v.telefono2) !== tel) errs.telefono2 = "Los dos números no coinciden.";
+    const email = String(v.email || "").trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errs.email = "Revisá el correo.";
+    if (String(v.localidad || "").trim().length < 2) errs.localidad = "Completá la localidad.";
+    if (!/^[A-Za-z0-9]{4,8}$/.test(String(v.codigo_postal || "").trim())) errs.codigo_postal = "Ej: 5000 o X5000ABC.";
+    if (String(v.direccion || "").trim().length < 3) errs.direccion = "Completá la dirección.";
+    if (!v.provincia) errs.provincia = "Elegí la provincia.";
+    if (!form.elements.acepto.checked) errs.acepto = "Tenés que aceptar las bases para participar.";
+    ["dni", "nombre_completo", "fecha_nacimiento", "telefono", "telefono2", "email", "localidad", "codigo_postal", "direccion", "provincia", "acepto"]
+      .forEach((k) => setError(k, errs[k]));
+    return { ok: !Object.keys(errs).length, errs, data: {
+      sorteo_id: C.id, dni, nombre_completo: nombre, fecha_nacimiento: v.fecha_nacimiento, telefono: tel, email,
+      localidad: String(v.localidad).trim(), codigo_postal: String(v.codigo_postal).trim().toUpperCase(),
+      direccion: String(v.direccion).trim(), provincia: v.provincia
+    } };
+  }
+
+  async function submitForm(e) {
+    e.preventDefault();
+    if (state.sending) return;
+    const formError = $("[data-rf-form-error]");
+    formError.hidden = true;
+    const r = validate();
+    if (!r.ok) {
+      const first = form.querySelector(".is-invalid input, .is-invalid select, [data-field='acepto'] input:not(:checked)");
+      if (first) first.focus();
+      return;
+    }
+    const compra = state.modo === "compra";
+    const btn = $("[data-rf-submit]");
+    state.sending = true;
+    btn.disabled = true;
+    $("[data-rf-submit-label]").textContent = "Guardando…";
+    try {
+      const res = await rpc("sorteo_inscribir", { p: Object.assign({}, r.data, { compra_manual: compra, monto: compra ? precio : null }) });
+      state.inscripcion = {
+        numero: res.numero, codigo: res.codigo, token: res.upload_token || null, compra: compra, comprobante: false,
+        nombre: r.data.nombre_completo, dni: r.data.dni, telefono: r.data.telefono, email: r.data.email,
+        domicilio: r.data.direccion + ", " + r.data.localidad + ", " + r.data.provincia + " (" + r.data.codigo_postal + ")"
+      };
+      saveInscripcion();
+      go(compra ? "pago" : "listo", "fwd");
+    } catch (err) {
+      formError.textContent = err.message;
+      if (err.code === "SIN_SERVICIO") {
+        const link = document.createElement("a");
+        link.className = "rf-btn rf-btn-wa rf-fallback-wa";
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = "Inscribirme por WhatsApp";
+        link.href = waLink("Hola Motobox! Quiero inscribirme al Sorteo N.º " + C.id + (compra ? " comprando el manual" : " (participación gratis)") +
+          ". Mis datos: " + r.data.nombre_completo + ", DNI " + r.data.dni + ", nacimiento " + r.data.fecha_nacimiento +
+          ", " + r.data.email + ", " + r.data.direccion + ", " + r.data.localidad + ", " + r.data.provincia + " (" + r.data.codigo_postal + ").");
+        formError.appendChild(document.createElement("br"));
+        formError.appendChild(link);
+      }
+      formError.hidden = false;
+      if (err.code === "DNI_YA_INSCRIPTO") setError("dni", "Ya está inscripto.");
+    } finally {
+      state.sending = false;
+      btn.disabled = false;
+      renderDatos();
+    }
+  }
+
+  async function sendFile() {
+    const ins = state.inscripcion;
+    const file = fileInput.files && fileInput.files[0];
+    const errBox = $("[data-rf-upload-error]");
+    errBox.hidden = true;
+    if (!ins || !ins.token || !file) return;
+    if (file.size > MAX_FILE) { errBox.textContent = "El archivo pesa más de 8 MB. Probá con una captura de pantalla."; errBox.hidden = false; return; }
+    sendFileBtn.disabled = true;
+    sendFileBtn.firstElementChild.textContent = "Enviando…";
+    try {
+      await uploadComprobante(file, ins.token);
+      ins.comprobante = true;
+      saveInscripcion();
+      go("listo", "fwd");
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.hidden = false;
+    } finally {
+      sendFileBtn.firstElementChild.textContent = "Enviar comprobante";
+      sendFileBtn.disabled = !(fileInput.files && fileInput.files[0]);
+    }
   }
 
   let lastFocus = null;
@@ -304,7 +538,7 @@
     root.classList.remove("is-closing");
     root.hidden = false;
     document.documentElement.classList.add("rf-lock");
-    go(state.prize === null ? firstStep() : "ticket");
+    go(state.step === "datos" ? "datos" : "intro");
     requestAnimationFrame(() => {
       try { dialog.focus({ preventScroll: true }); } catch (e) { dialog.focus(); }
     });
@@ -328,147 +562,7 @@
     }
   }
 
-  // --- Ruleta ---
-  function setRotation(deg, transition) {
-    state.rot = deg;
-    disc.style.transition = transition;
-    disc.style.transform = "translateZ(1px) rotate(" + deg.toFixed(2) + "deg)";
-  }
-
-  function renderWheel(celebrate) {
-    const p = state.phase;
-    wheel.classList.toggle("is-idle", p === "idle");
-    wheel.classList.toggle("is-spinning", p === "windup" || p === "spin");
-    wheel.classList.toggle("is-won", p === "won" && !!celebrate);
-    glow.classList.toggle("is-on", p === "spin");
-    glow.classList.toggle("is-half", p === "won");
-    actions.hidden = p === "won";
-    spinBtn.disabled = p !== "idle";
-    spinBtn.firstElementChild.textContent = p === "idle" ? "Girar la ruleta" : "Girando…";
-    result.hidden = p !== "won";
-    if (p === "won" && state.prize !== null) {
-      const n = bonus();
-      $("[data-rf-badge]").textContent = "+" + n;
-      $("[data-rf-result-title]").textContent = "¡Ganaste +" + chancesLabel(n) + "!";
-    }
-  }
-
-  function spin() {
-    if (state.phase !== "idle") return;
-    const k = pickPrize();
-    const center = k * SEG + SEG / 2;
-    const base = state.rot - (state.rot % 360);
-    const target = base + 360 * 6 + (360 - center) % 360 + (Math.random() - 0.5) * SEG * 0.55;
-    if (reduceMq.matches) {
-      setRotation(target, "none");
-      win(k);
-      return;
-    }
-    // Anticipación: un pequeño tirón hacia atrás antes del giro.
-    const from = state.rot - 10;
-    state.phase = "windup";
-    renderWheel(false);
-    setRotation(from, "transform 180ms var(--rf-ease-out)");
-    later(() => {
-      state.phase = "spin";
-      renderWheel(false);
-      setRotation(target, "transform " + SPIN_MS + "ms var(--rf-ease-out)");
-      runFlapper(from, target);
-      later(() => win(k), SPIN_MS + 60);
-    }, 190);
-  }
-
-  function win(k) {
-    state.phase = "won";
-    state.prize = k;
-    writeKey("localStorage", KEY + "_premio", String(k));
-    pointer.style.transform = "";
-    renderWheel(true);
-    burstConfetti();
-  }
-
-  // La flecha es una lengüeta: cada separador del borde la empuja y vuelve a su lugar cuando pasa.
-  let flapRaf = 0;
-  function runFlapper(from, to) {
-    cancelAnimationFrame(flapRaf);
-    const push = SEG * 0.31, release = SEG * 0.13;
-    let start = null, lastR = from, lastNow = 0;
-    const frame = (now) => {
-      if (start === null) { start = now; lastNow = now; }
-      const t = Math.min(1, (now - start) / SPIN_MS);
-      const r = from + (to - from) * easeOut(t);
-      const speed = ((r - lastR) / Math.max(1, now - lastNow)) * 1000;
-      lastR = r;
-      lastNow = now;
-      const u = ((r % SEG) + SEG) % SEG;
-      const ahead = SEG - u;
-      let angle = 0;
-      if (speed > 700) angle = -18 - Math.random() * 6;
-      else if (ahead < push) angle = -26 * (1 - ahead / push);
-      else if (u < release) angle = 5 * (1 - u / release);
-      pointer.style.transform = "rotate(" + angle.toFixed(2) + "deg)";
-      if (t < 1) flapRaf = requestAnimationFrame(frame);
-      else pointer.style.transform = "";
-    };
-    flapRaf = requestAnimationFrame(frame);
-  }
-
-  function burstConfetti() {
-    if (reduceMq.matches) return;
-    const colors = ["#e02e24", "#ffc940", "#ff8a82", "#1d1d1f"];
-    let html = "";
-    for (let i = 0; i < 28; i++) {
-      const a = Math.round(i * (360 / 28) + ((i * 53) % 17) - 8);
-      html += '<i class="rf-cf rf-cf' + (1 + (i % 3)) + '" style="--a:' + a + "deg;--c:" + colors[i % 4] + ";--w:" + (i % 2 ? 6 : 8) + "px;--h:" + (i % 2 ? 10 : 6) + "px;--d:" + (i % 5) * 18 + 'ms"></i>';
-    }
-    confetti.innerHTML = html;
-    later(() => { confetti.innerHTML = ""; }, 1600);
-  }
-
-  // --- Ticket de participación ---
-  function renderTicket() {
-    const n = bonus();
-    const total = 1 + n;
-    countUp($("[data-rf-tk-chances]"), total);
-    $("[data-rf-tk-chances-label]").textContent = total === 1 ? "chance" : "chances";
-    $("[data-rf-tk-bonus]").textContent = "+" + chancesLabel(n);
-    $("[data-rf-s-bonus]").textContent = "+" + chancesLabel(n);
-    $("[data-rf-s-total]").textContent = chancesLabel(total);
-    const prizeTxt = "En la ruleta gané +" + chancesLabel(n) + " (total: " + chancesLabel(total) + ").";
-    const buy = $("[data-rf-wa-buy]");
-    if (buy) {
-      buy.href = "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(
-        "Hola Motobox! Quiero comprar el " + (MANUAL.nombre || "manual") + (MANUAL.precio ? " (" + money(MANUAL.precio) + ")" : "") +
-        " y participar del Sorteo N.º " + C.id + ". " + prizeTxt + " Mi nombre y DNI: ");
-    }
-    $("[data-rf-wa-free]").href = "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(
-      "Hola Motobox! Quiero participar gratis del Sorteo N.º " + C.id + ". " + prizeTxt + " Mi nombre y DNI: ");
-    state.flipped = false;
-    flip.classList.remove("is-flipped");
-  }
-
-  // El número grande del ticket cuenta hasta el total de chances.
-  let countRaf = 0;
-  function countUp(el, to) {
-    cancelAnimationFrame(countRaf);
-    if (reduceMq.matches || to <= 1) { el.textContent = String(to); return; }
-    let start = null;
-    const frame = (now) => {
-      if (start === null) start = now;
-      const t = Math.min(1, (now - start - 350) / 650);
-      el.textContent = String(t <= 0 ? 1 : Math.max(1, Math.round(1 + (to - 1) * (1 - Math.pow(1 - t, 3)))));
-      if (t < 1) countRaf = requestAnimationFrame(frame);
-    };
-    el.textContent = "1";
-    countRaf = requestAnimationFrame(frame);
-  }
-
-  function toggleFlip() {
-    state.flipped = !state.flipped;
-    flip.classList.toggle("is-flipped", state.flipped);
-  }
-
-  // --- Inclinación 3D con resorte (tarjetas de premios y ticket, solo con mouse) ---
+  // --- Inclinación 3D con resorte (tarjetas de premios, solo con mouse) ---
   // Resorte estilo Apple: respuesta 0,5 s y rebote 0,2 → rigidez 157,9 y amortiguación 20,1.
   const spring = { el: null, x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, gx: 50, gy: 50, tgx: 50, tgy: 50, raf: 0 };
 
@@ -481,7 +575,6 @@
     el.style.setProperty("--gy", spring.gy.toFixed(1) + "%");
     el.style.setProperty("--glare", Math.min(1, (Math.abs(spring.x) + Math.abs(spring.y)) / 8).toFixed(2));
   }
-
   function resetTilt() {
     cancelAnimationFrame(spring.raf);
     spring.raf = 0;
@@ -492,7 +585,6 @@
     }
     spring.el = null;
   }
-
   function runSpring() {
     if (spring.raf) return;
     let last = null;
@@ -507,17 +599,12 @@
       spring.gy += (spring.tgy - spring.gy) * 0.18;
       const done = Math.abs(spring.tx - spring.x) < 0.02 && Math.abs(spring.ty - spring.y) < 0.02 &&
         Math.abs(spring.vx) < 0.02 && Math.abs(spring.vy) < 0.02;
-      if (done) {
-        spring.x = spring.tx;
-        spring.y = spring.ty;
-        spring.vx = spring.vy = 0;
-      }
+      if (done) { spring.x = spring.tx; spring.y = spring.ty; spring.vx = spring.vy = 0; }
       applyTilt();
       spring.raf = done ? 0 : requestAnimationFrame(frame);
     };
     spring.raf = requestAnimationFrame(frame);
   }
-
   function bindTilt(hit, target) {
     if (!hit || !target) return;
     hit.addEventListener("pointermove", (e) => {
@@ -543,13 +630,28 @@
 
   // --- Eventos ---
   root.addEventListener("click", (e) => {
-    const t = e.target.closest("[data-rf-close], [data-rf-back], [data-rf-go], [data-rf-spin], [data-rf-flip-btn]");
+    const t = e.target.closest("[data-rf-close], [data-rf-back], [data-rf-go], [data-rf-modo], [data-rf-copy], [data-rf-send-file]");
     if (!t || !root.contains(t)) return;
     if (t.hasAttribute("data-rf-close")) close();
     else if (t.hasAttribute("data-rf-back")) back();
+    else if (t.hasAttribute("data-rf-modo")) setModo(t.dataset.rfModo);
     else if (t.hasAttribute("data-rf-go")) { if (!t.disabled) go(t.getAttribute("data-rf-go"), "fwd"); }
-    else if (t.hasAttribute("data-rf-spin")) spin();
-    else if (t.hasAttribute("data-rf-flip-btn")) toggleFlip();
+    else if (t.hasAttribute("data-rf-send-file")) sendFile();
+    else if (t.hasAttribute("data-rf-copy")) {
+      const value = t.getAttribute("data-rf-copy");
+      const done = () => { t.classList.add("is-copied"); t.lastElementChild.textContent = "Copiado"; later(() => { t.classList.remove("is-copied"); t.lastElementChild.textContent = "Copiar"; }, 1600); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(value).then(done, done);
+      else done();
+    }
+  });
+  form.addEventListener("submit", submitForm);
+  form.addEventListener("input", (e) => { if (e.target.name) setError(e.target.name, ""); });
+  fileInput.addEventListener("change", () => {
+    const f = fileInput.files && fileInput.files[0];
+    $("[data-rf-file-name]").textContent = f ? f.name : "Tocá para elegir una foto o un PDF (hasta 8 MB)";
+    $("[data-rf-drop]").classList.toggle("has-file", !!f);
+    sendFileBtn.disabled = !f;
+    $("[data-rf-upload-error]").hidden = true;
   });
 
   // Los links "Sorteo" del menú abren el popup en vez de navegar.
@@ -577,7 +679,7 @@
       return;
     }
     if (e.key !== "Tab") return;
-    const focusables = Array.from(dialog.querySelectorAll("a[href], button:not([disabled])")).filter((el) => el.offsetParent !== null);
+    const focusables = Array.from(dialog.querySelectorAll("a[href], button:not([disabled]), input, select")).filter((el) => el.offsetParent !== null);
     if (!focusables.length) return;
     const first = focusables[0], last = focusables[focusables.length - 1];
     if (e.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
@@ -589,32 +691,20 @@
     }
   });
 
-  const onBreakpoint = () => { if (state.open) go(state.step); };
-  if (desktopMq.addEventListener) desktopMq.addEventListener("change", onBreakpoint);
-  else if (desktopMq.addListener) desktopMq.addListener(onBreakpoint);
-
   // --- Inicio ---
   function init() {
     document.body.appendChild(root);
     document.body.appendChild(pill);
-
-    const storedRaw = readKey("localStorage", KEY + "_premio");
-    const stored = Number(storedRaw);
-    if (storedRaw !== null && Number.isInteger(stored) && SEGS[stored]) {
-      state.prize = stored;
-      state.phase = "won";
-      setRotation((360 - (stored * SEG + SEG / 2)) % 360, "none");
-    }
-    renderWheel(false);
+    state.inscripcion = loadInscripcion();
+    setModo(state.inscripcion && !state.inscripcion.compra ? "gratis" : "compra");
     bindTilt($("[data-rf-tilt-hit]"), $("[data-rf-tilt]"));
-    bindTilt($("[data-rf-flip-btn]"), $("[data-rf-ticket-tilt]"));
 
     if (window.location.hash === "#sorteo") {
       writeKey("sessionStorage", KEY + "_visto", "1");
       later(open, 300);
     } else if (document.body.dataset.page === "sorteo") {
       // En la página de bases no se abre solo: se abre con el botón "Participar".
-    } else if (readKey("sessionStorage", KEY + "_visto") !== "1") {
+    } else if (readKey("sessionStorage", KEY + "_visto") !== "1" && !state.inscripcion) {
       writeKey("sessionStorage", KEY + "_visto", "1");
       // Si está corriendo la intro de la portada, el popup espera a que termine.
       if (document.documentElement.classList.contains("mx-intro-on")) {
