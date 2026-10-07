@@ -49,7 +49,8 @@
   // --- Servidor ---
   const ERRORES = {
     DATOS_INCORRECTOS: "El DNI o la clave no coinciden. Revisalos y probá de nuevo.",
-    NO_ENCONTRADO: "No encontramos tu inscripción en este teléfono. Entrá con tu DNI y tu clave."
+    NO_ENCONTRADO: "No encontramos tu inscripción en este teléfono. Entrá con tu DNI y tu clave.",
+    DEMASIADOS_INTENTOS: "Hubo demasiados intentos. Por seguridad, esperá 15 minutos y probá de nuevo."
   };
   async function rpc(name, body) {
     let res;
@@ -74,6 +75,12 @@
       }
       const err = new Error(ERRORES[code] || "No pudimos consultar tu número. Probá de nuevo en un momento.");
       err.code = code;
+      throw err;
+    }
+    // Los intentos fallidos vuelven como respuesta normal con "error" (así el servidor los puede contar).
+    if (data && data.error) {
+      const err = new Error(ERRORES[data.error] || "No pudimos consultar tu número. Probá de nuevo en un momento.");
+      err.code = String(data.error);
       throw err;
     }
     return data;

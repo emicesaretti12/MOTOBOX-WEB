@@ -70,6 +70,17 @@ y Mantenimiento, siempre con la misma chance (una participación por DNI).
 - **Configuración** en `SORTEO_CONFIG` (`data.js`): premios, precio del manual y fecha. Las bases
   completas están en `sorteo.html`.
 
+## Seguridad
+
+- **Cabeceras** (`vercel.json`): Content-Security-Policy estricta (solo scripts propios), HSTS,
+  anti-iframe (`frame-ancestors 'none'`), `nosniff`, Referrer y Permissions-Policy.
+  Si se agrega un servicio externo (scripts, fuentes, APIs), hay que sumarlo a la CSP.
+- **Sin scripts en línea**: todo JS va en archivos (`intro.js` en el `<head>` de la portada).
+- **supabase-js local** (`vendor/supabase.min.js`, versión fija 2.117.2) en lugar del CDN.
+- **Datos del CRM**: `data.js` limpia los textos (`< > "`) y solo acepta imágenes `https://`.
+- **Sorteo**: límites de intentos, campo trampa para bots y precio fijado en el servidor
+  (migración `006_seguridad.sql` del repo del CRM).
+
 ## WhatsApp
 
 Los CTAs generan links de WhatsApp con mensaje prearmado:

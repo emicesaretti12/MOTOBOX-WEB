@@ -961,3 +961,6 @@ html.rf-lock body {
 .rf-check-sm { font-size: 13px; color: var(--rf-ink-2); margin-top: -4px; }
 .rf-check-sm input { width: 18px; height: 18px; }
 @media (prefers-reduced-motion: reduce) { .rf-btn-pulse::before { animation: none; } }
+
+/* Campo trampa para bots: fuera de la vista y de la navegación con teclado */
+.rf-hp { position: absolute !important; left: -9999px !important; width: 1px; height: 1px; overflow: hidden; }

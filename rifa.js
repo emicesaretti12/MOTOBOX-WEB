@@ -88,7 +88,9 @@
     EMAIL_INVALIDO: "Revisá el correo electrónico.",
     DIRECCION_INVALIDA: "Revisá la dirección, la localidad, la provincia y el código postal.",
     DATOS_DEMASIADO_LARGOS: "Algún dato es demasiado largo. Revisalo y probá de nuevo.",
-    CLAVE_INVALIDA: "La clave tiene que tener al menos 6 caracteres."
+    CLAVE_INVALIDA: "La clave tiene que tener al menos 6 caracteres.",
+    DATOS_INVALIDOS: "Revisá los datos: hay caracteres que no se pueden usar (por ejemplo < o >).",
+    DEMASIADOS_INTENTOS: "Hubo demasiadas inscripciones desde esta conexión. Esperá un rato y probá de nuevo, o escribinos por WhatsApp."
   };
   async function rpc(name, body) {
     const res = await fetch(SB_URL + "/rest/v1/rpc/" + name, {
@@ -227,6 +229,7 @@
               </select><small class="rf-err" aria-live="polite"></small></label>
             ${field("clave", "Creá una clave", 'type="password" autocomplete="new-password" minlength="6" maxlength="72" required', "Con tu DNI y esta clave ves tus números y el estado del pago en «Mis números».")}
             <label class="rf-check rf-check-sm"><input type="checkbox" data-rf-show-pass><span>Mostrar clave</span></label>
+            <div class="rf-hp" aria-hidden="true"><label>Sitio web <input name="sitio" tabindex="-1" autocomplete="off"></label></div>
             <label class="rf-check" data-field="acepto"><input type="checkbox" name="acepto" required>
               <span>Soy mayor de 18 años y acepto las <a href="${esc(C.basesUrl || "sorteo.html")}" target="_blank" rel="noopener">bases y condiciones</a>.</span></label>
             <small class="rf-err rf-err-acepto" aria-live="polite"></small>
@@ -432,7 +435,8 @@
     return { ok: !Object.keys(errs).length, errs, data: {
       sorteo_id: C.id, dni, nombre_completo: nombre, fecha_nacimiento: v.fecha_nacimiento, telefono: tel, email,
       localidad: String(v.localidad).trim(), codigo_postal: String(v.codigo_postal).trim().toUpperCase(),
-      direccion: String(v.direccion).trim(), provincia: v.provincia, clave: clave
+      direccion: String(v.direccion).trim(), provincia: v.provincia, clave: clave,
+      sitio: String(v.sitio || "")   // campo oculto: solo lo completan los bots
     } };
   }
 

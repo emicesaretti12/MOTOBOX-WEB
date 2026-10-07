@@ -52,6 +52,15 @@ async function supabaseFetch(table, query = '') {
   }
 }
 
+// --- Limpieza de lo que llega del CRM ---
+// Las tarjetas se arman con HTML: un texto con < > o comillas podría inyectar código en la web.
+const cleanText = (v) => (v == null ? '' : String(v)).replace(/[<>]/g, '').replace(/"/g, '”');
+// Solo imágenes https (o locales); cualquier otra cosa se descarta.
+const cleanUrl = (v) => {
+  const u = v == null ? '' : String(v).trim();
+  return /^https:\/\/[^\s"'<>()]+$/i.test(u) || /^img\/[\w./-]+$/.test(u) ? u : '';
+};
+
 // --- Fetch motos from CRM ---
 async function fetchMotosFromCRM() {
   // Direct select with order, filtering performed in JS for 100% resilience across all schema versions
@@ -63,14 +72,20 @@ async function fetchMotosFromCRM() {
     .filter(m => (m.visible_web !== false) && (m.estado !== 'vendida'))
     .sort((a, b) => (b.destacada ? 1 : 0) - (a.destacada ? 1 : 0));
 
-  return visibleList.map((m, idx) => ({
+  return visibleList.map((raw, idx) => {
+    // Textos sin caracteres peligrosos; números y booleanos tal cual.
+    const m = {};
+    for (const k in raw) m[k] = typeof raw[k] === 'string' ? cleanText(raw[k]) : raw[k];
+    const imagenes = (Array.isArray(raw.imagenes) ? raw.imagenes : []).map(cleanUrl).filter(Boolean);
+    const imagenUrl = cleanUrl(raw.imagen_url);
+    return {
     id: m.id || idx + 1,
     marca: m.marca || '',
     modelo: m.modelo || '',
     categoria: m.categoria || 'economica',
     categoriaLabel: CAT_LABELS[m.categoria] || m.categoria || 'General',
-    imagen: m.imagen_url || (Array.isArray(m.imagenes) && m.imagenes.length ? m.imagenes[0] : `img/motos/placeholder.jpg`),
-    imagenes: (Array.isArray(m.imagenes) && m.imagenes.length) ? m.imagenes : (m.imagen_url ? [m.imagen_url] : []),
+    imagen: imagenUrl || (imagenes.length ? imagenes[0] : `img/motos/placeholder.jpg`),
+    imagenes: imagenes.length ? imagenes : (imagenUrl ? [imagenUrl] : []),
     disponible: m.estado === 'disponible',
     cilindrada: m.cilindrada ? `${m.cilindrada} cc` : '',
     consumo: m.consumo || '',
@@ -86,7 +101,8 @@ async function fetchMotosFromCRM() {
     anio: m.anio || null,
     usosRecomendados: [],
     perfilComprador: ''
-  }));
+    };
+  });
 }
 
 // --- Fetch promo poster from CRM ---
@@ -99,7 +115,7 @@ async function fetchPromoFromCRM() {
     badge: c.poster_badge || '',
     titulo: c.poster_titulo || '',
     subtitulo: c.poster_subtitulo || '',
-    imagen: c.poster_imagen_url || 'img/hero.jpg',
+    imagen: cleanUrl(c.poster_imagen_url) || 'img/hero.jpg',
     textoBoton: c.poster_boton_texto || 'Consultar por WhatsApp',
     mensajeWhatsApp: c.poster_whatsapp_msg || 'Hola Motobox!'
   };
