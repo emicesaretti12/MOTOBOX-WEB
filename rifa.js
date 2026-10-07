@@ -2,11 +2,11 @@
  * MOTOBOX — Sorteo promocional
  * Popup que aparece al entrar a la web. Pasos:
  *   1. intro  → premios y la compra del manual para participar.
- *   2. datos  → formulario de inscripción con clave (una participación por DNI, mayores de 18).
+ *   2. datos  → formulario de inscripción (una participación por DNI, mayores de 18).
  *   3. listo  → número de participación y botón a WhatsApp con un mensaje personalizado:
  *               ahí el vendedor pasa el alias, recibe el comprobante y marca el pago en el CRM.
- * Comprar o no, la chance es la misma. Cada persona ve su número y el estado del pago en
- * mis-numeros.html (DNI + clave). Las inscripciones se gestionan en el bloque "Sorteo" del CRM.
+ * Cada persona ve su número y el estado del pago en mis-numeros.html directamente con su DNI.
+ * Las inscripciones se gestionan en el bloque "Sorteo" del CRM.
  * Se configura con SORTEO_CONFIG (data.js). Las bases completas están en sorteo.html.
  */
 (function () {
@@ -247,8 +247,6 @@
               <select name="provincia" required autocomplete="address-level1">
                 ${PROVINCIAS.map((p) => '<option value="' + p + '">' + p + "</option>").join("")}
               </select><small class="rf-err" aria-live="polite"></small></label>
-            ${field("clave", "Creá una clave", 'type="password" autocomplete="new-password" minlength="6" maxlength="72" required', "Con tu DNI y esta clave ves tus números y el estado del pago en «Mis números».")}
-            <label class="rf-check rf-check-sm"><input type="checkbox" data-rf-show-pass><span>Mostrar clave</span></label>
             <div class="rf-hp" aria-hidden="true"><label>Sitio web <input name="sitio" tabindex="-1" autocomplete="off"></label></div>
             <label class="rf-check" data-field="acepto"><input type="checkbox" name="acepto" required>
               <span>Soy mayor de 18 años y acepto las <a href="${esc(C.basesUrl || "sorteo.html")}" target="_blank" rel="noopener">bases y condiciones</a>.</span></label>
@@ -473,17 +471,13 @@
     if (String(v.localidad || "").trim().length < 2) errs.localidad = "Completá la localidad.";
     if (!/^[A-Za-z0-9]{4,8}$/.test(String(v.codigo_postal || "").trim())) errs.codigo_postal = "Ej: 5000 o X5000ABC.";
     if (String(v.direccion || "").trim().length < 3) errs.direccion = "Completá la dirección.";
-    if (!v.provincia) errs.provincia = "Elegí la provincia.";
-    const clave = String(v.clave || "");
-    if (clave.length < 6) errs.clave = "Mínimo 6 caracteres.";
-    else if (clave === dni) errs.clave = "Usá una clave distinta de tu DNI.";
     if (!form.elements.acepto.checked) errs.acepto = "Tenés que aceptar las bases para participar.";
-    ["dni", "nombre_completo", "fecha_nacimiento", "telefono", "telefono2", "email", "localidad", "codigo_postal", "direccion", "provincia", "clave", "acepto"]
+    ["dni", "nombre_completo", "fecha_nacimiento", "telefono", "telefono2", "email", "localidad", "codigo_postal", "direccion", "provincia", "acepto"]
       .forEach((k) => setError(k, errs[k]));
     return { ok: !Object.keys(errs).length, errs, data: {
       sorteo_id: C.id, dni, nombre_completo: nombre, fecha_nacimiento: v.fecha_nacimiento, telefono: tel, email,
       localidad: String(v.localidad).trim(), codigo_postal: String(v.codigo_postal).trim().toUpperCase(),
-      direccion: String(v.direccion).trim(), provincia: v.provincia, clave: clave,
+      direccion: String(v.direccion).trim(), provincia: v.provincia, clave: dni,
       sitio: String(v.sitio || "")   // campo oculto: solo lo completan los bots
     } };
   }
@@ -527,7 +521,6 @@
       }
       // "Mis números" (si está abierta) se actualiza sola con la nueva inscripción.
       document.dispatchEvent(new CustomEvent("motobox:sorteo-inscripto", { detail: state.inscripcion }));
-      form.elements.clave.value = "";
       celebrate = true;
       go("listo", "fwd");
     } catch (err) {
@@ -664,7 +657,6 @@
   });
   form.addEventListener("submit", submitForm);
   form.addEventListener("input", (e) => { if (e.target.name) setError(e.target.name, ""); });
-  $("[data-rf-show-pass]").addEventListener("change", (e) => { form.elements.clave.type = e.target.checked ? "text" : "password"; });
 
   // Los links "Sorteo" del menú abren el popup en vez de navegar.
   document.addEventListener("click", (e) => {

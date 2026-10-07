@@ -2,9 +2,9 @@
  * MOTOBOX — Sorteo: "Mis números"
  * Cada participante ve su número y el estado del pago del manual.
  *   * Desde el mismo teléfono con el que se inscribió entra solo (token guardado por rifa.js).
- *   * Desde otro equipo entra con DNI + la clave que creó en el formulario.
+ *   * Desde otro equipo entra directamente con su DNI.
  * Cuando el vendedor marca "Pagado" en el CRM, acá aparece el pago confirmado y el manual para descargar.
- * Funciones del servidor: sorteo_mi_participacion y sorteo_consultar (migración 005 del CRM).
+ * Funciones del servidor: sorteo_mi_participacion y sorteo_consultar.
  */
 (function () {
   "use strict";
@@ -48,8 +48,8 @@
 
   // --- Servidor ---
   const ERRORES = {
-    DATOS_INCORRECTOS: "El DNI o la clave no coinciden. Revisalos y probá de nuevo.",
-    NO_ENCONTRADO: "No encontramos tu inscripción en este teléfono. Entrá con tu DNI y tu clave.",
+    DATOS_INCORRECTOS: "No encontramos una inscripción con este DNI. Revisalo y probá de nuevo.",
+    NO_ENCONTRADO: "No encontramos tu inscripción en este dispositivo. Ingresá tu DNI.",
     DEMASIADOS_INTENTOS: "Hubo demasiados intentos. Por seguridad, esperá 15 minutos y probá de nuevo."
   };
   async function rpc(name, body) {
@@ -225,21 +225,33 @@
   async function submit(e) {
     e.preventDefault();
     const dni = String(form.elements.dni.value || "").replace(/\D/g, "");
-    const clave = String(form.elements.clave.value || "");
     if (!/^\d{7,8}$/.test(dni)) { showError("Revisá el DNI: tiene que tener 7 u 8 números."); form.elements.dni.focus(); return; }
-    if (clave.length < 6) { showError("Escribí la clave que creaste al inscribirte (mínimo 6 caracteres)."); form.elements.clave.focus(); return; }
     showError("");
     submitBtn.disabled = true;
     submitBtn.textContent = "Buscando…";
     try {
-      const f = await rpc("sorteo_consultar", { p_dni: dni, p_clave: clave });
+      let f;
+      try {
+        f = await rpc("sorteo_consultar", { p_dni: dni });
+      } catch (err) {
+        // Si el servidor todavía espera p_clave (antes de correr la migración), reintenta con DNI como clave
+        if (err.code === "SIN_SERVICIO" || (err.message && err.message.toLowerCase().includes("p_clave")) || (err.code === "PGRST202")) {
+          f = await rpc("sorteo_consultar", { p_dni: dni, p_clave: dni });
+        } else {
+          throw err;
+        }
+      }
       current = f;
       remember(Object.assign({ dni: dni }, f));
       form.reset();
       render(f);
       main.scrollIntoView({ block: "start", behavior: "smooth" });
     } catch (err) {
-      showError(err.message);
+      if (err.code === "DATOS_INCORRECTOS" || err.message === "DATOS_INCORRECTOS" || err.code === "NO_ENCONTRADO") {
+        showError("No encontramos ninguna inscripción con ese DNI.");
+      } else {
+        showError(err.message);
+      }
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = "Ver mis números";
@@ -263,7 +275,8 @@
     }
   });
 
-  $("[data-mn-forgot]").href = waLink("Hola MOTOBOX! Me inscribí al Sorteo N.º " + C.id + " y no recuerdo mi clave para ver mis números. Mi DNI es: ");
+  const forgotEl = $("[data-mn-forgot]");
+  if (forgotEl) forgotEl.href = waLink("Hola MOTOBOX! Quiero consultar sobre mi inscripción al Sorteo N.º " + C.id + ". Mi DNI es: ");
 
   // Al volver de WhatsApp (o de otra pestaña) se consulta de nuevo: el pago puede haberse confirmado.
   let lastCheck = 0;

@@ -56,17 +56,15 @@ Sorteo promocional: se participa con la compra del Manual de Cuidado
 y Mantenimiento, y se pueden sumar paquetes de chances extras.
 
 - **Web** (`rifa.js`): el popup permite elegir paquetes de chances extras, pide los datos (DNI, nombre, fecha de
-  nacimiento, celular, Gmail, domicilio y una clave), guarda la inscripción en el CRM, asigna el
+  nacimiento, celular, Gmail y domicilio), guarda la inscripción en el CRM, asigna el
   número y abre WhatsApp con un mensaje personalizado (nombre, DNI, número y código).
 - **Pago del manual**: lo coordina un vendedor por WhatsApp: pasa el alias, recibe el comprobante y,
   cuando verifica la transferencia, toca "Marcar como pagado" en el CRM.
-- **Mis números** (`mis-numeros.html` + `mis-numeros.js`): cada persona ve su número y si el pago
+- **Mis números** (`mis-numeros.html` + `mis-numeros.js`): cada persona ve su número, sus chances y si el pago
   figura como pagado (con el manual en PDF para descargar). Entra sola desde el teléfono con el que se
-  inscribió, o con DNI + clave desde cualquier otro.
-- **Datos**: tabla `sorteo_participantes` en Supabase. Las migraciones están en el repo del CRM
-  (`supabase/migrations/004_sorteo.sql` y `005_sorteo_cuentas.sql`) y se corren una vez en el SQL Editor.
-- **CRM**: bloque "Sorteo" (solo admin) para ver inscriptos, marcar pagos, crear una clave nueva para
-  quien la olvidó y enviar por WhatsApp el número, el alias o el manual en PDF.
+  inscribió, o directamente con su DNI desde cualquier otro.
+- **Datos**: tabla `sorteo_participantes` en Supabase.
+- **CRM**: bloque "Sorteo" (solo admin) para ver inscriptos, marcar pagos y enviar por WhatsApp el número, el alias o el manual en PDF.
 - **Configuración** en `SORTEO_CONFIG` (`data.js`): premios, precio del manual y fecha. Las bases
   completas están en `sorteo.html`.
 
