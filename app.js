@@ -11,6 +11,42 @@
 (function () {
   "use strict";
 
+  // --- Sin zoom ---
+  // iOS ignora user-scalable=no desde hace años: el pellizco se cancela con sus eventos de
+  // gesto (no afectan el scroll). El doble toque lo frena "touch-action" en styles.css.
+  ["gesturestart", "gesturechange", "gestureend"].forEach((type) => {
+    document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+  });
+
+  // --- Título del hero palabra por palabra ---
+  // Se parte apenas carga el script (antes se hacía después de traer los datos del CRM:
+  // el título aparecía, desaparecía y volvía a entrar). Durante la intro de la portada
+  // las animaciones quedan en pausa (motion.css) y arrancan cuando se levanta el telón.
+  (function splitHeroTitle() {
+    const title = document.querySelector(".simple-hero-title");
+    if (!title || title.classList.contains("mx-split") || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let i = 0;
+    Array.from(title.childNodes).forEach((node) => {
+      if (node.nodeType !== Node.TEXT_NODE || !node.textContent.trim()) return;
+      const frag = document.createDocumentFragment();
+      node.textContent.split(/(\s+)/).forEach((part) => {
+        if (!part) return;
+        if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
+        const span = document.createElement("span");
+        span.className = "mx-word";
+        span.style.setProperty("--mx-d", (260 + i * 75) + "ms");
+        span.textContent = part;
+        frag.appendChild(span);
+        i++;
+      });
+      node.replaceWith(frag);
+    });
+    title.classList.add("mx-split");
+  })();
+
+  // Animaciones ligadas al scroll hechas por el navegador (si las soporta, el JS no las toca)
+  const cssScroll = typeof CSS !== "undefined" && CSS.supports && CSS.supports("animation-timeline: view()");
+
   // --- Helper Functions ---
   function buildWhatsAppUrl(message) {
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
@@ -544,7 +580,7 @@
 
     // El texto del hero sube y se desvanece con el scroll. Se escribe directo en el
     // contenido (no como variable en el hero) para no recalcular toda la sección.
-    if (heroContent && !reduceMotionMq.matches) {
+    if (heroContent && !reduceMotionMq.matches && !cssScroll) {
       const p = Math.min(1, Math.max(0, scrollY / heroHeight));
       if (p !== lastHeroP) {
         lastHeroP = p;
@@ -673,28 +709,6 @@
   // ==========================================================================
   function initMotion() {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    // Título del hero: cada palabra entra con un pequeño desenfoque, escalonada.
-    const heroTitle = document.querySelector(".simple-hero-title");
-    if (heroTitle && !reduce && !heroTitle.classList.contains("mx-split")) {
-      let i = 0;
-      Array.from(heroTitle.childNodes).forEach((node) => {
-        if (node.nodeType !== Node.TEXT_NODE || !node.textContent.trim()) return;
-        const frag = document.createDocumentFragment();
-        node.textContent.split(/(\s+)/).forEach((part) => {
-          if (!part) return;
-          if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
-          const span = document.createElement("span");
-          span.className = "mx-word";
-          span.style.setProperty("--mx-d", (300 + i * 70) + "ms");
-          span.textContent = part;
-          frag.appendChild(span);
-          i++;
-        });
-        node.replaceWith(frag);
-      });
-      heroTitle.classList.add("mx-split");
-    }
 
     // Bloques que aparecen al llegar a la pantalla (solo los que arrancan fuera de vista).
     if (!reduce && "IntersectionObserver" in window) {

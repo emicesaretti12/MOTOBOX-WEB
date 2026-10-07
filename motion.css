@@ -1082,3 +1082,245 @@ html.lenis { scroll-behavior: auto !important; }
   .mx-enter { animation: mxFade 0.4s ease backwards; animation-delay: var(--mx-d, 0ms); }
 }
 @keyframes mxFade { from { opacity: 0; } }
+
+/* =========================================================================
+   23. Hero de la portada — entrada nueva
+   Etiqueta que se abre desde el centro, palabras que se levantan en 3D desde su base,
+   subtítulo que sube y botones que aparecen con un rebote corto. Durante la intro todo
+   queda en pausa y arranca cuando se levanta el telón (antes terminaba escondido detrás).
+   ========================================================================= */
+html.mx-intro-on [data-page="home"] .simple-hero-tag,
+html.mx-intro-on [data-page="home"] .simple-hero-subtitle,
+html.mx-intro-on [data-page="home"] .simple-hero-btns > *,
+html.mx-intro-on [data-page="home"] .simple-hero-title .mx-word { animation-play-state: paused; }
+
+[data-page="home"] .simple-hero-tag {
+  opacity: 1;
+  transform: none;
+  animation: mxTagIn 1.1s var(--mx-expo-out) 0.1s backwards;
+}
+@keyframes mxTagIn {
+  from { clip-path: inset(0 50% 0 50%); opacity: 0; }
+  to   { clip-path: inset(0 0 0 0); opacity: 1; }
+}
+[data-page="home"] .simple-hero-title.mx-split { perspective: 700px; }
+[data-page="home"] .simple-hero-title .mx-word {
+  display: inline-block;
+  transform-origin: 50% 100%;
+  animation: mxWordRise 1.05s var(--mx-expo-out) backwards;
+  animation-delay: var(--mx-d, 0ms);
+}
+@keyframes mxWordRise {
+  from { opacity: 0; transform: translate3d(0, 0.6em, 0) rotateX(-80deg); }
+}
+[data-page="home"] .simple-hero-subtitle {
+  opacity: 1;
+  transform: none;
+  animation: mxHeroUp 0.9s var(--mx-expo-out) 0.8s backwards;
+}
+@keyframes mxHeroUp { from { opacity: 0; transform: translate3d(0, 16px, 0); } }
+[data-page="home"] .simple-hero-btns { opacity: 1; transform: none; animation: none; }
+[data-page="home"] .simple-hero-btns > * { animation: mxBtnIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.95s backwards; }
+[data-page="home"] .simple-hero-btns > *:nth-child(2) { animation-delay: 1.07s; }
+@keyframes mxBtnIn { from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.9); } }
+
+/* Celular sin giroscopio: el título se balancea en 3D con CSS (lo resuelve la placa de video).
+   Si el giroscopio arranca, motion.js saca .mx-sway y el título sigue al teléfono. */
+.simple-hero.mx-sway .simple-hero-content { perspective: 900px; }
+.simple-hero.mx-sway .simple-hero-title { animation: mxTitleSway 9s ease-in-out infinite alternate; }
+@keyframes mxTitleSway {
+  0%   { transform: rotateX(3deg) rotateY(-9deg); }
+  50%  { transform: rotateX(-2deg) rotateY(1deg); }
+  100% { transform: rotateX(2.5deg) rotateY(9deg); }
+}
+html.mx-intro-on .simple-hero.mx-sway .simple-hero-title,
+.mx-off.mx-sway .simple-hero-title,
+.mx-paused .simple-hero.mx-sway .simple-hero-title { animation-play-state: paused; }
+
+/* =========================================================================
+   24. Efectos ligados al scroll hechos por el navegador (html.mx-sd)
+   Sin JS en cada cuadro; en Chrome corren fuera del hilo principal.
+   ========================================================================= */
+@supports (animation-timeline: view()) {
+  /* Al bajar, el texto del hero sube y se apaga, y la foto baja más lento (profundidad). */
+  html.mx-sd [data-page="home"] .simple-hero-content {
+    animation: mxHeroExit linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 85vh;
+  }
+  @keyframes mxHeroExit { to { transform: translate3d(0, -48px, 0); opacity: 0.15; } }
+  html.mx-sd .simple-hero .mx-hero-bg {
+    animation: mxBgParallax linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 100vh;
+  }
+  html.mx-sd .simple-hero.mx-hero-live .mx-hero-bg {
+    animation: mxKenBurns 24s ease-in-out infinite alternate, mxBgParallax linear both;
+    animation-timeline: auto, scroll(root block);
+    animation-range: normal, 0 100vh;
+  }
+  @keyframes mxBgParallax { to { translate: 0 70px; } }
+
+  /* Foto del banner: se desplaza apenas dentro de su marco mientras pasa por la pantalla. */
+  html.mx-sd .promo-poster-img {
+    animation: mxPosterParallax linear both;
+    animation-timeline: view();
+  }
+  @keyframes mxPosterParallax {
+    from { translate: 0 -5%; scale: 1.12; }
+    to   { translate: 0 5%; scale: 1.04; }
+  }
+
+  /* Celular: tarjetas que se levantan en 3D al entrar (las de cada columna se abren hacia afuera). */
+  html.mx-touch3d-css .catalog-cards-grid:not(.mx-carousel) .moto-card-modern,
+  html.mx-touch3d-css .promo-poster-card,
+  html.mx-touch3d-css .cta-strip-inner {
+    animation: mxRise3d linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 42%;
+    transition: scale 0.16s var(--mx-expo-out), box-shadow 0.3s ease;
+  }
+  html.mx-touch3d-css .catalog-cards-grid:not(.mx-carousel) .moto-card-modern:nth-child(odd) { --mx-ry: 16deg; }
+  html.mx-touch3d-css .catalog-cards-grid:not(.mx-carousel) .moto-card-modern:nth-child(even) { --mx-ry: -16deg; }
+  @keyframes mxRise3d {
+    from { opacity: 0.35; transform: perspective(1000px) translate3d(0, 50px, -80px) rotateX(34deg) rotateY(var(--mx-ry, 0deg)) scale(0.9); }
+    to   { opacity: 1; transform: none; }
+  }
+  /* Al tocar se hunde (scale se suma al transform de la animación sin pisarlo). */
+  html.mx-touch3d-css .moto-card-modern:active,
+  html.mx-touch3d-css .promo-poster-card:active { scale: 0.97; }
+}
+
+/* =========================================================================
+   25. Cinta de marcas en celular: animación CSS continua (sin JS por cuadro)
+   ========================================================================= */
+.mx-marquee--css .mx-marquee-row { animation: mxMarquee 38s linear infinite; }
+.mx-marquee--css .mx-marquee-row + .mx-marquee-row { animation-duration: 46s; animation-direction: reverse; }
+@keyframes mxMarquee { to { transform: translate3d(-50%, 0, 0); } }
+.mx-off.mx-marquee--css .mx-marquee-row,
+.mx-paused .mx-marquee--css .mx-marquee-row { animation-play-state: paused; }
+
+/* =========================================================================
+   26. Portada en celular: las motos en un carrusel como el de una app
+   Una tarjeta grande por vez que frena en el centro; las de los costados se ven
+   giradas y más chicas. El giro lo hace el navegador con el scroll del carrusel.
+   ========================================================================= */
+@media (max-width: 640px) {
+  [data-page="home"] #home-catalog-grid {
+    position: relative;
+    display: flex;
+    gap: 14px;
+    margin: 0 -0.85rem;
+    padding: 10px 11vw 26px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  [data-page="home"] #home-catalog-grid::-webkit-scrollbar { display: none; }
+  [data-page="home"] #home-catalog-grid > * {
+    flex: 0 0 78vw;
+    max-width: 340px;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+  }
+  [data-page="home"] #home-catalog-grid > .moto-card-modern {
+    animation: none;
+    transform-origin: 50% 60%;
+    box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  }
+  /* Tarjetas grandes = textos legibles (en la grilla de 2 columnas eran diminutos) */
+  [data-page="home"] #home-catalog-grid .moto-card-body { padding: 0.95rem 1rem 1rem; }
+  [data-page="home"] #home-catalog-grid .moto-brand-label,
+  [data-page="home"] #home-catalog-grid .moto-category-label { font-size: 0.7rem; }
+  [data-page="home"] #home-catalog-grid .moto-title-h3 { font-size: 1.2rem; white-space: normal; margin: 0.15rem 0 0.25rem; }
+  [data-page="home"] #home-catalog-grid .moto-tagline { font-size: 0.84rem; -webkit-line-clamp: 2; margin-bottom: 0.7rem; }
+  [data-page="home"] #home-catalog-grid .moto-specs-strip { padding: 0.5rem 0.6rem; margin-bottom: 0.8rem; border-radius: 10px; }
+  [data-page="home"] #home-catalog-grid .spec-k { font-size: 0.6rem; margin-bottom: 0.18rem; }
+  [data-page="home"] #home-catalog-grid .spec-v { font-size: 0.82rem; }
+  [data-page="home"] #home-catalog-grid .moto-card-actions { padding-top: 0.75rem; }
+  [data-page="home"] #home-catalog-grid .btn-card-whatsapp { font-size: 0.92rem; padding: 0.8rem 0.6rem; }
+  [data-page="home"] #home-catalog-grid .moto-badge-tag { top: 0.7rem; left: 0.7rem; font-size: 0.64rem; padding: 0.28rem 0.55rem; border-radius: 6px; }
+
+  /* Lo que se asoma a los costados (la entrada desde la derecha, las tarjetas giradas) no debe
+     ensanchar la página: si no, el celular se puede mover de costado. clip no rompe el
+     encabezado fijo (hidden sí). */
+  [data-page="home"] .simple-catalog { overflow-x: clip; }
+
+  /* Entrada: el carrusel llega deslizándose desde la derecha */
+  .mx-carousel.mx-car-pre { opacity: 0; transform: translate3d(30%, 0, 0); }
+  .mx-carousel.mx-car-in { animation: mxCarIn 1.05s var(--mx-expo-out) both; }
+  @keyframes mxCarIn { from { opacity: 0; transform: translate3d(30%, 0, 0); } }
+
+  /* Puntos: el actual se estira y se pone rojo */
+  .mx-car-dots { display: flex; justify-content: center; gap: 6px; margin: -10px 0 8px; }
+  .mx-car-dots i {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.16);
+    transition: width 0.4s var(--mx-expo-out), background-color 0.3s ease;
+  }
+  .mx-car-dots i.is-on { width: 22px; background: var(--mx-red); }
+}
+@supports (animation-timeline: view()) {
+  @media (max-width: 640px) {
+    html.mx-sd [data-page="home"] #home-catalog-grid > .moto-card-modern {
+      animation: mxCarCard linear both;
+      animation-timeline: view(inline);
+    }
+    @keyframes mxCarCard {
+      0%   { transform: perspective(900px) rotateY(-20deg) scale(0.88); opacity: 0.5; }
+      50%  { transform: none; opacity: 1; }
+      100% { transform: perspective(900px) rotateY(20deg) scale(0.88); opacity: 0.5; }
+    }
+    html.mx-sd [data-page="home"] #home-catalog-grid > .moto-card-modern:active { scale: 0.97; }
+  }
+}
+
+/* =========================================================================
+   27. Esqueletos mientras cargan las motos (sin saltos cuando llegan)
+   ========================================================================= */
+.moto-skel {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg, 16px);
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding-bottom: 0.9rem;
+}
+.moto-skel i { display: block; background: #eceef1; }
+.moto-skel-img { aspect-ratio: 4 / 3; }
+.moto-skel-line { height: 12px; margin: 0.8rem 0.8rem 0; border-radius: 6px; }
+.moto-skel-line--short { width: 55%; }
+.moto-skel-btn { height: 34px; margin: 0.9rem 0.8rem 0; border-radius: 17px; }
+.moto-skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.7) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: mxSkel 1.3s ease-in-out infinite;
+}
+@keyframes mxSkel { to { transform: translateX(100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .moto-skel::after, .simple-hero.mx-sway .simple-hero-title, .mx-marquee--css .mx-marquee-row { animation: none !important; }
+  .mx-carousel.mx-car-pre { opacity: 1; transform: none; }
+}
+
+/* =========================================================================
+   28. Bloques de más abajo: el navegador no los calcula ni dibuja hasta que te acercás
+   (antes, al armar la portada, se calculaba el diseño de toda la página de una).
+   El tamaño estimado evita que la barra de scroll salte.
+   ========================================================================= */
+[data-page="home"] .mx-showroom,
+[data-page="home"] .mx-sorteo,
+[data-page="home"] .promo-poster-section,
+[data-page="home"] .simple-footer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
+[data-page="home"] .simple-footer { contain-intrinsic-size: auto 420px; }

@@ -3188,3 +3188,61 @@ input:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ==========================================================================
+   SENSACIÓN DE APP NATIVA (sobre todo en celular)
+   ========================================================================== */
+/* Sin zoom: ni pellizco ni doble toque (iOS ignora user-scalable=no; ver también app.js).
+   Se declara en cada elemento porque dentro de un carrusel el navegador no mira al <html>. */
+* { touch-action: pan-x pan-y; }
+html {
+  text-size-adjust: 100%;
+  /* Sin "tirar para recargar" ni rebote que deja ver el fondo detrás del encabezado */
+  overscroll-behavior-y: none;
+}
+/* Los controles no se seleccionan ni abren el menú de "copiar/guardar imagen" al mantener apretado */
+.site-header, .mobile-bottom-dock, .moto-card-modern, .promo-poster-card, .filter-pills-bar,
+.btn-hero-red, .btn-hero-outline, .btn-promo-whatsapp, .btn-card-whatsapp, .btn-match-whatsapp,
+.btn-whatsapp-header, .rf-btn, .rf-option, .rf-pill, .mx-marquee, .mx-sr-stage, .mx-car, button, [role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+img { -webkit-user-drag: none; }
+:focus:not(:focus-visible) { outline: none; }
+
+/* Barra de abajo: el ítem activo lleva una "píldora" detrás del ícono, como en Android/iOS */
+.btn-dock-item { position: relative; isolation: isolate; }
+.btn-dock-item svg { position: relative; }
+.btn-dock-item.active::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: calc(50% - 21px);
+  left: 50%;
+  width: 46px;
+  height: 26px;
+  margin-left: -23px;
+  border-radius: 13px;
+  background: rgba(224, 46, 36, 0.1);
+  animation: dockPill 0.5s var(--ease-spring) both;
+}
+@keyframes dockPill { from { transform: scaleX(0.4); opacity: 0; } }
+.btn-dock-item:active { transform: scale(0.92); transition-duration: 0.1s; }
+
+/* Hero del celular: ocupa justo la pantalla visible entre el encabezado y la barra de abajo.
+   svh es fijo: no cambia cuando el navegador esconde la barra de direcciones (antes, con dvh,
+   el hero cambiaba de alto en pleno scroll y la página saltaba). */
+@media (max-width: 600px) {
+  .simple-hero {
+    min-height: calc(100vh - var(--header-height) - var(--bottom-bar-height));
+    min-height: calc(100svh - var(--header-height) - var(--bottom-bar-height) - env(safe-area-inset-bottom, 0px));
+    background-image: url('https://res.cloudinary.com/di9j6zwyz/image/upload/f_auto,q_auto,w_1000/v1789083273/WhatsApp_Image_2026-09-10_at_8.34.08_PM_ygfs6g.jpg');
+  }
+}
+/* Foto del hero en compu: liviana y en el mejor formato para cada navegador */
+@media (min-width: 601px) {
+  .simple-hero {
+    background-image: url('https://res.cloudinary.com/di9j6zwyz/image/upload/f_auto,q_auto,w_1920/v1789083192/WhatsApp_Image_2026-09-10_at_8.31.32_PM_d0pzl7.jpg');
+  }
+}

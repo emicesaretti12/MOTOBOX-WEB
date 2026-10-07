@@ -28,6 +28,10 @@
 
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const $ = (sel) => document.querySelector(sel);
+  // Animaciones ligadas al scroll hechas por el navegador (Chrome 115+, Safari 26+): no usan JS
+  // en cada cuadro y en Chrome corren fuera del hilo principal. Si no hay soporte, se usa JS.
+  const cssScroll = !reduce && typeof CSS !== "undefined" && CSS.supports && CSS.supports("animation-timeline: view()");
+  if (cssScroll) root.classList.add("mx-sd");
 
   if (reduce) root.classList.add("mx-reduce");
 
@@ -143,7 +147,8 @@
 
   // ── 1. Intro de marca (solo portada, una vez por sesión) ──────────────────
   let heroSpring = null;
-  let rideGoal = null;
+  let rideLean = null;   // inclina la cámara de la ruta (la define initNightRide)
+  let rideSway = null;   // prende o apaga el balanceo propio de la ruta
 
   function runIntro() {
     if (!root.classList.contains("mx-intro-on")) return;
@@ -211,7 +216,8 @@
 
     let heroH = hero.offsetHeight || 1, heroTick = false;
     window.addEventListener("resize", () => { heroH = hero.offsetHeight || 1; });
-    window.addEventListener("scroll", () => {
+    // Con soporte, el desplazamiento de la foto con el scroll lo hace el CSS (propiedad translate).
+    if (!cssScroll) window.addEventListener("scroll", () => {
       if (heroTick) return;
       heroTick = true;
       requestAnimationFrame(() => {
@@ -258,24 +264,23 @@
     const lean = (x, y) => {
       heroSpring.set({ px: x * 0.5, py: y * 0.5 });
       if (titleSpring) titleSpring.set({ x: x, y: y });
-      if (rideGoal) { rideGoal.x = x * 1.2; rideGoal.pitch = y * -12; rideGoal.roll = x * -0.025; }
+      if (rideLean) rideLean(x, y);
     };
 
     if (!finePointer) {
-      // Celular: giroscopio si hay; si no, un balanceo lento para que la escena respire.
+      // Celular: giroscopio si hay. Si no, el título se balancea con una animación CSS
+      // (la hace la placa de video, sin JS en cada cuadro) y la cámara de la ruta se
+      // balancea sola dentro de su propio hilo.
+      hero.classList.add("mx-sway");
       let heroVisible = true;
       new IntersectionObserver((en) => { heroVisible = en[0].isIntersecting; }).observe(hero);
       let gx = 0, gy = 0;
       onGyro((x, y) => {
+        if (hero.classList.contains("mx-sway")) { hero.classList.remove("mx-sway"); if (rideSway) rideSway(false); }
         if (!heroVisible || (Math.abs(x - gx) < 0.02 && Math.abs(y - gy) < 0.02)) return;
         gx = x; gy = y;
         lean(x, y);
       });
-      setInterval(() => {
-        if (gyro.on || !heroVisible || document.hidden || lock.on) return;
-        const t = performance.now() / 1000;
-        lean(Math.sin(t * 0.55) * 0.5, Math.sin(t * 0.8) * 0.3);
-      }, 140);
       return;
     }
 
@@ -367,6 +372,12 @@
     section.innerHTML = rowHtml(BRANDS.slice(0, half), false) + rowHtml(BRANDS.slice(half), true);
     if (where === "before") anchor.before(section); else anchor.after(section);
     if (reduce) return;
+    if (!finePointer) {
+      // Celular: la cinta corre con CSS y se pausa fuera de pantalla.
+      section.classList.add("mx-marquee--css");
+      pauseOffscreen(section);
+      return;
+    }
 
     const rows = Array.from(section.querySelectorAll(".mx-marquee-row")).map((row, i) => ({
       el: row, x: 0, dir: i % 2 ? 1 : -1, width: row.firstElementChild.offsetWidth
@@ -665,10 +676,11 @@
     hero.classList.add("has-ride");
     canvas.setAttribute("aria-hidden", "true");
     hero.insertBefore(canvas, hero.querySelector(".simple-hero-content"));
+    const small = window.innerWidth < 700;
+    if (startRideWorker(hero, canvas, small)) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const small = window.innerWidth < 700;
     const FAR = 260, CAM_H = 1.25, LIGHT_H = 0.62;
     // Calidad: 2 = halos y luz aditiva, 1 = sin halos, 0 = además la mitad de autos.
     // Arranca según el equipo y baja sola si los cuadros empiezan a tardar.
@@ -720,7 +732,9 @@
     const cam = { x: 0, pitch: 0, roll: 0, speed: 1 };
     const goal = { x: 0, pitch: 0, roll: 0, speed: 1 };
     const vel = { x: 0, pitch: 0, roll: 0, speed: 0 };
-    rideGoal = goal;
+    let swayOn = !finePointer;
+    rideLean = (x, y) => { goal.x = x * 1.2; goal.pitch = y * -12; goal.roll = x * -0.025; };
+    rideSway = (on) => { swayOn = on; };
     let dash = 0, running = false, raf = 0, last = 0, boost = 1, lastScroll = window.scrollY;
     let slowFrames = 0, sampled = 0;
 
@@ -747,6 +761,10 @@
           }
           sampled = 20; slowFrames = 0;
         }
+      }
+      if (swayOn) {
+        const t = now / 1000;
+        goal.x = Math.sin(t * 0.55) * 0.6; goal.pitch = Math.sin(t * 0.8) * -3.6; goal.roll = Math.sin(t * 0.55) * -0.0125;
       }
       const sy = window.scrollY;
       goal.speed = boost + clamp(Math.abs(sy - lastScroll) * 0.08, 0, 2.5);
@@ -845,6 +863,60 @@
     const reveal = () => { canvas.classList.add("is-on"); start(); };
     if (root.classList.contains("mx-intro-on")) document.addEventListener("motobox:intro-done", reveal, { once: true });
     else requestAnimationFrame(reveal);
+  }
+
+  // La ruta se dibuja en un Web Worker con OffscreenCanvas: el hilo principal solo le avisa
+  // tamaño, visibilidad, inclinación y scroll. Devuelve false si el navegador no lo permite.
+  function startRideWorker(hero, canvas, small) {
+    if (!canvas.transferControlToOffscreen || typeof Worker === "undefined" || typeof OffscreenCanvas === "undefined") return false;
+    let worker;
+    try {
+      worker = new Worker("ride-worker.js");
+      const off = canvas.transferControlToOffscreen();
+      worker.postMessage({
+        type: "init", canvas: off, w: hero.clientWidth, h: hero.clientHeight,
+        dpr: Math.min(small ? 1 : 1.5, window.devicePixelRatio || 1), small: small
+      }, [off]);
+    } catch (err) {
+      if (worker) worker.terminate();
+      return false;
+    }
+    const post = (m) => worker.postMessage(m);
+    post({ type: "scroll", y: window.scrollY });
+    post({ type: "sway", on: !finePointer });
+
+    // La inclinación llega muchas veces por cuadro (mouse): se manda una sola vez por cuadro.
+    let leanMsg = null, leanRaf = 0;
+    rideLean = (x, y) => {
+      leanMsg = { type: "goal", x: x * 1.2, pitch: y * -12, roll: x * -0.025 };
+      if (!leanRaf) leanRaf = requestAnimationFrame(() => { leanRaf = 0; post(leanMsg); });
+    };
+    rideSway = (on) => post({ type: "sway", on: on });
+
+    let inView = true, revealed = false, scrollRaf = 0;
+    const sync = () => post({ type: "run", on: revealed && inView && !document.hidden && !lock.on });
+    new IntersectionObserver((entries) => { inView = entries[0].isIntersecting; sync(); }).observe(hero);
+    document.addEventListener("visibilitychange", sync);
+    onLock(sync);
+    window.addEventListener("scroll", () => {
+      if (!inView || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => { scrollRaf = 0; post({ type: "scroll", y: window.scrollY }); });
+    }, { passive: true });
+    new ResizeObserver(() => post({ type: "size", w: hero.clientWidth, h: hero.clientHeight })).observe(hero);
+
+    // Mantener apretado (o el dedo) sobre el hero = acelerar.
+    hero.addEventListener("pointerdown", (e) => { if (!e.target.closest("a, button")) post({ type: "boost", v: 4 }); });
+    window.addEventListener("pointerup", () => post({ type: "boost", v: 1 }));
+    window.addEventListener("pointercancel", () => post({ type: "boost", v: 1 }));
+    hero.querySelectorAll(".btn-hero-red").forEach((b) => {
+      b.addEventListener("pointerenter", () => post({ type: "boost", v: 2.2 }));
+      b.addEventListener("pointerleave", () => post({ type: "boost", v: 1 }));
+    });
+
+    const reveal = () => { revealed = true; canvas.classList.add("is-on"); sync(); };
+    if (root.classList.contains("mx-intro-on")) document.addEventListener("motobox:intro-done", reveal, { once: true });
+    else requestAnimationFrame(reveal);
+    return true;
   }
 
   // ── 12. Marca gigante en el pie que se levanta en 3D ─────────────────────
@@ -1246,7 +1318,13 @@
     };
     window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
     window.addEventListener("resize", update);
-    update();
+    // La primera medida se hace recién cuando la sección se acerca a la pantalla: medirla
+    // apenas insertada obligaba a calcular el diseño de toda la página (~75 ms en un celular medio).
+    new IntersectionObserver((en, io) => {
+      if (!en[0].isIntersecting) return;
+      io.disconnect();
+      update();
+    }, { rootMargin: "100% 0px" }).observe(section);
   }
 
   // ── 15. Títulos letra por letra en 3D ────────────────────────────────────
@@ -1293,10 +1371,16 @@
         io.unobserve(e.target);
       });
     }, { rootMargin: "0px 0px -10% 0px" });
-    document.querySelectorAll(".simple-catalog-title, .section-header h2, [data-mx-chars]").forEach((el) => {
+    const vh = window.innerHeight;
+    // Antes se partía un título y se medía en el mismo paso: cada medida obligaba a recalcular
+    // el diseño de toda la página. Ahora se mide todo primero y después se escribe.
+    const items = Array.from(document.querySelectorAll(".simple-catalog-title, .section-header h2, [data-mx-chars]"))
+      .filter((el) => !el.dataset.mxSplit)
+      .map((el) => [el, el.getBoundingClientRect().top < vh * 0.9]);
+    items.forEach(([el, onScreen]) => {
       if (!splitChars(el)) return;
       el.classList.add("mx-chars");
-      if (el.getBoundingClientRect().top < window.innerHeight * 0.9) return;
+      if (onScreen) return;
       el.classList.add("mx-pre");
       io.observe(el);
     });
@@ -1344,6 +1428,64 @@
     }
   }
 
+  // ── Celular: las motos de la portada en un carrusel que se pasa con el dedo ──
+  // Como en una app: una tarjeta grande por vez, se frena justo en el centro, las de los
+  // costados se ven giradas y más chicas, y los puntos de abajo muestran dónde estás.
+  function initHomeCarousel() {
+    const grid = document.getElementById("home-catalog-grid");
+    if (!grid || !window.matchMedia("(max-width: 640px)").matches) return;
+    grid.classList.add("mx-carousel");
+    const dots = document.createElement("div");
+    dots.className = "mx-car-dots";
+    dots.setAttribute("aria-hidden", "true");
+    grid.after(dots);
+
+    let cards = [], centers = [], step = 1, half = 0, idx = -1, raf = 0;
+    const update = () => {
+      raf = 0;
+      if (!cards.length) return;
+      const sl = grid.scrollLeft;
+      const i = clamp(Math.round(sl / step), 0, cards.length - 1);
+      if (i !== idx) {
+        if (idx !== -1) tick();   // vibración cortita al pasar de tarjeta (si se tocó hace poco)
+        idx = i;
+        Array.from(dots.children).forEach((d, n) => d.classList.toggle("is-on", n === i));
+      }
+      // Sin soporte de animaciones ligadas al scroll, el giro de los costados lo hace JS
+      // (son pocas tarjetas y solo se escribe transform y opacidad).
+      if (cssScroll || reduce) return;
+      for (let n = 0; n < cards.length; n++) {
+        const d = clamp((centers[n] - sl - half) / step, -1.4, 1.4), a = Math.min(1, Math.abs(d));
+        cards[n].style.transform = "perspective(900px) rotateY(" + (-d * 18).toFixed(1) + "deg) scale(" + (1 - a * 0.1).toFixed(3) + ")";
+        cards[n].style.opacity = (1 - a * 0.35).toFixed(2);
+      }
+    };
+    const measure = () => {
+      cards = Array.from(grid.querySelectorAll(".moto-card-modern"));
+      dots.innerHTML = cards.length > 1 ? cards.map(() => "<i></i>").join("") : "";
+      step = cards.length > 1 ? (cards[1].offsetLeft - cards[0].offsetLeft) || 1 : grid.clientWidth || 1;
+      centers = cards.map((c) => c.offsetLeft + c.offsetWidth / 2);
+      half = grid.clientWidth / 2;
+      idx = -1;
+      update();
+    };
+    grid.addEventListener("scroll", () => { if (!raf) raf = requestAnimationFrame(update); }, { passive: true });
+    new MutationObserver(() => requestAnimationFrame(measure)).observe(grid, { childList: true });
+    window.addEventListener("resize", measure);
+    measure();
+
+    // Entrada: las tarjetas llegan deslizándose desde la derecha, una tras otra.
+    if (reduce || !("IntersectionObserver" in window)) return;
+    if (grid.getBoundingClientRect().top < window.innerHeight * 0.85) return;
+    grid.classList.add("mx-car-pre");
+    new IntersectionObserver((entries, io) => {
+      if (!entries[0].isIntersecting) return;
+      grid.classList.remove("mx-car-pre");
+      grid.classList.add("mx-car-in");
+      io.disconnect();
+    }, { rootMargin: "0px 0px -18% 0px" }).observe(grid);
+  }
+
   // ── 17. Celular: tarjetas que se levantan en 3D con el scroll ────────────
   // Sin mouse no hay hover, así que el 3D lo maneja el scroll: cada tarjeta entra
   // acostada y se levanta al llegar al centro (las de cada columna se abren hacia
@@ -1351,6 +1493,8 @@
   function initTouch3D() {
     if (reduce || finePointer || !("IntersectionObserver" in window)) return;
     root.classList.add("mx-touch3d");
+    // Con animaciones ligadas al scroll, el CSS hace todo esto sin JS (motion.css, sección 24).
+    if (cssScroll) { root.classList.add("mx-touch3d-css"); return; }
     const SEL = ".moto-card-modern, .promo-poster-card, .cta-strip-inner";
     const state = new WeakMap();
     const live = new Set();
@@ -1389,7 +1533,8 @@
       el.addEventListener("pointercancel", up);
       el.addEventListener("pointerleave", up);
     };
-    const scan = () => document.querySelectorAll(SEL).forEach(add);
+    // Las tarjetas del carrusel de la portada tienen su propio efecto (initHomeCarousel).
+    const scan = () => document.querySelectorAll(SEL).forEach((el) => { if (!el.closest(".mx-carousel")) add(el); });
 
     const smooth = (t) => t * t * (3 - 2 * t);
     const rects = [];
@@ -1450,6 +1595,27 @@
     }
   }
 
+  // Lo que se ve al abrir va de una; lo de más abajo se arma en pedacitos, cada uno en su
+  // propia tarea, para que el navegador pueda dibujar cuadros en el medio (antes era un solo
+  // bloque de ~300 ms en un celular de gama media y la intro y el hero se trababan).
+  function runInSlices(tasks) {
+    const post = typeof scheduler !== "undefined" && scheduler.postTask
+      ? (fn) => scheduler.postTask(fn, { priority: "user-visible" })
+      : (() => {
+          // setTimeout(0) tiene un mínimo de 4 ms tras varios anidados; MessageChannel no.
+          const ch = new MessageChannel(), queue = [];
+          ch.port1.onmessage = () => { const fn = queue.shift(); if (fn) fn(); };
+          return (fn) => { queue.push(fn); ch.port2.postMessage(0); };
+        })();
+    const next = () => {
+      const fn = tasks.shift();
+      if (!fn) { document.dispatchEvent(new CustomEvent("motobox:built")); return; }
+      try { fn(); } catch (err) { console.error("[motion]", err); }
+      post(next);
+    };
+    post(next);
+  }
+
   function init() {
     initLockWatch();
     initSmoothScroll();
@@ -1457,16 +1623,19 @@
     runIntro();
     initHero();
     initPageEntrance();
-    buildSections();
-    initCharTitles();
     initScrub();
-    initReveals();
-    initCards();
-    initMagnetic();
     initNightRide();
-    initFooterWord();
-    initTouch3D();
-    initAboutTilt();
+    initMagnetic();
+    const tasks = page === "home"
+      ? [
+          () => buildMarquee($(".simple-hero"), "after"),
+          () => buildShowroom($(".mx-marquee")),
+          () => buildStory($("#catalogo-home")),
+          () => buildSorteo($("#promo-poster-section"), "before")
+        ]
+      : [buildSections];
+    tasks.push(initCharTitles, initReveals, initCards, initHomeCarousel, initTouch3D, initFooterWord, initAboutTilt);
+    runInSlices(tasks);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
