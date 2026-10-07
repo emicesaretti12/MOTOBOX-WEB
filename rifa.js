@@ -525,6 +525,14 @@
         paquete: state.paquete ? { chances: state.paquete.chances, precio: state.paquete.precio } : null
       };
       saveInscripcion();
+      // Si eligió un paquete de chances, guardar en el servidor (fire-and-forget, no bloquea).
+      if (state.paquete && state.inscripcion.token) {
+        rpc("sorteo_actualizar_chances", {
+          p_token: state.inscripcion.token,
+          p_chances: state.paquete.chances,
+          p_monto: state.paquete.precio
+        }).catch(function () { /* no bloquear si falla */ });
+      }
       // "Mis números" (si está abierta) se actualiza sola con la nueva inscripción.
       document.dispatchEvent(new CustomEvent("motobox:sorteo-inscripto", { detail: state.inscripcion }));
       form.elements.clave.value = "";
