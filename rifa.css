@@ -964,3 +964,227 @@ html.rf-lock body {
 
 /* Campo trampa para bots: fuera de la vista y de la navegación con teclado */
 .rf-hp { position: absolute !important; left: -9999px !important; width: 1px; height: 1px; overflow: hidden; }
+
+/* ==========================================================================
+   CHANCES EXTRAS — Paquetes de chances para el sorteo
+   ========================================================================== */
+.chances-section {
+  margin: 2.5rem 0;
+  padding: 2rem 0;
+  border-top: 1px solid var(--rf-line, #e8e8ed);
+  border-bottom: 1px solid var(--rf-line, #e8e8ed);
+}
+
+.chances-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+@media (min-width: 480px) {
+  .chances-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 768px) {
+  .chances-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.chance-card {
+  position: relative;
+  background: #ffffff;
+  border: 1.5px solid var(--rf-line, #e8e8ed);
+  border-radius: 20px;
+  padding: 1.35rem 1rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1), border-color 200ms, box-shadow 200ms;
+}
+.chance-card:hover {
+  border-color: #c8c8cc;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* Badge */
+.chance-card-badge {
+  position: absolute;
+  top: -0.55rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.18rem 0.65rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.chance-badge-pop {
+  background: var(--rf-red, #e02e24);
+  color: #ffffff;
+}
+.chance-badge-best {
+  background: var(--rf-green, #147a3f);
+  color: #ffffff;
+}
+.chance-badge-max {
+  background: linear-gradient(135deg, #ff6b4a, #e02e24);
+  color: #ffffff;
+}
+
+/* Popular variant */
+.chance-card--popular {
+  border-color: var(--rf-red, #e02e24);
+  box-shadow: 0 0 0 1px var(--rf-red, #e02e24);
+}
+.chance-card--popular:hover {
+  box-shadow: 0 0 0 1px var(--rf-red, #e02e24), 0 8px 24px rgba(224, 46, 36, 0.15);
+}
+
+/* Best value */
+.chance-card--best {
+  border-color: var(--rf-green, #147a3f);
+  box-shadow: 0 0 0 1px var(--rf-green, #147a3f);
+}
+.chance-card--best:hover {
+  box-shadow: 0 0 0 1px var(--rf-green, #147a3f), 0 8px 24px rgba(20, 122, 63, 0.15);
+}
+
+/* Premium variant */
+.chance-card--premium {
+  background: var(--rf-ink, #1d1d1f);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.chance-card--premium .chance-card-qty,
+.chance-card--premium .chance-card-price { color: #ffffff; }
+.chance-card--premium .chance-card-label,
+.chance-card--premium .chance-card-unit { color: rgba(255, 255, 255, 0.5); }
+.chance-card--premium .chance-card-btn {
+  background: var(--rf-red, #e02e24);
+  color: #ffffff;
+  border-color: var(--rf-red, #e02e24);
+}
+.chance-card--premium .chance-card-btn:hover {
+  background: var(--rf-red-dark, #c4241b);
+  border-color: var(--rf-red-dark, #c4241b);
+}
+.chance-card--premium:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Card inner */
+.chance-card-qty {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--rf-ink, #1d1d1f);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+.chance-card-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--rf-ink-2, #6e6e73);
+  margin-bottom: 0.4rem;
+}
+.chance-card-price {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--rf-ink, #1d1d1f);
+  letter-spacing: -0.02em;
+  margin-bottom: 0.1rem;
+}
+.chance-card-unit {
+  font-size: 0.7rem;
+  color: var(--rf-ink-2, #6e6e73);
+  font-weight: 500;
+  margin-bottom: 0.85rem;
+}
+.chance-card-btn {
+  display: inline-block;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 100px;
+  border: 1.5px solid var(--rf-line, #e8e8ed);
+  background: var(--rf-soft, #f5f5f7);
+  color: var(--rf-ink, #1d1d1f);
+  transition: all 200ms cubic-bezier(0.23, 1, 0.32, 1);
+  margin-top: auto;
+}
+.chance-card-btn:hover {
+  background: var(--rf-red, #e02e24);
+  color: #ffffff;
+  border-color: var(--rf-red, #e02e24);
+  transform: translateY(-1px);
+}
+
+/* Free chance banner */
+.chance-free-banner {
+  margin-top: 1.5rem;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  background: #effaf2;
+}
+.chance-free-banner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--rf-green, #147a3f), var(--rf-red, #e02e24));
+  border-radius: 4px 0 0 4px;
+}
+.chance-free-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+}
+@media (min-width: 768px) {
+  .chance-free-inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 1.75rem 1.5rem 2rem;
+  }
+}
+.chance-free-text { flex: 1; }
+.chance-free-badge {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: var(--rf-green, #147a3f);
+  color: #ffffff;
+  margin-bottom: 0.4rem;
+}
+.chance-free-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--rf-ink, #1d1d1f);
+  letter-spacing: -0.02em;
+  margin: 0 0 0.15rem;
+}
+.chance-free-desc {
+  font-size: 0.85rem;
+  color: var(--rf-ink-2, #6e6e73);
+  line-height: 1.45;
+  margin: 0;
+}
+.chance-free-inner .rf-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
