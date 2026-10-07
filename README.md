@@ -52,10 +52,10 @@ Cada moto tiene esta estructura (en `data.js`):
 
 ## Sorteo
 
-Sorteo promocional sin obligación de compra: se participa gratis o comprando el Manual de Cuidado
-y Mantenimiento, siempre con la misma chance (una participación por DNI).
+Sorteo promocional: se participa con la compra del Manual de Cuidado
+y Mantenimiento, y se pueden sumar paquetes de chances extras.
 
-- **Web** (`rifa.js`): el popup ofrece las dos opciones, pide los datos (DNI, nombre, fecha de
+- **Web** (`rifa.js`): el popup permite elegir paquetes de chances extras, pide los datos (DNI, nombre, fecha de
   nacimiento, celular, Gmail, domicilio y una clave), guarda la inscripción en el CRM, asigna el
   número y abre WhatsApp con un mensaje personalizado (nombre, DNI, número y código).
 - **Pago del manual**: lo coordina un vendedor por WhatsApp: pasa el alias, recibe el comprobante y,

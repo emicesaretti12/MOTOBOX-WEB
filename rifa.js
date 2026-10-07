@@ -1,7 +1,7 @@
 /**
  * MOTOBOX — Sorteo promocional
  * Popup que aparece al entrar a la web. Pasos:
- *   1. intro  → premios y las dos formas de participar (comprando el manual o gratis).
+ *   1. intro  → premios y la compra del manual para participar.
  *   2. datos  → formulario de inscripción con clave (una participación por DNI, mayores de 18).
  *   3. listo  → número de participación y botón a WhatsApp con un mensaje personalizado:
  *               ahí el vendedor pasa el alias, recibe el comprobante y marca el pago en el CRM.
@@ -28,7 +28,7 @@
   const desktopMq = window.matchMedia("(min-width: 900px)");
   const reduceMq = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-  // modo: "compra" o "gratis". inscripcion: lo que devolvió el servidor (se guarda en el teléfono).
+  // modo: "compra". inscripcion: lo que devolvió el servidor (se guarda en el teléfono).
   const state = { open: false, step: "intro", modo: "compra", paquete: null, sending: false, inscripcion: null };
 
   // --- Helpers ---
@@ -116,7 +116,7 @@
   }
   // --- Markup ---
   const title = esc(C.titulo || "Ganate una moto 0km");
-  const legal = '<strong>Sin obligación de compra.</strong> Comprando o gratis, la misma chance. <a href="' + esc(C.basesUrl || "sorteo.html") + '">Bases y condiciones</a>';
+  const legal = 'Al inscribirte aceptás las <a href="' + esc(C.basesUrl || "sorteo.html") + '">bases y condiciones</a> del sorteo.';
 
   const ICON_BACK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
   const ICON_CLOSE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
@@ -178,11 +178,11 @@
         <div class="rf-prize-text rf-st rf-d1">
           <p class="rf-kicker">Sorteo N.º ${esc(C.id)} · ${PRIZES.length === 1 ? "1 premio" : PRIZES.length + " premios"}</p>
           <h2 class="rf-title" id="rf-title">${title}</h2>
-          <p class="rf-sub">Sorteamos ${esc(prizeList)} 0km. Participás comprando el ${esc(manualNombre)} o gratis: en los dos casos, la misma chance.</p>
+          <p class="rf-sub">Sorteamos ${esc(prizeList)} 0km. Comprá el ${esc(manualNombre)} y participá del sorteo. Podés sumar chances extras.</p>
         </div>
         <div class="rf-stats rf-st rf-d2">
           <div class="rf-stat"><strong>${PRIZES.length}</strong><span>${PRIZES.length === 1 ? "moto 0km" : "motos 0km"}</span></div>
-          <div class="rf-stat"><strong>1 por DNI</strong><span>misma chance para todos</span></div>
+          <div class="rf-stat"><strong>1 por DNI</strong><span>sumá chances extras</span></div>
           <div class="rf-stat"><strong>${C.fechaSorteo ? esc(C.fechaSorteo) : "A confirmar"}</strong><span>fecha del sorteo</span></div>
         </div>
         <p class="rf-legal rf-legal--desk">${legal}</p>
@@ -191,8 +191,8 @@
       <div class="rf-steps">
         <section class="rf-step" data-step="intro">
           <div class="rf-head rf-intro-head">
-            <h3 class="rf-h">Elegí cómo participar</h3>
-            <p class="rf-p">Las dos opciones tienen exactamente la misma chance.</p>
+            <h3 class="rf-h">Participá del sorteo</h3>
+            <p class="rf-p">Comprá el manual y accedé a tu número de participación.</p>
           </div>
           <div class="rf-options rf-st rf-d3" role="radiogroup" aria-label="Forma de participar">
             <button type="button" class="rf-option is-selected" role="radio" aria-checked="true" data-rf-modo="compra">
@@ -203,14 +203,6 @@
                 <span class="rf-option-desc">${esc(manualNombre)} en PDF. Coordinás el pago con un vendedor por WhatsApp.</span>
               </span>
               <span class="rf-option-price">${precio ? money(precio) : ""}</span>
-            </button>
-            <button type="button" class="rf-option" role="radio" aria-checked="false" data-rf-modo="gratis">
-              <span class="rf-option-icon">${ICON_TICKET}</span>
-              <span class="rf-option-body">
-                <span class="rf-option-title">Participar gratis</span>
-                <span class="rf-option-desc">Te inscribís sin comprar nada y recibís tu número.</span>
-              </span>
-              <span class="rf-option-price">$0</span>
             </button>
           </div>
           <div class="rf-cta-block rf-st rf-d4">
@@ -359,7 +351,7 @@
       b.classList.toggle("is-selected", on);
       b.setAttribute("aria-checked", on ? "true" : "false");
     });
-    $("[data-rf-intro-cta]").textContent = modo === "compra" ? "Continuar con la compra" + (precio ? " · " + money(precio) : "") : "Participar gratis";
+    $("[data-rf-intro-cta]").textContent = "Continuar con la compra" + (precio ? " · " + money(precio) : "");
   }
 
   function renderDatos() {
@@ -546,7 +538,7 @@
         link.target = "_blank";
         link.rel = "noopener";
         link.textContent = "Inscribirme por WhatsApp";
-        link.href = waLink("Hola Motobox! Quiero inscribirme al Sorteo N.º " + C.id + (compra ? " comprando el manual" : " (participación gratis)") +
+        link.href = waLink("Hola Motobox! Quiero inscribirme al Sorteo N.º " + C.id + " comprando el manual" +
           ". Mis datos: " + r.data.nombre_completo + ", DNI " + r.data.dni + ", nacimiento " + r.data.fecha_nacimiento +
           ", " + r.data.email + ", " + r.data.direccion + ", " + r.data.localidad + ", " + r.data.provincia + " (" + r.data.codigo_postal + ").");
         formError.appendChild(document.createElement("br"));
@@ -723,7 +715,7 @@
     document.body.appendChild(root);
     document.body.appendChild(pill);
     state.inscripcion = loadInscripcion();
-    setModo(state.inscripcion && !state.inscripcion.compra ? "gratis" : "compra");
+    setModo("compra");
     bindTilt($("[data-rf-tilt-hit]"), $("[data-rf-tilt]"));
 
     if (window.location.hash === "#sorteo") {

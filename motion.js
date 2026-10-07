@@ -237,7 +237,7 @@
 
     // Título con volumen: capas de sombra en rojo oscuro arman un bloque extruido.
     // En compu la extrusión sigue al mouse; en celular queda fija (redibujar sombras en
-    // cada cuadro traba los teléfonos) y el título solo gira, que es casi gratis.
+    // cada cuadro traba los teléfonos) y el título solo gira, que es muy liviano.
     const title = hero.querySelector(".simple-hero-title");
     const LAYERS = 7;
     const extrude = (x, y) => {
@@ -436,11 +436,11 @@
     if (compact) return stage;
     return '<div class="container"><div class="mx-sorteo-grid">' +
       "<div>" +
-        '<p class="mx-sorteo-kicker">Sorteo N.º ' + esc(C.id || "01") + " · Participación gratuita</p>" +
+        '<p class="mx-sorteo-kicker">Sorteo N.º ' + esc(C.id || "01") + " · 2 motos 0km</p>" +
         '<h2 class="mx-sorteo-title"><span class="mx-line"><span>Ganate una</span></span><span class="mx-line"><span>moto 0km</span></span></h2>' +
         '<p class="mx-sorteo-text">Sorteamos ' + prizes.map((p) => esc(p.nombre)).join(" y ") +
-          ". Participás comprando el manual o gratis: en los dos casos, la misma chance.</p>" +
-        '<ul class="mx-sorteo-facts"><li>Sin obligación de compra</li><li>Una participación por DNI</li><li>Fecha del sorteo: ' + fecha + "</li></ul>" +
+          ". Comprá el manual y participá del sorteo. Podés sumar chances extras.</p>" +
+        '<ul class="mx-sorteo-facts"><li>Sumá chances extras</li><li>Una participación por DNI</li><li>Fecha del sorteo: ' + fecha + "</li></ul>" +
         '<div class="mx-sorteo-actions">' +
           '<a href="sorteo.html" class="btn-hero-red mx-magnetic" data-rifa-open>Participar</a>' +
           '<a href="mis-numeros.html" class="mx-sorteo-link">Ver mis números</a>' +

@@ -158,7 +158,7 @@
       else if (rechazado) rows += row("no", ICON_NO, "Pago no confirmado", "No pudimos verificar el comprobante. Escribinos por WhatsApp. Tu número sigue participando.", i++);
       else rows += row("wait", ICON_WAIT, "Pago del manual pendiente", "Cuando el vendedor verifique tu transferencia, acá vas a ver «Pagado».", i++);
     } else {
-      rows += row("info", ICON_INFO, "Participación gratis", "Tenés la misma chance que quien compró el manual.", i++);
+      rows += row("info", ICON_INFO, "Participación registrada", "Tu número está activo para el sorteo.", i++);
     }
     if (chancesExtra > 0) {
       rows += row("ok", ICON_OK, chancesExtra + " chances extras", "Paquete de " + chancesExtra + " chances · $" + fmt(montoChances) + ". Total: " + totalChances + " chances en el sorteo.", i++);
@@ -188,7 +188,7 @@
       '<div class="mn-actions">' + actions +
         '<div class="mn-sub"><button type="button" class="mn-link" data-mn-refresh>Actualizar</button>' +
         '<button type="button" class="mn-link" data-mn-logout>Salir de este dispositivo</button></div>' +
-        '<p class="mn-note">Comprando el manual o gratis, la chance es la misma. <a href="' + esc(C.basesUrl || "sorteo.html") + '">Bases y condiciones</a></p>' +
+        '<p class="mn-note">Sumá chances extras para aumentar tus probabilidades. <a href="' + esc(C.basesUrl || "sorteo.html") + '">Bases y condiciones</a></p>' +
       "</div>";
     show("result");
   }

@@ -163,8 +163,8 @@ const STATIC_PROMO = {
 };
 
 // --- Sorteo promocional (popup que aparece al entrar a la web) ---
-// Sorteo sin obligación de compra: se participa gratis o comprando el manual, siempre con
-// la misma chance (una participación por DNI). Las bases completas están en sorteo.html.
+// Sorteo promocional: se participa comprando el manual y sumando chances extras.
+// Las bases completas están en sorteo.html.
 // Las inscripciones se guardan en Supabase (tabla sorteo_participantes) y se gestionan
 // desde el bloque "Sorteo" del CRM. El pago del manual se coordina por WhatsApp con un
 // vendedor (alias y comprobante), que después lo marca como pagado en el CRM.
