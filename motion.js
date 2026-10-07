@@ -432,7 +432,8 @@
         '<ul class="mx-sorteo-facts"><li>Sin obligación de compra</li><li>Una participación por DNI</li><li>Fecha del sorteo: ' + fecha + "</li></ul>" +
         '<div class="mx-sorteo-actions">' +
           '<a href="sorteo.html" class="btn-hero-red mx-magnetic" data-rifa-open>Participar</a>' +
-          '<a href="' + esc(C.basesUrl || "sorteo.html") + '" class="mx-sorteo-link">Ver bases y condiciones</a>' +
+          '<a href="mis-numeros.html" class="mx-sorteo-link">Ver mis números</a>' +
+          '<a href="' + esc(C.basesUrl || "sorteo.html") + '" class="mx-sorteo-link">Bases y condiciones</a>' +
         "</div>" +
       "</div>" + stage +
     "</div></div>";

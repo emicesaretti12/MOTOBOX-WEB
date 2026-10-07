@@ -2,11 +2,11 @@
  * MOTOBOX — Sorteo promocional
  * Popup que aparece al entrar a la web. Pasos:
  *   1. intro  → premios y las dos formas de participar (comprando el manual o gratis).
- *   2. datos  → formulario de inscripción (una participación por DNI, mayores de 18).
- *   3. pago   → solo si compra el manual: datos del pedido, alias, CBU, Mercado Pago y comprobante.
- *   4. listo  → número de participación y verificación del teléfono por WhatsApp.
- * Comprar o no, la chance es la misma. Las inscripciones se guardan en Supabase
- * (función sorteo_inscribir) y se gestionan desde el bloque "Sorteo" del CRM.
+ *   2. datos  → formulario de inscripción con clave (una participación por DNI, mayores de 18).
+ *   3. listo  → número de participación y botón a WhatsApp con un mensaje personalizado:
+ *               ahí el vendedor pasa el alias, recibe el comprobante y marca el pago en el CRM.
+ * Comprar o no, la chance es la misma. Cada persona ve su número y el estado del pago en
+ * mis-numeros.html (DNI + clave). Las inscripciones se gestionan en el bloque "Sorteo" del CRM.
  * Se configura con SORTEO_CONFIG (data.js). Las bases completas están en sorteo.html.
  */
 (function () {
@@ -19,15 +19,13 @@
   if (!PRIZES.length) return;
 
   const MANUAL = C.manual || {};
-  const PAGO = C.pago || {};
-  const STEPS = ["intro", "datos", "pago", "listo"];
+  const STEPS = ["intro", "datos", "listo"];
   const WA_NUMBER = typeof WHATSAPP_NUMBER !== "undefined" ? WHATSAPP_NUMBER : "5493516312930";
   const SB_URL = typeof SUPABASE_URL !== "undefined" ? SUPABASE_URL : "";
   const SB_KEY = typeof SUPABASE_ANON_KEY !== "undefined" ? SUPABASE_ANON_KEY : "";
   const KEY = "motobox_sorteo_" + C.id;
   const desktopMq = window.matchMedia("(min-width: 900px)");
   const reduceMq = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const MAX_FILE = 8 * 1024 * 1024;
 
   // modo: "compra" o "gratis". inscripcion: lo que devolvió el servidor (se guarda en el teléfono).
   const state = { open: false, step: "intro", modo: "compra", sending: false, inscripcion: null };
@@ -89,7 +87,8 @@
     TELEFONO_INVALIDO: "Revisá el teléfono: código de área y número, sin 0 ni 15.",
     EMAIL_INVALIDO: "Revisá el correo electrónico.",
     DIRECCION_INVALIDA: "Revisá la dirección, la localidad, la provincia y el código postal.",
-    DATOS_DEMASIADO_LARGOS: "Algún dato es demasiado largo. Revisalo y probá de nuevo."
+    DATOS_DEMASIADO_LARGOS: "Algún dato es demasiado largo. Revisalo y probá de nuevo.",
+    CLAVE_INVALIDA: "La clave tiene que tener al menos 6 caracteres."
   };
   async function rpc(name, body) {
     const res = await fetch(SB_URL + "/rest/v1/rpc/" + name, {
@@ -112,19 +111,6 @@
     }
     return data;
   }
-  async function uploadComprobante(file, token) {
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "jpg";
-    const path = token + "/comprobante-" + Date.now() + "." + ext;
-    const res = await fetch(SB_URL + "/storage/v1/object/sorteo-comprobantes/" + path, {
-      method: "POST",
-      headers: { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, "Content-Type": file.type || "application/octet-stream", "x-upsert": "false" },
-      body: file
-    });
-    if (!res.ok) throw new Error("No pudimos subir el comprobante. Probá con una foto o un PDF de menos de 8 MB.");
-    const ok = await rpc("sorteo_registrar_comprobante", { p_token: token, p_path: path });
-    if (ok !== true) throw new Error("No pudimos registrar el comprobante. Escribinos por WhatsApp y lo cargamos nosotros.");
-  }
-
   // --- Markup ---
   const title = esc(C.titulo || "Ganate una moto 0km");
   const legal = '<strong>Sin obligación de compra.</strong> Comprando o gratis, la misma chance. <a href="' + esc(C.basesUrl || "sorteo.html") + '">Bases y condiciones</a>';
@@ -134,7 +120,7 @@
   const ICON_MOTO = '<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5l4-7h4l3 7"/><path d="M13.5 9.5l1.5-3h2.5"/><path d="M9 9.5H6.5"/></svg>';
   const ICON_BOOK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>';
   const ICON_TICKET = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a2 2 0 0 0 0 4v0a2 2 0 0 0 0 4v2h18v-2a2 2 0 0 0 0-4 2 2 0 0 0 0-4V6H3z"/><path d="M13 6v12" stroke-dasharray="2 2"/></svg>';
-  const ICON_COPY = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+  const ICON_WA = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.26-.46-2.39-1.47-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.7.63.71.22 1.36.19 1.87.12.57-.09 1.76-.72 2-1.41.25-.7.25-1.29.18-1.41-.08-.13-.27-.2-.57-.35M12.05 21.79a9.87 9.87 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.86 9.86 0 0 1-1.51-5.26c0-5.45 4.44-9.88 9.89-9.88 2.64 0 5.12 1.03 6.99 2.9a9.83 9.83 0 0 1 2.89 6.99c0 5.45-4.44 9.88-9.89 9.88m8.41-18.3A11.82 11.82 0 0 0 12.05 0C5.5 0 .16 5.34.16 11.89c0 2.1.55 4.14 1.59 5.95L.06 24l6.3-1.65a11.88 11.88 0 0 0 5.68 1.45h.01c6.55 0 11.89-5.34 11.89-11.89 0-3.18-1.24-6.17-3.48-8.41"/></svg>';
 
   const prizeCards = PRIZES.slice(0, 2).map((p, i) =>
     '<div class="rf-prize-card rf-prize-card--' + (i + 1) + '">' +
@@ -163,7 +149,7 @@
       <div class="rf-grabber" aria-hidden="true"></div>
       <div class="rf-top">
         <button type="button" class="rf-icon-btn" data-rf-back aria-label="Volver">${ICON_BACK}</button>
-        <div class="rf-progress" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <div class="rf-progress" aria-hidden="true"><span></span><span></span><span></span></div>
         <button type="button" class="rf-icon-btn" data-rf-close aria-label="Cerrar">${ICON_CLOSE}</button>
       </div>
 
@@ -199,7 +185,7 @@
               <span class="rf-option-body">
                 <span class="rf-option-title">Comprar el manual y participar</span>
                 <span class="rf-option-chip">Incluye manual en PDF</span>
-                <span class="rf-option-desc">${esc(manualNombre)} en PDF por WhatsApp + tu número para el sorteo.</span>
+                <span class="rf-option-desc">${esc(manualNombre)} en PDF. Coordinás el pago con un vendedor por WhatsApp.</span>
               </span>
               <span class="rf-option-price">${precio ? money(precio) : ""}</span>
             </button>
@@ -239,35 +225,14 @@
               <select name="provincia" required autocomplete="address-level1">
                 ${PROVINCIAS.map((p) => '<option value="' + p + '">' + p + "</option>").join("")}
               </select><small class="rf-err" aria-live="polite"></small></label>
+            ${field("clave", "Creá una clave", 'type="password" autocomplete="new-password" minlength="6" maxlength="72" required', "Con tu DNI y esta clave ves tus números y el estado del pago en «Mis números».")}
+            <label class="rf-check rf-check-sm"><input type="checkbox" data-rf-show-pass><span>Mostrar clave</span></label>
             <label class="rf-check" data-field="acepto"><input type="checkbox" name="acepto" required>
               <span>Soy mayor de 18 años y acepto las <a href="${esc(C.basesUrl || "sorteo.html")}" target="_blank" rel="noopener">bases y condiciones</a>.</span></label>
             <small class="rf-err rf-err-acepto" aria-live="polite"></small>
             <p class="rf-form-error" data-rf-form-error role="alert" hidden></p>
             <button type="submit" class="rf-btn rf-btn-red" data-rf-submit><span data-rf-submit-label>Confirmar</span></button>
           </form>
-        </section>
-
-        <section class="rf-step" data-step="pago">
-          <div class="rf-head">
-            <h3 class="rf-h">Pagá tu manual</h3>
-            <p class="rf-p">Tu número ya está reservado. Pagá y subí el comprobante para que lo verifiquemos.</p>
-          </div>
-          <div class="rf-order" data-rf-order></div>
-          <div class="rf-paybox">
-            <div class="rf-pay-amount"><span>Total a pagar</span><strong>${precio ? money(precio) : "A confirmar"}</strong></div>
-            <div data-rf-bank></div>
-            <a class="rf-btn rf-btn-mp" data-rf-mp href="#" target="_blank" rel="noopener" hidden>Pagar con Mercado Pago</a>
-          </div>
-          <div class="rf-upload">
-            <p class="rf-upload-title">Adjuntá el comprobante</p>
-            <label class="rf-drop" data-rf-drop>
-              <input type="file" accept="image/*,application/pdf" data-rf-file>
-              <span class="rf-drop-text" data-rf-file-name>Tocá para elegir una foto o un PDF (hasta 8 MB)</span>
-            </label>
-            <p class="rf-form-error" data-rf-upload-error role="alert" hidden></p>
-            <button type="button" class="rf-btn rf-btn-red" data-rf-send-file disabled><span>Enviar comprobante</span></button>
-            <button type="button" class="rf-btn rf-btn-ghost" data-rf-go="listo">Lo subo más tarde</button>
-          </div>
         </section>
 
         <section class="rf-step" data-step="listo">
@@ -280,13 +245,12 @@
             </div>
             <p class="rf-done-status" data-rf-status></p>
           </div>
-          <div class="rf-verify">
-            <p class="rf-upload-title">Verificá tu WhatsApp</p>
-            <p class="rf-p">Mandanos el código desde el celular que cargaste: así confirmamos que es tuyo y por ahí te avisamos todo.</p>
-            <p class="rf-code">Código <strong data-rf-code>—</strong></p>
-            <a class="rf-btn rf-btn-wa" data-rf-verify href="#" target="_blank" rel="noopener">Enviar código por WhatsApp</a>
+          <div class="rf-wa-card">
+            <p class="rf-upload-title" data-rf-wa-title></p>
+            <p class="rf-p" data-rf-wa-desc></p>
+            <a class="rf-btn rf-btn-wa rf-btn-pulse" data-rf-wa href="#" target="_blank" rel="noopener">${ICON_WA}<span data-rf-wa-label>Continuar en WhatsApp</span></a>
           </div>
-          <button type="button" class="rf-btn rf-btn-outline" data-rf-go="pago" data-rf-back-pay hidden>Volver al pago</button>
+          <a class="rf-btn rf-btn-outline" href="mis-numeros.html">Ver mis números</a>
           <p class="rf-legal">${legal}</p>
         </section>
       </div>
@@ -314,8 +278,6 @@
   const progressEls = Array.from(root.querySelectorAll(".rf-progress span"));
   const backBtn = $("[data-rf-back]");
   const form = $("[data-rf-form]");
-  const fileInput = $("[data-rf-file]");
-  const sendFileBtn = $("[data-rf-send-file]");
 
   const timers = [];
   function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
@@ -323,17 +285,13 @@
   // --- Navegación entre pasos ---
   // Una vez inscripto no se vuelve al formulario: el número ya está asignado.
   function allowedBack(step) {
-    if (step === "datos") return "intro";
-    if (step === "listo" && state.inscripcion && state.inscripcion.compra && !state.inscripcion.comprobante) return "pago";
-    return null;
+    return step === "datos" ? "intro" : null;
   }
 
   function go(step, dir) {
     if (STEPS.indexOf(step) < 0) return;
-    const ins = state.inscripcion;
-    if (ins && (step === "intro" || step === "datos")) step = ins.compra && !ins.comprobante ? "pago" : "listo";
-    if (!ins && (step === "pago" || step === "listo")) step = "intro";
-    if (step === "pago" && ins && !ins.compra) step = "listo";
+    if (state.inscripcion && step !== "listo") step = "listo";
+    if (!state.inscripcion && step === "listo") step = "intro";
     state.step = step;
     root.dataset.step = step;
     const idx = STEPS.indexOf(step);
@@ -350,7 +308,6 @@
     backBtn.classList.toggle("is-hidden", !allowedBack(step));
     resetTilt();
     if (step === "datos") renderDatos();
-    if (step === "pago") renderPago();
     if (step === "listo") renderListo();
     dialog.scrollTop = 0;
     stepsBox.scrollTop = 0;
@@ -375,42 +332,20 @@
     const compra = state.modo === "compra";
     $("[data-rf-submit-label]").textContent = compra ? "Confirmar pedido" : "Confirmar inscripción";
     $("[data-rf-datos-sub]").textContent = compra
-      ? "Creamos tu inscripción y después te mostramos cómo pagar el manual."
+      ? "Te inscribimos con tu número y después coordinás el pago del manual por WhatsApp."
       : "Con estos datos te inscribimos y te contactamos si ganás.";
   }
 
-  function copyRow(label, value) {
-    return '<div class="rf-copy-row"><span><small>' + label + "</small><strong>" + esc(value) + "</strong></span>" +
-      '<button type="button" class="rf-copy" data-rf-copy="' + esc(value) + '" aria-label="Copiar ' + label + '">' + ICON_COPY + "<em>Copiar</em></button></div>";
-  }
-
-  function renderPago() {
-    const ins = state.inscripcion;
-    if (!ins) return;
-    $("[data-rf-order]").innerHTML =
-      '<div class="rf-order-head"><span>Pedido</span><strong>N.º de participación ' + pad(ins.numero) + "</strong></div>" +
-      '<dl class="rf-order-list">' +
-        "<div><dt>Producto</dt><dd>" + esc(manualNombre) + " (PDF)</dd></div>" +
-        "<div><dt>Nombre</dt><dd>" + esc(ins.nombre) + "</dd></div>" +
-        "<div><dt>DNI</dt><dd>" + esc(ins.dni) + "</dd></div>" +
-        "<div><dt>WhatsApp</dt><dd>" + esc(ins.telefono) + "</dd></div>" +
-        "<div><dt>Correo</dt><dd>" + esc(ins.email) + "</dd></div>" +
-        "<div><dt>Domicilio</dt><dd>" + esc(ins.domicilio) + "</dd></div>" +
-      "</dl>";
-    const hasBank = PAGO.alias || PAGO.cbu;
-    $("[data-rf-bank]").innerHTML = hasBank
-      ? (PAGO.alias ? copyRow("Alias", PAGO.alias) : "") + (PAGO.cbu ? copyRow("CBU / CVU", PAGO.cbu) : "") +
-        (PAGO.titular ? '<p class="rf-bank-holder">Titular: ' + esc(PAGO.titular) + "</p>" : "")
-      : '<p class="rf-bank-holder">Te enviamos el alias y el CBU por WhatsApp.</p>' +
-        '<a class="rf-btn rf-btn-outline" target="_blank" rel="noopener" href="' + esc(waLink("Hola Motobox! Me inscribí al Sorteo N.º " + C.id + " (número " + pad(ins.numero) + ", DNI " + ins.dni + ") y quiero pagar el manual. ¿Me pasan los datos para transferir?")) + '">Pedir datos de pago</a>';
-    const mp = $("[data-rf-mp]");
-    mp.hidden = !PAGO.mercadoPagoUrl;
-    if (PAGO.mercadoPagoUrl) {
-      mp.href = PAGO.mercadoPagoUrl;
-      // Un link de cobro lleva directo a pagar; la página general abre la app para transferir al alias.
-      const linkDeCobro = !/^https?:\/\/(www\.)?mercadopago\.com\.ar\/?$/.test(PAGO.mercadoPagoUrl);
-      mp.textContent = linkDeCobro ? "Pagar con Mercado Pago" : "Abrir Mercado Pago y transferir";
-    }
+  // Mensaje personalizado: llega al WhatsApp de Motobox desde el celular de la persona,
+  // así el vendedor confirma el número y le pasa el alias (si compra el manual).
+  function waMessage(ins) {
+    const base = "Hola MOTOBOX! Soy " + ins.nombre + (ins.dni ? " (DNI " + ins.dni + ")" : "") + ". Me inscribí al Sorteo N.º " + C.id +
+      " y mi número de participación es el " + pad(ins.numero) + ".";
+    const codigo = ins.codigo ? " Código: " + ins.codigo + "." : "";
+    return ins.compra
+      ? base + " Quiero comprar el " + manualNombre + (precio ? " (" + money(precio) + ")" : "") +
+        ". ¿Me pasan el alias para transferir? Después les envío el comprobante." + codigo
+      : base + " Confirmo mi WhatsApp para el sorteo." + codigo;
   }
 
   function renderListo() {
@@ -420,14 +355,15 @@
     if (celebrate && !reduceMq.matches) rollNumber(numEl, pad(ins.numero));
     else numEl.textContent = pad(ins.numero);
     $("[data-rf-name]").textContent = ins.nombre;
-    $("[data-rf-code]").textContent = ins.codigo;
-    let status;
-    if (!ins.compra) status = "¡Listo, ya estás participando! Guardá tu número. Te avisamos por WhatsApp la fecha del sorteo.";
-    else if (ins.comprobante) status = "Recibimos tu comprobante. Cuando verifiquemos el pago te mandamos por WhatsApp tu número y el manual en PDF.";
-    else status = "Tu número está reservado. Falta el pago del manual: cuando subas el comprobante lo verificamos y te mandamos todo por WhatsApp.";
-    $("[data-rf-status]").textContent = status;
-    $("[data-rf-back-pay]").hidden = !(ins.compra && !ins.comprobante);
-    $("[data-rf-verify]").href = waLink("Hola Motobox! Verifico mi WhatsApp para el Sorteo N.º " + C.id + ". Código: " + ins.codigo + ". DNI: " + ins.dni + ".");
+    $("[data-rf-status]").textContent = ins.compra
+      ? "¡Listo! Tu número ya está asignado. Ahora coordiná el pago del manual con un vendedor por WhatsApp."
+      : "¡Listo, ya estás participando! Guardá tu número.";
+    $("[data-rf-wa-title]").textContent = ins.compra ? "Pagá el manual por WhatsApp" : "Confirmá tu WhatsApp";
+    $("[data-rf-wa-desc]").textContent = ins.compra
+      ? "Te abrimos un chat con un vendedor con tus datos ya escritos. Te pasa el alias, le mandás el comprobante y, cuando lo verifica, en «Mis números» vas a ver el pago confirmado."
+      : "Mandanos el mensaje desde tu celular: así confirmamos que es tuyo y por ahí te avisamos la fecha del sorteo.";
+    $("[data-rf-wa-label]").textContent = ins.compra ? "Coordinar el pago por WhatsApp" : "Confirmar por WhatsApp";
+    $("[data-rf-wa]").href = waLink(waMessage(ins));
     if (celebrate && !reduceMq.matches) later(burstConfetti, 380);
     celebrate = false;
   }
@@ -451,7 +387,7 @@
     const colors = ["#e02e24", "#ff7a45", "#ffd166", "#1d1d1f", "#ffffff", "#25d366"];
     let html = "";
     for (let i = 0; i < 28; i++) {
-      const a = (Math.random() * 140 + 200) * Math.PI / 180;  // hacia arriba, abanico
+      const a = (Math.random() * 140 + 200) * Math.PI / 180;
       const d = 120 + Math.random() * 160;
       html += '<i style="--x:' + (Math.cos(a) * d).toFixed(0) + "px;--y:" + (Math.sin(a) * d).toFixed(0) + "px;--r:" + Math.round(Math.random() * 720 - 360) +
         "deg;--d:" + Math.round(Math.random() * 120) + "ms;background:" + colors[i % colors.length] + '"></i>';
@@ -487,13 +423,16 @@
     if (!/^[A-Za-z0-9]{4,8}$/.test(String(v.codigo_postal || "").trim())) errs.codigo_postal = "Ej: 5000 o X5000ABC.";
     if (String(v.direccion || "").trim().length < 3) errs.direccion = "Completá la dirección.";
     if (!v.provincia) errs.provincia = "Elegí la provincia.";
+    const clave = String(v.clave || "");
+    if (clave.length < 6) errs.clave = "Mínimo 6 caracteres.";
+    else if (clave === dni) errs.clave = "Usá una clave distinta de tu DNI.";
     if (!form.elements.acepto.checked) errs.acepto = "Tenés que aceptar las bases para participar.";
-    ["dni", "nombre_completo", "fecha_nacimiento", "telefono", "telefono2", "email", "localidad", "codigo_postal", "direccion", "provincia", "acepto"]
+    ["dni", "nombre_completo", "fecha_nacimiento", "telefono", "telefono2", "email", "localidad", "codigo_postal", "direccion", "provincia", "clave", "acepto"]
       .forEach((k) => setError(k, errs[k]));
     return { ok: !Object.keys(errs).length, errs, data: {
       sorteo_id: C.id, dni, nombre_completo: nombre, fecha_nacimiento: v.fecha_nacimiento, telefono: tel, email,
       localidad: String(v.localidad).trim(), codigo_postal: String(v.codigo_postal).trim().toUpperCase(),
-      direccion: String(v.direccion).trim(), provincia: v.provincia
+      direccion: String(v.direccion).trim(), provincia: v.provincia, clave: clave
     } };
   }
 
@@ -516,13 +455,15 @@
     try {
       const res = await rpc("sorteo_inscribir", { p: Object.assign({}, r.data, { compra_manual: compra, monto: compra ? precio : null }) });
       state.inscripcion = {
-        numero: res.numero, codigo: res.codigo, token: res.upload_token || null, compra: compra, comprobante: false,
-        nombre: r.data.nombre_completo, dni: r.data.dni, telefono: r.data.telefono, email: r.data.email,
-        domicilio: r.data.direccion + ", " + r.data.localidad + ", " + r.data.provincia + " (" + r.data.codigo_postal + ")"
+        numero: res.numero, codigo: res.codigo, token: res.token || res.upload_token || null, compra: compra,
+        nombre: r.data.nombre_completo, dni: r.data.dni
       };
       saveInscripcion();
-      if (!compra) celebrate = true;
-      go(compra ? "pago" : "listo", "fwd");
+      // "Mis números" (si está abierta) se actualiza sola con la nueva inscripción.
+      document.dispatchEvent(new CustomEvent("motobox:sorteo-inscripto", { detail: state.inscripcion }));
+      form.elements.clave.value = "";
+      celebrate = true;
+      go("listo", "fwd");
     } catch (err) {
       formError.textContent = err.message;
       if (err.code === "SIN_SERVICIO") {
@@ -546,30 +487,6 @@
     }
   }
 
-  async function sendFile() {
-    const ins = state.inscripcion;
-    const file = fileInput.files && fileInput.files[0];
-    const errBox = $("[data-rf-upload-error]");
-    errBox.hidden = true;
-    if (!ins || !ins.token || !file) return;
-    if (file.size > MAX_FILE) { errBox.textContent = "El archivo pesa más de 8 MB. Probá con una captura de pantalla."; errBox.hidden = false; return; }
-    sendFileBtn.disabled = true;
-    sendFileBtn.firstElementChild.textContent = "Enviando…";
-    try {
-      await uploadComprobante(file, ins.token);
-      ins.comprobante = true;
-      saveInscripcion();
-      celebrate = true;
-      go("listo", "fwd");
-    } catch (err) {
-      errBox.textContent = err.message;
-      errBox.hidden = false;
-    } finally {
-      sendFileBtn.firstElementChild.textContent = "Enviar comprobante";
-      sendFileBtn.disabled = !(fileInput.files && fileInput.files[0]);
-    }
-  }
-
   let lastFocus = null;
   function open() {
     if (state.open) return;
@@ -579,7 +496,7 @@
     root.classList.remove("is-closing");
     root.hidden = false;
     document.documentElement.classList.add("rf-lock");
-    go(state.step === "datos" ? "datos" : "intro");
+    go(state.inscripcion ? "listo" : state.step === "datos" ? "datos" : "intro");
     requestAnimationFrame(() => {
       try { dialog.focus({ preventScroll: true }); } catch (e) { dialog.focus(); }
     });
@@ -671,29 +588,16 @@
 
   // --- Eventos ---
   root.addEventListener("click", (e) => {
-    const t = e.target.closest("[data-rf-close], [data-rf-back], [data-rf-go], [data-rf-modo], [data-rf-copy], [data-rf-send-file]");
+    const t = e.target.closest("[data-rf-close], [data-rf-back], [data-rf-go], [data-rf-modo]");
     if (!t || !root.contains(t)) return;
     if (t.hasAttribute("data-rf-close")) close();
     else if (t.hasAttribute("data-rf-back")) back();
     else if (t.hasAttribute("data-rf-modo")) setModo(t.dataset.rfModo);
     else if (t.hasAttribute("data-rf-go")) { if (!t.disabled) go(t.getAttribute("data-rf-go"), "fwd"); }
-    else if (t.hasAttribute("data-rf-send-file")) sendFile();
-    else if (t.hasAttribute("data-rf-copy")) {
-      const value = t.getAttribute("data-rf-copy");
-      const done = () => { t.classList.add("is-copied"); t.lastElementChild.textContent = "Copiado"; later(() => { t.classList.remove("is-copied"); t.lastElementChild.textContent = "Copiar"; }, 1600); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(value).then(done, done);
-      else done();
-    }
   });
   form.addEventListener("submit", submitForm);
   form.addEventListener("input", (e) => { if (e.target.name) setError(e.target.name, ""); });
-  fileInput.addEventListener("change", () => {
-    const f = fileInput.files && fileInput.files[0];
-    $("[data-rf-file-name]").textContent = f ? f.name : "Tocá para elegir una foto o un PDF (hasta 8 MB)";
-    $("[data-rf-drop]").classList.toggle("has-file", !!f);
-    sendFileBtn.disabled = !f;
-    $("[data-rf-upload-error]").hidden = true;
-  });
+  $("[data-rf-show-pass]").addEventListener("change", (e) => { form.elements.clave.type = e.target.checked ? "text" : "password"; });
 
   // Los links "Sorteo" del menú abren el popup en vez de navegar.
   document.addEventListener("click", (e) => {
@@ -701,6 +605,13 @@
     if (!link) return;
     e.preventDefault();
     open();
+  });
+
+  // "Salir de este dispositivo" en Mis números: el popup vuelve a empezar desde cero.
+  document.addEventListener("motobox:sorteo-salir", () => {
+    state.inscripcion = null;
+    state.step = "intro";
+    setModo("compra");
   });
 
   pill.addEventListener("click", (e) => {
@@ -743,8 +654,8 @@
     if (window.location.hash === "#sorteo") {
       writeKey("sessionStorage", KEY + "_visto", "1");
       later(open, 300);
-    } else if (document.body.dataset.page === "sorteo") {
-      // En la página de bases no se abre solo: se abre con el botón "Participar".
+    } else if (document.body.dataset.page === "sorteo" || document.body.dataset.page === "mis-numeros") {
+      // En las bases y en "Mis números" no se abre solo: se abre con el botón "Participar" / "Inscribite acá".
     } else if (readKey("sessionStorage", KEY + "_visto") !== "1" && !state.inscripcion) {
       writeKey("sessionStorage", KEY + "_visto", "1");
       // Si está corriendo la intro de la portada, el popup espera a que termine.

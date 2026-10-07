@@ -56,15 +56,19 @@ Sorteo promocional sin obligación de compra: se participa gratis o comprando el
 y Mantenimiento, siempre con la misma chance (una participación por DNI).
 
 - **Web** (`rifa.js`): el popup ofrece las dos opciones, pide los datos (DNI, nombre, fecha de
-  nacimiento, celular, Gmail, domicilio), asigna el número de participación y, si compró el manual,
-  muestra el pedido con alias, CBU, Mercado Pago y la carga del comprobante. El celular se confirma
-  enviando por WhatsApp el código que muestra la web.
-- **Datos**: tabla `sorteo_participantes` en Supabase. La migración está en el repo del CRM
-  (`supabase/migrations/004_sorteo.sql`) y se corre una vez en el SQL Editor.
-- **CRM**: bloque "Sorteo" (solo admin) para ver inscriptos, comprobantes, verificar pagos y
-  enviar por WhatsApp el número y el manual en PDF.
-- **Configuración** en `SORTEO_CONFIG` (`data.js`): premios, precio del manual, fecha, alias, CBU,
-  titular y link de Mercado Pago. Las bases completas están en `sorteo.html`.
+  nacimiento, celular, Gmail, domicilio y una clave), guarda la inscripción en el CRM, asigna el
+  número y abre WhatsApp con un mensaje personalizado (nombre, DNI, número y código).
+- **Pago del manual**: lo coordina un vendedor por WhatsApp: pasa el alias, recibe el comprobante y,
+  cuando verifica la transferencia, toca "Marcar como pagado" en el CRM.
+- **Mis números** (`mis-numeros.html` + `mis-numeros.js`): cada persona ve su número y si el pago
+  figura como pagado (con el manual en PDF para descargar). Entra sola desde el teléfono con el que se
+  inscribió, o con DNI + clave desde cualquier otro.
+- **Datos**: tabla `sorteo_participantes` en Supabase. Las migraciones están en el repo del CRM
+  (`supabase/migrations/004_sorteo.sql` y `005_sorteo_cuentas.sql`) y se corren una vez en el SQL Editor.
+- **CRM**: bloque "Sorteo" (solo admin) para ver inscriptos, marcar pagos, crear una clave nueva para
+  quien la olvidó y enviar por WhatsApp el número, el alias o el manual en PDF.
+- **Configuración** en `SORTEO_CONFIG` (`data.js`): premios, precio del manual y fecha. Las bases
+  completas están en `sorteo.html`.
 
 ## WhatsApp
 

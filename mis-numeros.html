@@ -3,31 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sorteo Motobox — Bases y condiciones | MOTOBOX Córdoba</title>
-  <meta name="description" content="Bases y condiciones del Sorteo N.º 01 de MOTOBOX: participación gratuita, sin obligación de compra. Premios: Honda Wave full y Keller full 0km.">
+  <title>Mis números — Sorteo MOTOBOX</title>
+  <meta name="description" content="Consultá tu número de participación en el Sorteo N.º 01 de MOTOBOX y el estado del pago del manual.">
+  <meta name="robots" content="noindex">
   <meta name="theme-color" content="#151516">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23DC2626'/%3E%3Ctext y='65' x='50' text-anchor='middle' font-size='50' font-weight='900' fill='white' font-family='sans-serif'%3EMB%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="rifa.css">
   <link rel="stylesheet" href="motion.css">
   <style>
-    .bases { max-width: 760px; margin: 0 auto; padding: calc(var(--header-height) + 2.5rem) 1.25rem 7rem; color: var(--text-primary); }
-    .bases-kicker { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #b3241b; }
-    .bases h1 { font-size: clamp(2rem, 5vw, 2.8rem); line-height: 1.08; font-weight: 800; letter-spacing: -0.03em; margin: 0.4rem 0 0.8rem; }
-    .bases-lead { font-size: 1.05rem; line-height: 1.55; color: var(--text-secondary); }
-    .bases-highlight { margin: 1.5rem 0; padding: 1rem 1.2rem; border-radius: 16px; background: #fdecea; color: #8f1d16; font-weight: 600; line-height: 1.5; }
-    .bases-cta { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 2.5rem; }
-    .bases-cta .rf-btn { width: auto; padding: 0 1.8rem; }
-    .bases h2 { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.01em; margin: 2rem 0 0.6rem; }
-    .bases p, .bases li { font-size: 0.98rem; line-height: 1.65; color: #3a3a3c; }
-    .bases p + p { margin-top: 0.6rem; }
-    .bases ol, .bases ul { padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.6rem; }
-    .bases ol { list-style: decimal; }
-    .bases ul { list-style: disc; }
-    .bases-foot { margin-top: 2.5rem; font-size: 0.85rem; color: var(--text-secondary); }
+    .mn { max-width: 560px; margin: 0 auto; padding: calc(var(--header-height) + 2.2rem) 1.25rem 7rem; color: var(--text-primary); }
+    .mn-kicker { font-size: 0.8rem; font-weight: 700; color: #b3241b; }
+    .mn h1 { font-size: clamp(2rem, 6vw, 2.8rem); line-height: 1.05; font-weight: 800; letter-spacing: -0.035em; margin: 0.3rem 0 0.6rem; }
+    .mn-lead { font-size: 1.02rem; line-height: 1.55; color: var(--text-secondary); margin-bottom: 1.6rem; }
+    .mn-card { background: #fff; border-radius: 24px; padding: 22px; box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 18px 40px -24px rgba(0,0,0,0.25); }
+    .mn-form { display: flex; flex-direction: column; gap: 14px; }
+    .mn-field { display: flex; flex-direction: column; gap: 6px; }
+    .mn-field span { font-size: 0.85rem; font-weight: 700; }
+    .mn-field input { height: 52px; padding: 0 14px; border-radius: 14px; border: 1.5px solid #e8e8ed; font: inherit; font-size: 16px; background: #fff; }
+    .mn-field input:focus { outline: none; border-color: #1d1d1f; box-shadow: 0 0 0 4px rgba(29,29,31,0.08); }
+    .mn-error { padding: 12px 14px; border-radius: 14px; background: #fdecea; color: #8f1d16; font-size: 0.9rem; font-weight: 600; }
+    .mn-help { font-size: 0.88rem; color: var(--text-secondary); text-align: center; }
+    .mn-help a { text-decoration: underline; text-underline-offset: 3px; }
+    .mn-hello { font-size: 1.05rem; color: var(--text-secondary); margin-bottom: 14px; }
+    .mn-hello strong { color: var(--text-primary); }
+    .mn-tickets { display: grid; gap: 14px; margin-bottom: 18px; }
+    .mn-ticket {
+      position: relative; border-radius: 26px; padding: 22px 22px 20px; color: #fff;
+      background: radial-gradient(120% 120% at 100% 0%, rgba(224,46,36,0.55), transparent 55%), #1d1d1f;
+      box-shadow: 0 28px 50px -24px rgba(0,0,0,0.6);
+      animation: mnIn 700ms cubic-bezier(0.34,1.56,0.64,1) backwards;
+    }
+    .mn-ticket::before, .mn-ticket::after { content: ""; position: absolute; top: 58%; width: 24px; height: 24px; margin-top: -12px; border-radius: 50%; background: var(--bg-primary, #f5f5f7); }
+    .mn-ticket::before { left: -12px; } .mn-ticket::after { right: -12px; }
+    .mn-ticket small { display: block; font-size: 0.78rem; font-weight: 700; color: #ff8a82; }
+    .mn-ticket .mn-num { display: block; font-size: clamp(2.8rem, 12vw, 3.6rem); font-weight: 800; letter-spacing: 0.05em; line-height: 1.05; font-variant-numeric: tabular-nums; margin: 6px 0 10px; }
+    .mn-ticket .mn-tline { border-top: 1.5px dashed rgba(255,255,255,0.25); padding-top: 12px; display: flex; justify-content: space-between; gap: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.75); }
+    @keyframes mnIn { from { opacity: 0; transform: translateY(24px) scale(0.94) rotate(-1.5deg); } }
+    .mn-status { display: grid; gap: 10px; margin-bottom: 18px; }
+    .mn-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1.5px #e8e8ed; }
+    .mn-dot { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: #fff; }
+    .mn-ok { background: #16a34a; } .mn-wait { background: #d97706; } .mn-info { background: #2563eb; } .mn-no { background: #dc2626; }
+    .mn-row { animation: mnRow 520ms cubic-bezier(0.23,1,0.32,1) backwards; animation-delay: calc(220ms + var(--i, 0) * 70ms); }
+    @keyframes mnRow { from { opacity: 0; transform: translateY(10px); } }
+    .mn-ticket { animation-delay: var(--d, 0ms); overflow: hidden; }
+    .mn-ticket.is-paid { background: radial-gradient(120% 120% at 100% 0%, rgba(22,163,74,0.5), transparent 55%), #1d1d1f; }
+    .mn-ticket.is-paid small { color: #86efac; }
+    .mn-stamp {
+      position: absolute; top: 20px; right: 18px; padding: 6px 12px; border-radius: 10px;
+      border: 2px solid #4ade80; color: #4ade80; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+      transform: rotate(-8deg); animation: mnStamp 520ms cubic-bezier(0.34,1.56,0.64,1) 650ms backwards;
+    }
+    @keyframes mnStamp { from { opacity: 0; transform: rotate(-8deg) scale(1.8); } }
+    .mn-actions .rf-btn { gap: 10px; text-decoration: none; }
+    .mn-sub { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .mn-note { font-size: 0.82rem; color: var(--text-secondary); text-align: center; margin-top: 4px; }
+    .mn-note a { text-decoration: underline; text-underline-offset: 3px; }
+    .mn-row div { display: flex; flex-direction: column; gap: 2px; }
+    .mn-row strong { font-size: 0.98rem; } .mn-row div span { font-size: 0.85rem; color: var(--text-secondary); }
+    .mn-actions { display: flex; flex-direction: column; gap: 10px; }
+    .mn-link { background: none; border: none; color: var(--text-secondary); font: inherit; font-size: 0.9rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 6px; }
+    .mn .rf-btn { width: 100%; }
+    .mn-loading { text-align: center; color: var(--text-secondary); padding: 2rem 0; }
+    @media (prefers-reduced-motion: reduce) { .mn-ticket, .mn-row, .mn-stamp { animation: none; } }
   </style>
 </head>
-<body data-page="sorteo">
+<body data-page="mis-numeros">
 
   <header class="site-header" id="site-header">
     <div class="container">
@@ -53,64 +94,23 @@
     </div>
   </header>
 
-  <main class="bases">
-    <p class="bases-kicker">Sorteo N.º 01</p>
-    <h1>Bases y condiciones</h1>
-    <p class="bases-lead">Sorteo promocional de MOTOBOX por dos motos 0km: una Honda Wave full y una Keller full.</p>
+  <main class="mn" id="mis-numeros">
+    <p class="mn-kicker">Sorteo N.º 01</p>
+    <h1>Mis números</h1>
+    <p class="mn-lead">Mirá tu número de participación y si el pago del manual ya está confirmado.</p>
 
-    <p class="bases-highlight">Participación gratuita. No hace falta comprar nada para participar ni para ganar. Quien compra el Manual de Cuidado y Mantenimiento participa con las mismas chances que quien se anota gratis.</p>
+    <section class="mn-card" data-mn-login hidden>
+      <form class="mn-form" data-mn-form novalidate>
+        <label class="mn-field"><span>DNI</span><input name="dni" inputmode="numeric" autocomplete="username" maxlength="10" required placeholder="Solo números"></label>
+        <label class="mn-field"><span>Clave</span><input name="clave" type="password" autocomplete="current-password" maxlength="72" required placeholder="La que creaste al inscribirte"></label>
+        <p class="mn-error" data-mn-error role="alert" hidden></p>
+        <button type="submit" class="rf-btn rf-btn-red" data-mn-submit>Ver mis números</button>
+        <p class="mn-help">¿Todavía no participás? <a href="#" data-rifa-open>Inscribite acá</a>.<br>¿Olvidaste tu clave? <a data-mn-forgot target="_blank" rel="noopener" href="#">Escribinos por WhatsApp</a>.</p>
+      </form>
+    </section>
 
-    <div class="bases-cta">
-      <button type="button" class="rf-btn rf-btn-red" data-rifa-open>Participar</button>
-      <a class="rf-btn rf-btn-outline" href="mis-numeros.html">Ver mis números</a>
-    </div>
-
-    <h2>1. Organizador</h2>
-    <p>El sorteo es organizado por MOTOBOX, con domicilio en Santa Rosa 4227, Córdoba Capital (en adelante, "el Organizador").</p>
-
-    <h2>2. Vigencia</h2>
-    <p>La promoción rige desde su publicación en este sitio hasta 48 horas antes de la fecha del sorteo. La fecha del sorteo está a confirmar y se anunciará con al menos 10 días de anticipación en las redes sociales y el WhatsApp oficiales de MOTOBOX y en esta página.</p>
-
-    <h2>3. Quiénes pueden participar</h2>
-    <ul>
-      <li>Personas humanas mayores de 18 años, con residencia en la República Argentina y DNI vigente.</li>
-      <li>No pueden participar los socios, empleados y colaboradores del Organizador, ni sus familiares directos (cónyuges, convivientes, padres, hijos y hermanos).</li>
-    </ul>
-
-    <h2>4. Cómo participar</h2>
-    <p>La inscripción se hace en esta web completando el formulario con DNI, nombre completo, fecha de nacimiento, celular con WhatsApp, correo electrónico, domicilio y una clave personal. Al confirmar, el sistema asigna un número de participación. Hay dos formas de inscribirse:</p>
-    <ol>
-      <li><strong>Gratis:</strong> completando el formulario y eligiendo "Participar gratis". También se puede pedir la inscripción gratuita por WhatsApp al (351) 631-2930 o en el showroom de Santa Rosa 4227.</li>
-      <li><strong>Con la compra del Manual de Cuidado y Mantenimiento</strong> ($10.000): completando el mismo formulario. Al confirmar, la web abre un chat de WhatsApp con un vendedor de MOTOBOX, que pasa los datos para transferir y recibe el comprobante. Cuando el vendedor verifica la transferencia, el pago figura como confirmado en «Mis números» y el manual en PDF queda disponible para descargar.</li>
-    </ol>
-    <p>Cada persona participa una sola vez, identificada por su DNI, y recibe un único número de participación. Comprar el manual no otorga chances adicionales ni mejores probabilidades que la participación gratuita. Si la compra no se completa o el pago no se verifica, la inscripción sigue siendo válida como participación gratuita.</p>
-    <p>El participante confirma su celular enviando por WhatsApp el código que le muestra la web. El Organizador usa ese número para todas las comunicaciones del sorteo.</p>
-    <p>En la sección <a href="mis-numeros.html">Mis números</a> cada participante puede consultar, con su DNI y su clave, su número de participación y el estado del pago del manual. MOTOBOX nunca pide la clave por WhatsApp ni por teléfono.</p>
-
-    <h2>5. Manual de Cuidado y Mantenimiento</h2>
-    <p>El manual es un producto que se vende por separado, en formato PDF, a $10.000. Su compra es opcional y no es requisito para participar ni para ganar.</p>
-
-    <h2>6. Premios</h2>
-    <ul>
-      <li>Primer premio: una moto Honda Wave full 0km.</li>
-      <li>Segundo premio: una moto Keller full 0km.</li>
-    </ul>
-    <p>Los premios no son canjeables por dinero ni por otros bienes. Los gastos de patentamiento, seguro, flete y cualquier otro necesario para la entrega se coordinan con el ganador al momento de la entrega.</p>
-
-    <h2>7. Sorteo</h2>
-    <p>El sorteo se hará en vivo, en la fecha anunciada, y se transmitirá por las redes sociales oficiales de MOTOBOX. Entre todos los números de participación asignados se extrae al azar primero el ganador de la Honda Wave full y después el de la Keller full. Una misma persona no puede ganar más de un premio. Para cada premio se extraen además 3 suplentes.</p>
-    <p>Todos los participantes tienen la misma probabilidad de ganar, que depende de la cantidad total de inscriptos al momento del sorteo.</p>
-
-    <h2>8. Ganadores y entrega</h2>
-    <p>Los ganadores serán notificados por WhatsApp y por teléfono y publicados en las redes de MOTOBOX. Deben presentarse con su DNI en el showroom dentro de los 30 días corridos siguientes al sorteo. Si un ganador no puede ser contactado, no cumple los requisitos o no reclama el premio en ese plazo, el premio pasa al primer suplente.</p>
-
-    <h2>9. Datos personales</h2>
-    <p>Los datos se usan solo para administrar el sorteo y contactar a los ganadores, conforme a la Ley 25.326 de Protección de Datos Personales. Los participantes pueden pedir el acceso, la corrección o la eliminación de sus datos escribiendo al WhatsApp del Organizador.</p>
-
-    <h2>10. Aceptación y jurisdicción</h2>
-    <p>Participar implica aceptar estas bases. Ante cualquier controversia, son competentes los tribunales ordinarios de la ciudad de Córdoba.</p>
-
-    <p class="bases-foot">Última actualización: octubre de 2026.</p>
+    <section data-mn-result hidden></section>
+    <p class="mn-loading" data-mn-loading>Cargando…</p>
   </main>
 
   <!-- 6. MOBILE BOTTOM TAB BAR -->
@@ -152,6 +152,7 @@
   <script src="data.js"></script>
   <script src="app.js"></script>
   <script src="rifa.js"></script>
+  <script src="mis-numeros.js"></script>
   <script src="vendor/lenis.min.js"></script>
   <script src="motion.js"></script>
 </body>

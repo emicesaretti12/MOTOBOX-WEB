@@ -150,7 +150,8 @@ const STATIC_PROMO = {
 // Sorteo sin obligación de compra: se participa gratis o comprando el manual, siempre con
 // la misma chance (una participación por DNI). Las bases completas están en sorteo.html.
 // Las inscripciones se guardan en Supabase (tabla sorteo_participantes) y se gestionan
-// desde el bloque "Sorteo" del CRM, que solo ve el perfil admin.
+// desde el bloque "Sorteo" del CRM. El pago del manual se coordina por WhatsApp con un
+// vendedor (alias y comprobante), que después lo marca como pagado en el CRM.
 // Con activo: false el popup no aparece.
 const SORTEO_CONFIG = {
   activo: true,
@@ -163,16 +164,7 @@ const SORTEO_CONFIG = {
   ],
   manual: { nombre: "Manual de Cuidado y Mantenimiento", precio: 10000 },
   fechaSorteo: "",                            // Vacío = "a confirmar"
-  basesUrl: "sorteo.html",
-  // Datos para el pago del manual. Mientras estén vacíos, la web avisa que se envían por WhatsApp.
-  pago: {
-    alias: "motoboxsorteo.arq",
-    cbu: "0000069708377145543005",            // 22 dígitos (CVU de Mercado Pago)
-    titular: "",                              // Nombre de la cuenta (opcional)
-    // Sin link de cobro, el botón abre Mercado Pago para transferir al alias.
-    // Si generás un link de pago por $10.000, ponelo acá y el botón lleva directo a pagar.
-    mercadoPagoUrl: "https://www.mercadopago.com.ar/"
-  }
+  basesUrl: "sorteo.html"
 };
 
 // --- Categorías ---
