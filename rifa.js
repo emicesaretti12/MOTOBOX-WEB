@@ -19,7 +19,8 @@
   if (!PRIZES.length) return;
 
   const MANUAL = C.manual || {};
-  const STEPS = ["intro", "datos", "listo"];
+  const PACKS = Array.isArray(C.paquetesChances) ? C.paquetesChances : [];
+  const STEPS = ["intro", "chances", "datos", "listo"];
   const WA_NUMBER = typeof WHATSAPP_NUMBER !== "undefined" ? WHATSAPP_NUMBER : "5493516312930";
   const SB_URL = typeof SUPABASE_URL !== "undefined" ? SUPABASE_URL : "";
   const SB_KEY = typeof SUPABASE_ANON_KEY !== "undefined" ? SUPABASE_ANON_KEY : "";
@@ -28,7 +29,7 @@
   const reduceMq = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   // modo: "compra" o "gratis". inscripcion: lo que devolvió el servidor (se guarda en el teléfono).
-  const state = { open: false, step: "intro", modo: "compra", sending: false, inscripcion: null };
+  const state = { open: false, step: "intro", modo: "compra", paquete: null, sending: false, inscripcion: null };
 
   // --- Helpers ---
   function readKey(kind, key) {
@@ -134,6 +135,18 @@
     "</div>"
   ).join("");
 
+  const packCards = PACKS.map((p, i) =>
+    '<button type="button" class="rf-chance' +
+      (p.popular ? ' rf-chance--pop' : '') + (p.mejor ? ' rf-chance--best' : '') + (p.premium ? ' rf-chance--max' : '') +
+    '" data-rf-pack="' + i + '">' +
+      (p.popular ? '<em class="rf-chance-badge">Popular</em>' : '') +
+      (p.mejor ? '<em class="rf-chance-badge rf-chance-badge--green">Mejor precio</em>' : '') +
+      (p.premium ? '<em class="rf-chance-badge rf-chance-badge--max">Máximo</em>' : '') +
+      '<strong>' + p.chances + '</strong><span>chances</span>' +
+      '<b>' + money(p.precio) + '</b><small>' + money(Math.round(p.precio / p.chances)) + ' c/u</small>' +
+    '</button>'
+  ).join("");
+
   const field = (name, label, attrs, hint) =>
     '<label class="rf-field" data-field="' + name + '"><span class="rf-label-t">' + label + "</span>" +
       "<input " + attrs + ' name="' + name + '">' +
@@ -151,7 +164,7 @@
       <div class="rf-grabber" aria-hidden="true"></div>
       <div class="rf-top">
         <button type="button" class="rf-icon-btn" data-rf-back aria-label="Volver">${ICON_BACK}</button>
-        <div class="rf-progress" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="rf-progress" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
         <button type="button" class="rf-icon-btn" data-rf-close aria-label="Cerrar">${ICON_CLOSE}</button>
       </div>
 
@@ -201,8 +214,23 @@
             </button>
           </div>
           <div class="rf-cta-block rf-st rf-d4">
-            <button type="button" class="rf-btn rf-btn-red rf-btn-shine" data-rf-go="datos"><span data-rf-intro-cta>Continuar</span></button>
+            <button type="button" class="rf-btn rf-btn-red rf-btn-shine" data-rf-go="chances"><span data-rf-intro-cta>Continuar</span></button>
             <p class="rf-legal">${legal}</p>
+          </div>
+        </section>
+
+        <section class="rf-step" data-step="chances">
+          <div class="rf-head">
+            <h3 class="rf-h">¿Querés sumar chances?</h3>
+            <p class="rf-p">Elegí un paquete para tener más números en el sorteo. Es opcional.</p>
+          </div>
+          <div class="rf-chances-scroll">
+            <div class="rf-chances-grid">${packCards}</div>
+          </div>
+          <p class="rf-chances-selected" data-rf-pack-selected hidden></p>
+          <div class="rf-cta-block">
+            <button type="button" class="rf-btn rf-btn-red" data-rf-go="datos"><span data-rf-chances-cta>Continuar sin paquete</span></button>
+            <button type="button" class="rf-btn rf-btn-ghost" data-rf-go="datos">Solo quiero participar</button>
           </div>
         </section>
 
@@ -288,7 +316,9 @@
   // --- Navegación entre pasos ---
   // Una vez inscripto no se vuelve al formulario: el número ya está asignado.
   function allowedBack(step) {
-    return step === "datos" ? "intro" : null;
+    if (step === "chances") return "intro";
+    if (step === "datos") return "chances";
+    return null;
   }
 
   function go(step, dir) {
@@ -311,6 +341,7 @@
     backBtn.classList.toggle("is-hidden", !allowedBack(step));
     resetTilt();
     if (step === "datos") renderDatos();
+    if (step === "chances") renderChances();
     if (step === "listo") renderListo();
     dialog.scrollTop = 0;
     stepsBox.scrollTop = 0;
@@ -339,16 +370,40 @@
       : "Con estos datos te inscribimos y te contactamos si ganás.";
   }
 
+  function setPack(idx) {
+    const pack = PACKS[idx] || null;
+    if (state.paquete && state.paquete === pack) { state.paquete = null; } // deselect
+    else { state.paquete = pack; }
+    root.querySelectorAll("[data-rf-pack]").forEach((b) => {
+      b.classList.toggle("is-selected", state.paquete && PACKS[Number(b.dataset.rfPack)] === state.paquete);
+    });
+    renderChances();
+  }
+
+  function renderChances() {
+    const sel = $("[data-rf-pack-selected]");
+    const cta = $("[data-rf-chances-cta]");
+    if (state.paquete) {
+      sel.innerHTML = "✓ Paquete de <strong>" + state.paquete.chances + " chances</strong> · " + money(state.paquete.precio);
+      sel.hidden = false;
+      cta.textContent = "Continuar con " + state.paquete.chances + " chances · " + money(state.paquete.precio);
+    } else {
+      sel.hidden = true;
+      cta.textContent = "Continuar sin paquete";
+    }
+  }
+
   // Mensaje personalizado: llega al WhatsApp de Motobox desde el celular de la persona,
   // así el vendedor confirma el número y le pasa el alias (si compra el manual).
   function waMessage(ins) {
     const base = "Hola MOTOBOX! Soy " + ins.nombre + (ins.dni ? " (DNI " + ins.dni + ")" : "") + ". Me inscribí al Sorteo N.º " + C.id +
       " y mi número de participación es el " + pad(ins.numero) + ".";
     const codigo = ins.codigo ? " Código: " + ins.codigo + "." : "";
+    const packMsg = ins.paquete ? " También quiero el paquete de " + ins.paquete.chances + " chances (" + money(ins.paquete.precio) + ")." : "";
     return ins.compra
       ? base + " Quiero comprar el " + manualNombre + (precio ? " (" + money(precio) + ")" : "") +
-        ". ¿Me pasan el alias para transferir? Después les envío el comprobante." + codigo
-      : base + " Confirmo mi WhatsApp para el sorteo." + codigo;
+        ". ¿Me pasan el alias para transferir? Después les envío el comprobante." + packMsg + codigo
+      : base + " Confirmo mi WhatsApp para el sorteo." + packMsg + codigo;
   }
 
   function renderListo() {
@@ -358,9 +413,10 @@
     if (celebrate && !reduceMq.matches) rollNumber(numEl, pad(ins.numero));
     else numEl.textContent = pad(ins.numero);
     $("[data-rf-name]").textContent = ins.nombre;
+    const packInfo = ins.paquete ? " Sumaste " + ins.paquete.chances + " chances (" + money(ins.paquete.precio) + ")." : "";
     $("[data-rf-status]").textContent = ins.compra
-      ? "¡Listo! Tu número ya está asignado. Ahora coordiná el pago del manual con un vendedor por WhatsApp."
-      : "¡Listo, ya estás participando! Guardá tu número.";
+      ? "¡Listo! Tu número ya está asignado. Ahora coordiná el pago del manual con un vendedor por WhatsApp." + packInfo
+      : "¡Listo, ya estás participando! Guardá tu número." + packInfo;
     $("[data-rf-wa-title]").textContent = ins.compra ? "Pagá el manual por WhatsApp" : "Confirmá tu WhatsApp";
     $("[data-rf-wa-desc]").textContent = ins.compra
       ? "Te abrimos un chat con un vendedor con tus datos ya escritos. Te pasa el alias, le mandás el comprobante y, cuando lo verifica, en «Mis números» vas a ver el pago confirmado."
@@ -457,10 +513,16 @@
     btn.disabled = true;
     $("[data-rf-submit-label]").textContent = "Guardando…";
     try {
-      const res = await rpc("sorteo_inscribir", { p: Object.assign({}, r.data, { compra_manual: compra, monto: compra ? precio : null }) });
+      const res = await rpc("sorteo_inscribir", { p: Object.assign({}, r.data, {
+        compra_manual: compra,
+        monto: compra ? precio : null,
+        chances_extra: state.paquete ? state.paquete.chances : 0,
+        monto_chances: state.paquete ? state.paquete.precio : null
+      }) });
       state.inscripcion = {
         numero: res.numero, codigo: res.codigo, token: res.token || res.upload_token || null, compra: compra,
-        nombre: r.data.nombre_completo, dni: r.data.dni
+        nombre: r.data.nombre_completo, dni: r.data.dni,
+        paquete: state.paquete ? { chances: state.paquete.chances, precio: state.paquete.precio } : null
       };
       saveInscripcion();
       // "Mis números" (si está abierta) se actualiza sola con la nueva inscripción.
@@ -592,11 +654,12 @@
 
   // --- Eventos ---
   root.addEventListener("click", (e) => {
-    const t = e.target.closest("[data-rf-close], [data-rf-back], [data-rf-go], [data-rf-modo]");
+    const t = e.target.closest("[data-rf-close], [data-rf-back], [data-rf-go], [data-rf-modo], [data-rf-pack]");
     if (!t || !root.contains(t)) return;
     if (t.hasAttribute("data-rf-close")) close();
     else if (t.hasAttribute("data-rf-back")) back();
     else if (t.hasAttribute("data-rf-modo")) setModo(t.dataset.rfModo);
+    else if (t.hasAttribute("data-rf-pack")) setPack(Number(t.dataset.rfPack));
     else if (t.hasAttribute("data-rf-go")) { if (!t.disabled) go(t.getAttribute("data-rf-go"), "fwd"); }
   });
   form.addEventListener("submit", submitForm);

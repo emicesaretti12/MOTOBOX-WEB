@@ -137,6 +137,9 @@
     const pagado = !!f.pagado;
     const rechazado = f.estado_pago === "rechazado";
     const nombre = String(f.nombre || "").split(" ")[0];
+    const chancesExtra = f.chances_extra || 0;
+    const montoChances = f.monto_chances || 0;
+    const totalChances = 1 + chancesExtra;
     let i = 0;
 
     const tickets = numeros.map((n, k) =>
@@ -144,6 +147,7 @@
         "<small>" + (numeros.length > 1 ? "Número " + (k + 1) + " de " + numeros.length : "Tu número de participación") + "</small>" +
         '<strong class="mn-num">' + pad(n) + "</strong>" +
         (pagado ? '<span class="mn-stamp">Pagado</span>' : "") +
+        (chancesExtra > 0 ? '<span class="mn-chances-badge">' + totalChances + ' chances</span>' : '') +
         '<div class="mn-tline"><span>Sorteo N.º ' + esc(C.id) + "</span><span>Fecha: " + esc(fecha) + "</span></div>" +
       "</article>"
     ).join("");
@@ -155,6 +159,9 @@
       else rows += row("wait", ICON_WAIT, "Pago del manual pendiente", "Cuando el vendedor verifique tu transferencia, acá vas a ver «Pagado».", i++);
     } else {
       rows += row("info", ICON_INFO, "Participación gratis", "Tenés la misma chance que quien compró el manual.", i++);
+    }
+    if (chancesExtra > 0) {
+      rows += row("ok", ICON_OK, chancesExtra + " chances extras", "Paquete de " + chancesExtra + " chances · $" + fmt(montoChances) + ". Total: " + totalChances + " chances en el sorteo.", i++);
     }
     rows += f.telefono_verificado
       ? row("ok", ICON_OK, "WhatsApp confirmado", "Por ahí te avisamos la fecha del sorteo y si ganás.", i++)
@@ -175,6 +182,7 @@
 
     result.innerHTML =
       '<p class="mn-hello">Hola, <strong>' + esc(nombre) + "</strong>. Estos son tus números del Sorteo N.º " + esc(C.id) + ".</p>" +
+      (chancesExtra > 0 ? '<p class="mn-chances-summary">Tenés <strong>' + totalChances + ' chances</strong> en total (1 base + ' + chancesExtra + ' extras).</p>' : '') +
       '<div class="mn-tickets">' + tickets + "</div>" +
       '<div class="mn-status">' + rows + "</div>" +
       '<div class="mn-actions">' + actions +

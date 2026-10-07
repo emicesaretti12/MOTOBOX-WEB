@@ -180,7 +180,18 @@ const SORTEO_CONFIG = {
   ],
   manual: { nombre: "Manual de Cuidado y Mantenimiento", precio: 10000 },
   fechaSorteo: "",                            // Vacío = "a confirmar"
-  basesUrl: "sorteo.html"
+  basesUrl: "sorteo.html",
+  paquetesChances: [
+    { chances: 2, precio: 15000 },
+    { chances: 4, precio: 25000 },
+    { chances: 6, precio: 35000 },
+    { chances: 10, precio: 45000, popular: true },
+    { chances: 15, precio: 70000 },
+    { chances: 20, precio: 90000 },
+    { chances: 30, precio: 120000 },
+    { chances: 50, precio: 150000, mejor: true },
+    { chances: 200, precio: 300000, premium: true }
+  ]
 };
 
 // --- Categorías ---
