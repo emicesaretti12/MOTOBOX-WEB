@@ -133,13 +133,19 @@
   }
 
   function render(f) {
-    const numeros = Array.isArray(f.numeros) && f.numeros.length ? f.numeros : [];
+    const chancesExtra = f.chances_extra || 0;
+    const totalChances = f.chances || (chancesExtra > 1 ? chancesExtra : (chancesExtra === 1 ? 2 : 1));
+    const startNum = (Array.isArray(f.numeros) && f.numeros.length ? f.numeros[0] : (f.numero || 1));
+    const rawNumeros = Array.isArray(f.numeros) && f.numeros.length ? f.numeros : [startNum];
+    // Asegurar que si el participante compró N chances, se muestren los N números correspondientes
+    const numeros = rawNumeros.length >= totalChances
+      ? rawNumeros
+      : Array.from({ length: totalChances }, (_, k) => startNum + k);
+
     const pagado = !!f.pagado;
     const rechazado = f.estado_pago === "rechazado";
     const nombre = String(f.nombre || "").split(" ")[0];
-    const chancesExtra = f.chances_extra || 0;
     const montoChances = f.monto_chances || 0;
-    const totalChances = 1 + chancesExtra;
     let i = 0;
 
     const tickets = numeros.map((n, k) =>
@@ -147,7 +153,7 @@
         "<small>" + (numeros.length > 1 ? "Número " + (k + 1) + " de " + numeros.length : "Tu número de participación") + "</small>" +
         '<strong class="mn-num">' + pad(n) + "</strong>" +
         (pagado ? '<span class="mn-stamp">Pagado</span>' : "") +
-        (chancesExtra > 0 ? '<span class="mn-chances-badge">' + totalChances + ' chances</span>' : '') +
+        (totalChances > 1 ? '<span class="mn-chances-badge">' + totalChances + ' números</span>' : '') +
         '<div class="mn-tline"><span>Sorteo N.º ' + esc(C.id) + "</span><span>Fecha: " + esc(fecha) + "</span></div>" +
       "</article>"
     ).join("");
@@ -155,13 +161,13 @@
     let rows = row("ok", ICON_OK, "Participación confirmada", f.inscripto ? "Inscripto el " + fechaCorta(f.inscripto) + "." : "Ya estás en el sorteo.", i++);
     if (f.compra_manual) {
       if (pagado) rows += row("ok", ICON_OK, "Manual pagado", "El vendedor confirmó tu pago. Ya podés descargar el manual.", i++);
-      else if (rechazado) rows += row("no", ICON_NO, "Pago no confirmado", "No pudimos verificar el comprobante. Escribinos por WhatsApp. Tu número sigue participando.", i++);
-      else rows += row("wait", ICON_WAIT, "Pago del manual pendiente", "Cuando el vendedor verifique tu transferencia, acá vas a ver «Pagado».", i++);
+      else if (rechazado) rows += row("no", ICON_NO, "Pago no confirmado", "No pudimos verificar el comprobante. Escribinos por WhatsApp. Tus números siguen participando.", i++);
+      else rows += row("wait", ICON_WAIT, "Pago del manual y chances pendiente", "Cuando el vendedor verifique tu transferencia, acá vas a ver «Pagado».", i++);
     } else {
-      rows += row("info", ICON_INFO, "Participación registrada", "Tu número está activo para el sorteo.", i++);
+      rows += row("info", ICON_INFO, "Participación registrada", "Tus números están activos para el sorteo.", i++);
     }
-    if (chancesExtra > 0) {
-      rows += row("ok", ICON_OK, chancesExtra + " chances extras", "Paquete de " + chancesExtra + " chances · $" + fmt(montoChances) + ". Total: " + totalChances + " chances en el sorteo.", i++);
+    if (totalChances > 1) {
+      rows += row("ok", ICON_OK, totalChances + " números asignados", "Plan de " + totalChances + " chances · Del #" + pad(startNum) + " al #" + pad(startNum + totalChances - 1) + ".", i++);
     }
     rows += f.telefono_verificado
       ? row("ok", ICON_OK, "WhatsApp confirmado", "Por ahí te avisamos la fecha del sorteo y si ganás.", i++)

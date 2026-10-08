@@ -18,9 +18,37 @@
   const PRIZES = Array.isArray(C.premios) ? C.premios.filter((p) => p && p.nombre) : [];
   if (!PRIZES.length) return;
 
+  const fmt = (x) => String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const money = (x) => "$" + fmt(x);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const pad = (n) => String(n).padStart(5, "0");
+  const fecha = C.fechaSorteo ? String(C.fechaSorteo) : "a confirmar";
+  const prizeNames = PRIZES.map((p) => p.nombre);
+  const prizeList = prizeNames.length > 1 ? prizeNames.slice(0, -1).join(", ") + " y " + prizeNames[prizeNames.length - 1] : prizeNames[0];
+
   const MANUAL = C.manual || {};
-  const PACKS = Array.isArray(C.paquetesChances) ? C.paquetesChances : [];
-  const STEPS = ["intro", "chances", "datos", "listo"];
+  const precio = Number(MANUAL.precio) || 10000;
+  const manualNombre = MANUAL.nombre || "Manual de Cuidado y Mantenimiento";
+
+  const BASE_PACK = {
+    chances: 1,
+    precio: precio,
+    label: "1 chance",
+    desc: "1 número para el sorteo · Manual PDF incluido"
+  };
+  const EXTRA_PACKS = Array.isArray(C.paquetesChances) ? C.paquetesChances : [];
+  const ALL_PACKS = [BASE_PACK].concat(EXTRA_PACKS.map(function(p) {
+    return {
+      chances: p.chances,
+      precio: p.precio,
+      label: p.chances + " chances",
+      desc: p.chances + " números en el sorteo (" + money(Math.round(p.precio / p.chances)) + " c/u) · Manual incluido",
+      popular: !!p.popular,
+      mejor: !!p.mejor,
+      premium: !!p.premium
+    };
+  }));
+  const STEPS = ["chances", "datos", "listo"];
   const WA_NUMBER = typeof WHATSAPP_NUMBER !== "undefined" ? WHATSAPP_NUMBER : "5493516312930";
   const SB_URL = typeof SUPABASE_URL !== "undefined" ? SUPABASE_URL : "";
   const SB_KEY = typeof SUPABASE_ANON_KEY !== "undefined" ? SUPABASE_ANON_KEY : "";
@@ -28,8 +56,8 @@
   const desktopMq = window.matchMedia("(min-width: 900px)");
   const reduceMq = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-  // modo: "compra". inscripcion: lo que devolvió el servidor (se guarda en el teléfono).
-  const state = { open: false, step: "intro", modo: "compra", paquete: null, sending: false, inscripcion: null };
+  // inscripcion: lo que devolvió el servidor (se guarda en el teléfono).
+  const state = { open: false, step: "chances", selectedPack: 0, sending: false, inscripcion: null };
 
   // --- Helpers ---
   function readKey(kind, key) {
@@ -38,15 +66,6 @@
   function writeKey(kind, key, value) {
     try { if (window[kind]) window[kind].setItem(key, value); } catch (e) { /* almacenamiento bloqueado */ }
   }
-  const fmt = (x) => String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  const money = (x) => "$" + fmt(x);
-  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const pad = (n) => String(n).padStart(5, "0");
-  const fecha = C.fechaSorteo ? String(C.fechaSorteo) : "a confirmar";
-  const prizeNames = PRIZES.map((p) => p.nombre);
-  const prizeList = prizeNames.length > 1 ? prizeNames.slice(0, -1).join(", ") + " y " + prizeNames[prizeNames.length - 1] : prizeNames[0];
-  const precio = Number(MANUAL.precio) || 0;
-  const manualNombre = MANUAL.nombre || "Manual de Cuidado y Mantenimiento";
   const waLink = (text) => "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(text);
 
   function saveInscripcion() { writeKey("localStorage", KEY + "_inscripcion", JSON.stringify(state.inscripcion)); }
@@ -89,7 +108,6 @@
     EMAIL_INVALIDO: "Revisá el correo electrónico.",
     DIRECCION_INVALIDA: "Revisá la dirección, la localidad, la provincia y el código postal.",
     DATOS_DEMASIADO_LARGOS: "Algún dato es demasiado largo. Revisalo y probá de nuevo.",
-    CLAVE_INVALIDA: "La clave tiene que tener al menos 6 caracteres.",
     DATOS_INVALIDOS: "Revisá los datos: hay caracteres que no se pueden usar (por ejemplo < o >).",
     DEMASIADOS_INTENTOS: "Hubo demasiadas inscripciones desde esta conexión. Esperá un rato y probá de nuevo, o escribinos por WhatsApp."
   };
@@ -135,17 +153,28 @@
     "</div>"
   ).join("");
 
-  const packCards = PACKS.map((p, i) =>
-    '<button type="button" class="rf-chance' +
-      (p.popular ? ' rf-chance--pop' : '') + (p.mejor ? ' rf-chance--best' : '') + (p.premium ? ' rf-chance--max' : '') +
-    '" data-rf-pack="' + i + '">' +
-      (p.popular ? '<em class="rf-chance-badge">Popular</em>' : '') +
-      (p.mejor ? '<em class="rf-chance-badge rf-chance-badge--green">Mejor precio</em>' : '') +
-      (p.premium ? '<em class="rf-chance-badge rf-chance-badge--max">Máximo</em>' : '') +
-      '<strong>' + p.chances + '</strong><span>chances</span>' +
-      '<b>' + money(p.precio) + '</b><small>' + money(Math.round(p.precio / p.chances)) + ' c/u</small>' +
-    '</button>'
-  ).join("");
+  const packList = ALL_PACKS.map(function(p, i) {
+    var badge = '';
+    if (p.popular) badge = '<em class="rf-pack-badge">⭐ Más elegido</em>';
+    if (p.mejor) badge = '<em class="rf-pack-badge rf-pack-badge--green">🔥 Mejor precio</em>';
+    if (p.premium) badge = '<em class="rf-pack-badge rf-pack-badge--gold">👑 Máximo</em>';
+
+    var divider = '';
+    if (i === 1) {
+      divider = '<div class="rf-pack-divider" aria-hidden="true"><span>O aumentá tus chances con más números</span></div>';
+    }
+
+    var row = '<button type="button" class="rf-pack-row' + (i === 0 ? ' is-selected rf-pack-row--base' : '') + (p.premium ? ' rf-pack-row--premium' : '') + '" data-rf-pack="' + i + '">' +
+      '<span class="rf-pack-radio"></span>' +
+      '<span class="rf-pack-info">' +
+        '<span class="rf-pack-title">' + p.label + badge + '</span>' +
+        '<span class="rf-pack-desc">' + p.desc + '</span>' +
+      '</span>' +
+      '<span class="rf-pack-price">' + money(p.precio) + '</span>' +
+    '</button>';
+
+    return divider + row;
+  }).join('');
 
   const field = (name, label, attrs, hint) =>
     '<label class="rf-field" data-field="' + name + '"><span class="rf-label-t">' + label + "</span>" +
@@ -164,7 +193,7 @@
       <div class="rf-grabber" aria-hidden="true"></div>
       <div class="rf-top">
         <button type="button" class="rf-icon-btn" data-rf-back aria-label="Volver">${ICON_BACK}</button>
-        <div class="rf-progress" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <div class="rf-progress" aria-hidden="true"><span></span><span></span><span></span></div>
         <button type="button" class="rf-icon-btn" data-rf-close aria-label="Cerrar">${ICON_CLOSE}</button>
       </div>
 
@@ -178,66 +207,48 @@
         <div class="rf-prize-text rf-st rf-d1">
           <p class="rf-kicker">Sorteo N.º ${esc(C.id)} · ${PRIZES.length === 1 ? "1 premio" : PRIZES.length + " premios"}</p>
           <h2 class="rf-title" id="rf-title">${title}</h2>
-          <p class="rf-sub">Sorteamos ${esc(prizeList)} 0km. Comprá el ${esc(manualNombre)} y participá del sorteo. Podés sumar chances extras.</p>
+          <p class="rf-sub">Sorteamos ${esc(prizeList)} 0km. Elegí tus chances y participá.</p>
         </div>
         <div class="rf-stats rf-st rf-d2">
           <div class="rf-stat"><strong>${PRIZES.length}</strong><span>${PRIZES.length === 1 ? "moto 0km" : "motos 0km"}</span></div>
-          <div class="rf-stat"><strong>1 por DNI</strong><span>sumá chances extras</span></div>
+          <div class="rf-stat"><strong>Desde ${money(precio)}</strong><span>incluye manual</span></div>
           <div class="rf-stat"><strong>${C.fechaSorteo ? esc(C.fechaSorteo) : "A confirmar"}</strong><span>fecha del sorteo</span></div>
         </div>
         <p class="rf-legal rf-legal--desk">${legal}</p>
       </aside>
 
       <div class="rf-steps">
-        <section class="rf-step" data-step="intro">
-          <div class="rf-head rf-intro-head">
-            <h3 class="rf-h">Participá del sorteo</h3>
-            <p class="rf-p">Comprá el manual y accedé a tu número de participación.</p>
-          </div>
-          <div class="rf-options rf-st rf-d3" role="radiogroup" aria-label="Forma de participar">
-            <button type="button" class="rf-option is-selected" role="radio" aria-checked="true" data-rf-modo="compra">
-              <span class="rf-option-icon">${ICON_BOOK}</span>
-              <span class="rf-option-body">
-                <span class="rf-option-title">Comprar el manual y participar</span>
-                <span class="rf-option-chip">Incluye manual en PDF</span>
-                <span class="rf-option-desc">${esc(manualNombre)} en PDF. Coordinás el pago con un vendedor por WhatsApp.</span>
-              </span>
-              <span class="rf-option-price">${precio ? money(precio) : ""}</span>
-            </button>
-          </div>
-          <div class="rf-cta-block rf-st rf-d4">
-            <button type="button" class="rf-btn rf-btn-red rf-btn-shine" data-rf-go="chances"><span data-rf-intro-cta>Continuar</span></button>
-            <p class="rf-legal">${legal}</p>
-          </div>
-        </section>
-
-        <section class="rf-step" data-step="chances">
+        <section class="rf-step is-active" data-step="chances">
           <div class="rf-head">
-            <h3 class="rf-h">¿Querés sumar chances?</h3>
-            <p class="rf-p">Elegí un paquete para tener más números en el sorteo. Es opcional.</p>
+            <h3 class="rf-h">Elegí tus chances</h3>
+            <p class="rf-p">Más números = más probabilidades de ganar. Todos los planes incluyen el manual digital en PDF.</p>
           </div>
-          <div class="rf-chances-scroll">
-            <div class="rf-chances-grid">${packCards}</div>
-          </div>
-          <p class="rf-chances-selected" data-rf-pack-selected hidden></p>
+          <div class="rf-pack-list">${packList}</div>
           <div class="rf-cta-block">
-            <button type="button" class="rf-btn rf-btn-red" data-rf-go="datos"><span data-rf-chances-cta>Continuar sin paquete</span></button>
-            <button type="button" class="rf-btn rf-btn-ghost" data-rf-go="datos">Solo quiero participar</button>
+            <button type="button" class="rf-btn rf-btn-red rf-btn-shine" data-rf-go="datos"><span data-rf-chances-cta>Continuar · ${precio ? money(precio) : ''}</span></button>
+            <p class="rf-legal">${legal}</p>
           </div>
         </section>
 
         <section class="rf-step" data-step="datos">
           <div class="rf-head">
             <h3 class="rf-h">Tus datos</h3>
-            <p class="rf-p" data-rf-datos-sub>Con estos datos te inscribimos y te contactamos si ganás.</p>
+            <p class="rf-p" data-rf-datos-sub>Completá tus datos para asignarte tus números del sorteo.</p>
+          </div>
+          <div class="rf-plan-summary">
+            <div class="rf-ps-icon">${ICON_TICKET}</div>
+            <div class="rf-ps-body">
+              <strong data-rf-summary-title>1 chance · ${money(precio)}</strong>
+              <span data-rf-summary-desc>1 número en el sorteo · Manual PDF incluido</span>
+            </div>
+            <button type="button" class="rf-ps-btn" data-rf-go="chances">Cambiar</button>
           </div>
           <form class="rf-form" data-rf-form novalidate>
             ${field("dni", "DNI", 'inputmode="numeric" autocomplete="off" maxlength="10" required placeholder="Solo números"')}
             ${field("nombre_completo", "Nombre y apellido", 'autocomplete="name" maxlength="120" required')}
             ${field("fecha_nacimiento", "Fecha de nacimiento", 'type="date" required max="' + new Date(Date.now() - 18 * 365.25 * 864e5).toISOString().slice(0, 10) + '"', "Tenés que ser mayor de 18 años.")}
-            ${field("telefono", "Celular con WhatsApp", 'type="tel" inputmode="tel" autocomplete="tel-national" required placeholder="351 6312930"', "Código de área y número, sin 0 ni 15. Es el medio por el que te vamos a contactar.")}
-            ${field("telefono2", "Repetí el celular", 'type="tel" inputmode="tel" autocomplete="off" required placeholder="351 6312930"')}
-            ${field("email", "Gmail", 'type="email" inputmode="email" autocomplete="email" maxlength="120" required placeholder="nombre@gmail.com"')}
+            ${field("telefono", "Celular con WhatsApp", 'type="tel" inputmode="tel" autocomplete="tel-national" required placeholder="351 6312930"', "Código de área y número, sin 0 ni 15. Es el medio por el que te contactamos.")}
+            ${field("email", "Correo electrónico", 'type="email" inputmode="email" autocomplete="email" maxlength="120" required placeholder="nombre@ejemplo.com"')}
             <div class="rf-row">
               ${field("localidad", "Localidad", 'autocomplete="address-level2" maxlength="80" required')}
               ${field("codigo_postal", "Código postal", 'autocomplete="postal-code" maxlength="8" required')}
@@ -245,14 +256,14 @@
             ${field("direccion", "Dirección", 'autocomplete="street-address" maxlength="160" required placeholder="Calle, número, piso"')}
             <label class="rf-field" data-field="provincia"><span class="rf-label-t">Provincia</span>
               <select name="provincia" required autocomplete="address-level1">
-                ${PROVINCIAS.map((p) => '<option value="' + p + '">' + p + "</option>").join("")}
+                ${PROVINCIAS.map((p) => '<option value="' + p + '"' + (p === "Córdoba" ? " selected" : "") + ">" + p + "</option>").join("")}
               </select><small class="rf-err" aria-live="polite"></small></label>
             <div class="rf-hp" aria-hidden="true"><label>Sitio web <input name="sitio" tabindex="-1" autocomplete="off"></label></div>
-            <label class="rf-check" data-field="acepto"><input type="checkbox" name="acepto" required>
+            <label class="rf-check" data-field="acepto"><input type="checkbox" name="acepto" checked required>
               <span>Soy mayor de 18 años y acepto las <a href="${esc(C.basesUrl || "sorteo.html")}" target="_blank" rel="noopener">bases y condiciones</a>.</span></label>
             <small class="rf-err rf-err-acepto" aria-live="polite"></small>
             <p class="rf-form-error" data-rf-form-error role="alert" hidden></p>
-            <button type="submit" class="rf-btn rf-btn-red" data-rf-submit><span data-rf-submit-label>Confirmar</span></button>
+            <button type="submit" class="rf-btn rf-btn-red rf-btn-shine" data-rf-submit><span data-rf-submit-label>Inscribirme y pagar por WhatsApp</span></button>
           </form>
         </section>
 
@@ -260,8 +271,9 @@
           <div class="rf-done">
             <div class="rf-ticket-lite">
               <span class="rf-tl-kicker">Sorteo N.º ${esc(C.id)}</span>
-              <span class="rf-tl-label">Tu número</span>
+              <span class="rf-tl-label" data-rf-tl-label>Tu número</span>
               <strong class="rf-tl-num" data-rf-num>—</strong>
+              <div class="rf-tl-chips" data-rf-chips hidden></div>
               <span class="rf-tl-name" data-rf-name></span>
             </div>
             <p class="rf-done-status" data-rf-status></p>
@@ -306,7 +318,6 @@
   // --- Navegación entre pasos ---
   // Una vez inscripto no se vuelve al formulario: el número ya está asignado.
   function allowedBack(step) {
-    if (step === "chances") return "intro";
     if (step === "datos") return "chances";
     return null;
   }
@@ -314,7 +325,7 @@
   function go(step, dir) {
     if (STEPS.indexOf(step) < 0) return;
     if (state.inscripcion && step !== "listo") step = "listo";
-    if (!state.inscripcion && step === "listo") step = "intro";
+    if (!state.inscripcion && step === "listo") step = "chances";
     state.step = step;
     root.dataset.step = step;
     const idx = STEPS.indexOf(step);
@@ -342,76 +353,99 @@
     if (to) go(to, "back");
   }
 
-  function setModo(modo) {
-    state.modo = modo;
-    root.querySelectorAll("[data-rf-modo]").forEach((b) => {
-      const on = b.dataset.rfModo === modo;
-      b.classList.toggle("is-selected", on);
-      b.setAttribute("aria-checked", on ? "true" : "false");
-    });
-    $("[data-rf-intro-cta]").textContent = "Continuar con la compra" + (precio ? " · " + money(precio) : "");
-  }
-
   function renderDatos() {
-    const compra = state.modo === "compra";
-    $("[data-rf-submit-label]").textContent = compra ? "Confirmar pedido" : "Confirmar inscripción";
-    $("[data-rf-datos-sub]").textContent = compra
-      ? "Te inscribimos con tu número y después coordinás el pago del manual por WhatsApp."
-      : "Con estos datos te inscribimos y te contactamos si ganás.";
+    var pack = ALL_PACKS[state.selectedPack] || ALL_PACKS[0];
+    var chances = pack.chances;
+    var priceStr = money(pack.precio);
+    var titleEl = $("[data-rf-summary-title]");
+    var descEl = $("[data-rf-summary-desc]");
+    if (titleEl) titleEl.textContent = pack.label + " · " + priceStr;
+    if (descEl) descEl.textContent = (chances === 1 ? "1 número para el sorteo" : chances + " números para el sorteo") + " · Manual PDF incluido";
+    $("[data-rf-submit-label]").textContent = "Inscribirme y pagar por WhatsApp · " + priceStr;
+    $("[data-rf-datos-sub]").textContent = "Completá tus datos para asignarte tus " + (chances === 1 ? "número" : chances + " números") + ". El pago se coordina por WhatsApp.";
   }
 
   function setPack(idx) {
-    const pack = PACKS[idx] || null;
-    if (state.paquete && state.paquete === pack) { state.paquete = null; } // deselect
-    else { state.paquete = pack; }
-    root.querySelectorAll("[data-rf-pack]").forEach((b) => {
-      b.classList.toggle("is-selected", state.paquete && PACKS[Number(b.dataset.rfPack)] === state.paquete);
+    if (idx < 0 || idx >= ALL_PACKS.length) return;
+    state.selectedPack = idx;
+    root.querySelectorAll("[data-rf-pack]").forEach(function(b) {
+      b.classList.toggle("is-selected", Number(b.dataset.rfPack) === idx);
     });
     renderChances();
   }
 
   function renderChances() {
-    const sel = $("[data-rf-pack-selected]");
-    const cta = $("[data-rf-chances-cta]");
-    if (state.paquete) {
-      sel.innerHTML = "✓ Paquete de <strong>" + state.paquete.chances + " chances</strong> · " + money(state.paquete.precio);
-      sel.hidden = false;
-      cta.textContent = "Continuar con " + state.paquete.chances + " chances · " + money(state.paquete.precio);
+    var pack = ALL_PACKS[state.selectedPack] || ALL_PACKS[0];
+    var cta = $("[data-rf-chances-cta]");
+    if (pack.chances > 1) {
+      cta.textContent = "Comprar " + pack.chances + " chances · " + money(pack.precio);
     } else {
-      sel.hidden = true;
-      cta.textContent = "Continuar sin paquete";
+      cta.textContent = "Comprar 1 chance · " + money(pack.precio);
     }
   }
 
   // Mensaje personalizado: llega al WhatsApp de Motobox desde el celular de la persona,
-  // así el vendedor confirma el número y le pasa el alias (si compra el manual).
+  // así el vendedor confirma los números asignados y le pasa el alias.
   function waMessage(ins) {
-    const base = "Hola MOTOBOX! Soy " + ins.nombre + (ins.dni ? " (DNI " + ins.dni + ")" : "") + ". Me inscribí al Sorteo N.º " + C.id +
-      " y mi número de participación es el " + pad(ins.numero) + ".";
-    const codigo = ins.codigo ? " Código: " + ins.codigo + "." : "";
-    const packMsg = ins.paquete ? " También quiero el paquete de " + ins.paquete.chances + " chances (" + money(ins.paquete.precio) + ")." : "";
-    return ins.compra
-      ? base + " Quiero comprar el " + manualNombre + (precio ? " (" + money(precio) + ")" : "") +
-        ". ¿Me pasan el alias para transferir? Después les envío el comprobante." + packMsg + codigo
-      : base + " Confirmo mi WhatsApp para el sorteo." + packMsg + codigo;
+    var pack = ins.pack;
+    var chances = pack ? pack.chances : 1;
+    var startNum = Number(ins.numero) || 1;
+    var endNum = ins.numero_hasta ? Number(ins.numero_hasta) : (startNum + chances - 1);
+    var numStr = chances > 1
+      ? "mis números de participación son del " + pad(startNum) + " al " + pad(endNum) + " (" + chances + " números en total)"
+      : "mi número de participación es el " + pad(startNum);
+    var base = "Hola MOTOBOX! Soy " + ins.nombre + (ins.dni ? " (DNI " + ins.dni + ")" : "") + ". Me inscribí al Sorteo N.º " + C.id + " y " + numStr + ".";
+    var codigo = ins.codigo ? " Código: " + ins.codigo + "." : "";
+    var planMsg = chances > 1
+      ? " Elegí el plan de " + chances + " chances (" + money(pack.precio) + ")."
+      : " Compro el manual (" + money(pack ? pack.precio : precio) + ").";
+    return base + planMsg + " ¿Me pasan el alias para transferir? Después les envío el comprobante." + codigo;
   }
 
   function renderListo() {
-    const ins = state.inscripcion;
+    var ins = state.inscripcion;
     if (!ins) return;
-    const numEl = $("[data-rf-num]");
-    if (celebrate && !reduceMq.matches) rollNumber(numEl, pad(ins.numero));
-    else numEl.textContent = pad(ins.numero);
-    $("[data-rf-name]").textContent = ins.nombre;
-    const packInfo = ins.paquete ? " Sumaste " + ins.paquete.chances + " chances (" + money(ins.paquete.precio) + ")." : "";
-    $("[data-rf-status]").textContent = ins.compra
-      ? "¡Listo! Tu número ya está asignado. Ahora coordiná el pago del manual con un vendedor por WhatsApp." + packInfo
-      : "¡Listo, ya estás participando! Guardá tu número." + packInfo;
-    $("[data-rf-wa-title]").textContent = ins.compra ? "Pagá el manual por WhatsApp" : "Confirmá tu WhatsApp";
-    $("[data-rf-wa-desc]").textContent = ins.compra
-      ? "Te abrimos un chat con un vendedor con tus datos ya escritos. Te pasa el alias, le mandás el comprobante y, cuando lo verifica, en «Mis números» vas a ver el pago confirmado."
-      : "Mandanos el mensaje desde tu celular: así confirmamos que es tuyo y por ahí te avisamos la fecha del sorteo.";
-    $("[data-rf-wa-label]").textContent = ins.compra ? "Coordinar el pago por WhatsApp" : "Confirmar por WhatsApp";
+    var chances = (ins.pack && ins.pack.chances) || 1;
+    var startNum = Number(ins.numero) || 1;
+    var endNum = ins.numero_hasta ? Number(ins.numero_hasta) : (startNum + chances - 1);
+    var numEl = $("[data-rf-num]");
+    var labelEl = $("[data-rf-tl-label]");
+    var chipsEl = $("[data-rf-chips]");
+    var nameEl = $("[data-rf-name]");
+    var statusEl = $("[data-rf-status]");
+
+    nameEl.textContent = ins.nombre;
+
+    if (chances > 1) {
+      if (labelEl) labelEl.textContent = "Tus " + chances + " números para el sorteo";
+      numEl.textContent = "Del " + pad(startNum) + " al " + pad(endNum);
+      numEl.classList.add("rf-tl-num--range");
+
+      if (chipsEl) {
+        var chipsHtml = "";
+        var maxChips = Math.min(chances, 30);
+        for (var i = 0; i < maxChips; i++) {
+          chipsHtml += '<span class="rf-num-chip">#' + pad(startNum + i) + '</span>';
+        }
+        if (chances > maxChips) {
+          chipsHtml += '<span class="rf-num-chip rf-num-chip--more">+ ' + (chances - maxChips) + ' más</span>';
+        }
+        chipsEl.innerHTML = chipsHtml;
+        chipsEl.hidden = false;
+      }
+      statusEl.textContent = "¡Listo! Se te asignaron " + chances + " números para el sorteo. Ahora coordiná el pago del manual y tus chances por WhatsApp.";
+    } else {
+      if (labelEl) labelEl.textContent = "Tu número de participación";
+      numEl.classList.remove("rf-tl-num--range");
+      if (celebrate && !reduceMq.matches) rollNumber(numEl, pad(ins.numero));
+      else numEl.textContent = pad(ins.numero);
+      if (chipsEl) chipsEl.hidden = true;
+      statusEl.textContent = "¡Listo! Tu número ya está asignado. Ahora coordiná el pago del manual por WhatsApp.";
+    }
+
+    $("[data-rf-wa-title]").textContent = "Coordiná el pago por WhatsApp";
+    $("[data-rf-wa-desc]").textContent = "Te abrimos un chat con un vendedor con tus datos y números ya escritos. Te pasa el alias, le mandás el comprobante y listo.";
+    $("[data-rf-wa-label]").textContent = "Coordinar pago · " + money(ins.pack ? ins.pack.precio : precio);
     $("[data-rf-wa]").href = waLink(waMessage(ins));
     if (celebrate && !reduceMq.matches) later(burstConfetti, 380);
     celebrate = false;
@@ -465,14 +499,13 @@
     else if (ageFrom(v.fecha_nacimiento) < 18 || ageFrom(v.fecha_nacimiento) > 110) errs.fecha_nacimiento = "Tenés que ser mayor de 18 años.";
     const tel = normalizePhone(v.telefono);
     if (tel.length !== 10) errs.telefono = "Revisalo: código de área y número, 10 dígitos en total.";
-    else if (normalizePhone(v.telefono2) !== tel) errs.telefono2 = "Los dos números no coinciden.";
     const email = String(v.email || "").trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errs.email = "Revisá el correo.";
     if (String(v.localidad || "").trim().length < 2) errs.localidad = "Completá la localidad.";
     if (!/^[A-Za-z0-9]{4,8}$/.test(String(v.codigo_postal || "").trim())) errs.codigo_postal = "Ej: 5000 o X5000ABC.";
     if (String(v.direccion || "").trim().length < 3) errs.direccion = "Completá la dirección.";
     if (!form.elements.acepto.checked) errs.acepto = "Tenés que aceptar las bases para participar.";
-    ["dni", "nombre_completo", "fecha_nacimiento", "telefono", "telefono2", "email", "localidad", "codigo_postal", "direccion", "provincia", "acepto"]
+    ["dni", "nombre_completo", "fecha_nacimiento", "telefono", "email", "localidad", "codigo_postal", "direccion", "provincia", "acepto"]
       .forEach((k) => setError(k, errs[k]));
     return { ok: !Object.keys(errs).length, errs, data: {
       sorteo_id: C.id, dni, nombre_completo: nombre, fecha_nacimiento: v.fecha_nacimiento, telefono: tel, email,
@@ -493,30 +526,46 @@
       if (first) first.focus();
       return;
     }
-    const compra = state.modo === "compra";
+    var pack = ALL_PACKS[state.selectedPack] || ALL_PACKS[0];
     const btn = $("[data-rf-submit]");
     state.sending = true;
     btn.disabled = true;
     $("[data-rf-submit-label]").textContent = "Guardando…";
     try {
       const res = await rpc("sorteo_inscribir", { p: Object.assign({}, r.data, {
-        compra_manual: compra,
-        monto: compra ? precio : null,
-        chances_extra: state.paquete ? state.paquete.chances : 0,
-        monto_chances: state.paquete ? state.paquete.precio : null
+        compra_manual: true,
+        monto: pack.precio,
+        chances: pack.chances,
+        chances_extra: pack.chances > 1 ? pack.chances : 0,
+        monto_chances: pack.chances > 1 ? pack.precio : null
       }) });
+
+      const startNum = Number(res.numero) || 1;
+      const totalChances = pack.chances || 1;
+      const endNum = res.numero_hasta ? Number(res.numero_hasta) : (startNum + totalChances - 1);
+      const numerosList = Array.isArray(res.numeros) && res.numeros.length
+        ? res.numeros
+        : Array.from({ length: totalChances }, (_, i) => startNum + i);
+
       state.inscripcion = {
-        numero: res.numero, codigo: res.codigo, token: res.token || res.upload_token || null, compra: compra,
-        nombre: r.data.nombre_completo, dni: r.data.dni,
-        paquete: state.paquete ? { chances: state.paquete.chances, precio: state.paquete.precio } : null
+        numero: startNum,
+        numero_hasta: endNum,
+        numeros: numerosList,
+        codigo: res.codigo,
+        token: res.token || res.upload_token || null,
+        compra: true,
+        nombre: r.data.nombre_completo,
+        dni: r.data.dni,
+        pack: { chances: totalChances, precio: pack.precio }
       };
       saveInscripcion();
+
       // Si eligió un paquete de chances, guardar en el servidor (fire-and-forget, no bloquea).
-      if (state.paquete && state.inscripcion.token) {
+      if (pack.chances > 1 && state.inscripcion.token) {
         rpc("sorteo_actualizar_chances", {
           p_token: state.inscripcion.token,
-          p_chances: state.paquete.chances,
-          p_monto: state.paquete.precio
+          p_chances: pack.chances,
+          p_monto: pack.precio
         }).catch(function () { /* no bloquear si falla */ });
       }
       // "Mis números" (si está abierta) se actualiza sola con la nueva inscripción.
@@ -555,7 +604,7 @@
     root.classList.remove("is-closing");
     root.hidden = false;
     document.documentElement.classList.add("rf-lock");
-    go(state.inscripcion ? "listo" : state.step === "datos" ? "datos" : "intro");
+    go(state.inscripcion ? "listo" : state.step === "datos" ? "datos" : "chances");
     requestAnimationFrame(() => {
       try { dialog.focus({ preventScroll: true }); } catch (e) { dialog.focus(); }
     });
@@ -647,11 +696,10 @@
 
   // --- Eventos ---
   root.addEventListener("click", (e) => {
-    const t = e.target.closest("[data-rf-close], [data-rf-back], [data-rf-go], [data-rf-modo], [data-rf-pack]");
+    const t = e.target.closest("[data-rf-close], [data-rf-back], [data-rf-go], [data-rf-pack]");
     if (!t || !root.contains(t)) return;
     if (t.hasAttribute("data-rf-close")) close();
     else if (t.hasAttribute("data-rf-back")) back();
-    else if (t.hasAttribute("data-rf-modo")) setModo(t.dataset.rfModo);
     else if (t.hasAttribute("data-rf-pack")) setPack(Number(t.dataset.rfPack));
     else if (t.hasAttribute("data-rf-go")) { if (!t.disabled) go(t.getAttribute("data-rf-go"), "fwd"); }
   });
@@ -669,8 +717,8 @@
   // "Salir de este dispositivo" en Mis números: el popup vuelve a empezar desde cero.
   document.addEventListener("motobox:sorteo-salir", () => {
     state.inscripcion = null;
-    state.step = "intro";
-    setModo("compra");
+    state.step = "chances";
+    state.selectedPack = 0;
   });
 
   pill.addEventListener("click", (e) => {
@@ -707,7 +755,6 @@
     document.body.appendChild(root);
     document.body.appendChild(pill);
     state.inscripcion = loadInscripcion();
-    setModo("compra");
     bindTilt($("[data-rf-tilt-hit]"), $("[data-rf-tilt]"));
 
     if (window.location.hash === "#sorteo") {
