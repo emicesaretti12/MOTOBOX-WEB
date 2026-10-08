@@ -175,7 +175,7 @@ const SORTEO_CONFIG = {
   titulo: "Ganate una moto 0km",
   premios: [
     // f_auto,q_auto,w_900: Cloudinary entrega la foto liviana y en el mejor formato para cada equipo.
-    { nombre: "Honda Wave full", imagen: "https://res.cloudinary.com/di9j6zwyz/image/upload/f_auto,q_auto,w_900/v1791326578/WhatsApp_Image_2026-10-06_at_7.37.04_PM_kvumvg.jpg" },
+    { nombre: "Honda Wave S", imagen: "https://res.cloudinary.com/di9j6zwyz/image/upload/f_auto,q_auto,w_900/v1791326578/WhatsApp_Image_2026-10-06_at_7.37.04_PM_kvumvg.jpg" },
     { nombre: "Keller full", imagen: "https://res.cloudinary.com/di9j6zwyz/image/upload/f_auto,q_auto,w_900/v1791326558/WhatsApp_Image_2026-10-06_at_7.37.05_PM_ih5jsw.jpg" }
   ],
   manual: { nombre: "Manual de Cuidado y Mantenimiento", precio: 10000 },
