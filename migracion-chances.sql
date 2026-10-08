@@ -178,6 +178,9 @@ $$;
 GRANT EXECUTE ON FUNCTION public.sorteo_inscribir(JSONB) TO anon, authenticated;
 
 -- 5. Consulta directa por DNI (SIN necesidad de clave)
+DROP FUNCTION IF EXISTS public.sorteo_consultar(text);
+DROP FUNCTION IF EXISTS public.sorteo_consultar(text, text);
+
 CREATE OR REPLACE FUNCTION public.sorteo_consultar(p_dni TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -229,6 +232,10 @@ GRANT EXECUTE ON FUNCTION public.sorteo_consultar(TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.sorteo_consultar(TEXT, TEXT) TO anon, authenticated;
 
 -- 6. Actualizar chances tras inscripción desde la web (actualiza todas las columnas para el CRM)
+-- Eliminamos primero las versiones anteriores para evitar el error de parámetros por defecto en PostgreSQL (42P13)
+DROP FUNCTION IF EXISTS public.sorteo_actualizar_chances(text, integer, numeric);
+DROP FUNCTION IF EXISTS public.sorteo_actualizar_chances(text, integer, numeric, text);
+
 CREATE OR REPLACE FUNCTION public.sorteo_actualizar_chances(
   p_token text,
   p_chances integer DEFAULT 1,
@@ -271,26 +278,11 @@ BEGIN
 END;
 $$;
 
--- Sobrecarga de 3 parámetros para compatibilidad
-CREATE OR REPLACE FUNCTION public.sorteo_actualizar_chances(
-  p_token text,
-  p_chances integer,
-  p_monto numeric
-)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  PERFORM public.sorteo_actualizar_chances(p_token, p_chances, p_monto, NULL);
-END;
-$$;
-
 GRANT EXECUTE ON FUNCTION public.sorteo_actualizar_chances(text, integer, numeric, text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.sorteo_actualizar_chances(text, integer, numeric) TO anon, authenticated;
 
 -- 7. Función para que el vendedor asigne o modifique chances desde el CRM
+DROP FUNCTION IF EXISTS public.sorteo_set_chances(text, text, integer, numeric);
+
 CREATE OR REPLACE FUNCTION public.sorteo_set_chances(
   p_dni text,
   p_sorteo_id text DEFAULT '01',
