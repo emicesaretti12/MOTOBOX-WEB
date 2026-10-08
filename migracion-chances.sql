@@ -1,16 +1,25 @@
 -- ==========================================================================
--- MOTOBOX — Migración: Chances extras + Rango de números correlativos + Consulta por DNI
+-- MOTOBOX — Migración: Soporte total de chances y números en CRM y Web
 -- Ejecutar en Supabase SQL Editor (Dashboard → SQL Editor → New query)
 -- 
 -- ✅ Seguro e Idempotente: se puede ejecutar múltiples veces sin error.
 -- ==========================================================================
 
--- 1. Agregar columnas para chances y rango de números en sorteo_participantes
+-- 1. Agregar columnas para que el CRM y la Web vean exactamente cuántos números compró cada uno
+ALTER TABLE public.sorteo_participantes
+  ADD COLUMN IF NOT EXISTS chances integer NOT NULL DEFAULT 1;
+
+ALTER TABLE public.sorteo_participantes
+  ADD COLUMN IF NOT EXISTS cantidad_numeros integer NOT NULL DEFAULT 1;
+
+ALTER TABLE public.sorteo_participantes
+  ADD COLUMN IF NOT EXISTS cantidad_chances integer NOT NULL DEFAULT 1;
+
 ALTER TABLE public.sorteo_participantes
   ADD COLUMN IF NOT EXISTS numero_hasta integer DEFAULT NULL;
 
 ALTER TABLE public.sorteo_participantes
-  ADD COLUMN IF NOT EXISTS chances integer NOT NULL DEFAULT 1;
+  ADD COLUMN IF NOT EXISTS numeros_texto text DEFAULT NULL;
 
 ALTER TABLE public.sorteo_participantes
   ADD COLUMN IF NOT EXISTS chances_extra integer NOT NULL DEFAULT 0;
@@ -18,8 +27,29 @@ ALTER TABLE public.sorteo_participantes
 ALTER TABLE public.sorteo_participantes
   ADD COLUMN IF NOT EXISTS monto_chances numeric DEFAULT NULL;
 
--- 2. Ficha de participación (lo que ve la persona en "Mis números")
---    Devuelve todos los números asignados según las chances compradas.
+ALTER TABLE public.sorteo_participantes
+  ADD COLUMN IF NOT EXISTS notas text DEFAULT NULL;
+
+-- 2. Actualizar participantes existentes para que el CRM muestre sus números de inmediato
+UPDATE public.sorteo_participantes
+SET chances = GREATEST(1, COALESCE(chances, chances_extra + 1, 1)),
+    cantidad_numeros = GREATEST(1, COALESCE(chances, chances_extra + 1, 1)),
+    cantidad_chances = GREATEST(1, COALESCE(chances, chances_extra + 1, 1)),
+    numero_hasta = COALESCE(numero_hasta, numero + GREATEST(1, COALESCE(chances, chances_extra + 1, 1)) - 1),
+    numeros_texto = CASE 
+      WHEN GREATEST(1, COALESCE(chances, chances_extra + 1, 1)) > 1
+      THEN 'Del #' || lpad(numero::text, 5, '0') || ' al #' || lpad((numero + GREATEST(1, COALESCE(chances, chances_extra + 1, 1)) - 1)::text, 5, '0') || ' (' || GREATEST(1, COALESCE(chances, chances_extra + 1, 1)) || ' números)'
+      ELSE '#' || lpad(numero::text, 5, '0') || ' (1 número)'
+    END,
+    notas = COALESCE(notas, 
+      CASE 
+        WHEN GREATEST(1, COALESCE(chances, chances_extra + 1, 1)) > 1
+        THEN 'Compró ' || GREATEST(1, COALESCE(chances, chances_extra + 1, 1)) || ' números (del #' || lpad(numero::text, 5, '0') || ' al #' || lpad((numero + GREATEST(1, COALESCE(chances, chances_extra + 1, 1)) - 1)::text, 5, '0') || ')'
+        ELSE 'Compró 1 número (#' || lpad(numero::text, 5, '0') || ')'
+      END
+    );
+
+-- 3. Ficha de participación (lo que ve la persona en "Mis números")
 CREATE OR REPLACE FUNCTION public.sorteo_ficha(r public.sorteo_participantes)
 RETURNS JSONB
 LANGUAGE sql
@@ -30,6 +60,7 @@ AS $$
     'numero', r.numero,
     'numero_hasta', COALESCE(r.numero_hasta, r.numero),
     'numeros', ARRAY(SELECT generate_series(r.numero, COALESCE(r.numero_hasta, r.numero))),
+    'numeros_texto', r.numeros_texto,
     'nombre', r.nombre_completo,
     'dni', r.dni,
     'codigo', r.codigo_verificacion,
@@ -40,12 +71,14 @@ AS $$
     'inscripto', r.created_at,
     'token', r.upload_token,
     'chances', COALESCE(r.chances, 1 + COALESCE(r.chances_extra, 0)),
+    'cantidad_numeros', COALESCE(r.cantidad_numeros, r.chances, 1),
     'chances_extra', COALESCE(r.chances_extra, 0),
-    'monto_chances', r.monto_chances
+    'monto_chances', r.monto_chances,
+    'notas', r.notas
   );
 $$;
 
--- 3. Inscripción con asignación de números según cantidad de chances
+-- 4. Inscripción con asignación correlativa y guardado de chances para el CRM
 CREATE OR REPLACE FUNCTION public.sorteo_inscribir(p JSONB)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -66,9 +99,11 @@ DECLARE
   v_clave TEXT := COALESCE(NULLIF(trim(p->>'clave'), ''), v_dni);
   v_compra BOOLEAN := COALESCE((p->>'compra_manual')::BOOLEAN, true);
   v_monto INTEGER := NULLIF(p->>'monto', '')::INTEGER;
-  v_chances INTEGER := GREATEST(1, COALESCE((p->>'chances')::INTEGER, (p->>'chances_extra')::INTEGER, 1));
+  v_chances INTEGER := GREATEST(1, COALESCE((p->>'chances')::INTEGER, (p->>'cantidad_numeros')::INTEGER, (p->>'cantidad_chances')::INTEGER, (p->>'chances_extra')::INTEGER, 1));
   v_num INTEGER;
   v_num_hasta INTEGER;
+  v_numeros_texto TEXT;
+  v_notas TEXT;
   v_codigo TEXT := lpad((floor(random() * 10000))::INT::TEXT, 4, '0');
   v_row public.sorteo_participantes;
 BEGIN
@@ -104,13 +139,25 @@ BEGIN
 
   v_num_hasta := v_num + v_chances - 1;
 
+  v_numeros_texto := CASE 
+    WHEN v_chances > 1 THEN 'Del #' || lpad(v_num::text, 5, '0') || ' al #' || lpad(v_num_hasta::text, 5, '0') || ' (' || v_chances || ' números)'
+    ELSE '#' || lpad(v_num::text, 5, '0') || ' (1 número)'
+  END;
+
+  v_notas := COALESCE(
+    NULLIF(trim(p->>'notas'), ''),
+    'Compró ' || v_chances || ' números · ' || v_numeros_texto
+  );
+
   INSERT INTO public.sorteo_participantes (
-    sorteo_id, numero, numero_hasta, chances, chances_extra, dni, nombre_completo, fecha_nacimiento, telefono, codigo_verificacion, email,
-    localidad, direccion, provincia, codigo_postal, compra_manual, monto, estado_pago, clave_hash
+    sorteo_id, numero, numero_hasta, chances, cantidad_numeros, cantidad_chances, chances_extra,
+    numeros_texto, notas, dni, nombre_completo, fecha_nacimiento, telefono, codigo_verificacion,
+    email, localidad, direccion, provincia, codigo_postal, compra_manual, monto, monto_chances,
+    estado_pago, clave_hash
   ) VALUES (
-    v_sorteo, v_num, v_num_hasta, v_chances, (v_chances - 1), v_dni, v_nombre, v_nac, v_tel, v_codigo, v_email,
-    v_loc, v_dir, v_prov, upper(v_cp), v_compra,
-    CASE WHEN v_compra THEN v_monto END,
+    v_sorteo, v_num, v_num_hasta, v_chances, v_chances, v_chances, (v_chances - 1),
+    v_numeros_texto, v_notas, v_dni, v_nombre, v_nac, v_tel, v_codigo,
+    v_email, v_loc, v_dir, v_prov, upper(v_cp), v_compra, v_monto, v_monto,
     'pendiente',
     extensions.crypt(v_clave, extensions.gen_salt('bf', 8))
   ) RETURNING * INTO v_row;
@@ -119,6 +166,8 @@ BEGIN
     'numero', v_row.numero,
     'numero_hasta', v_row.numero_hasta,
     'chances', v_chances,
+    'cantidad_numeros', v_chances,
+    'numeros_texto', v_numeros_texto,
     'numeros', ARRAY(SELECT generate_series(v_row.numero, v_row.numero_hasta)),
     'codigo', v_row.codigo_verificacion,
     'token', v_row.upload_token
@@ -128,7 +177,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.sorteo_inscribir(JSONB) TO anon, authenticated;
 
--- 4. Consulta directa por DNI (SIN necesidad de clave)
+-- 5. Consulta directa por DNI (SIN necesidad de clave)
 CREATE OR REPLACE FUNCTION public.sorteo_consultar(p_dni TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -152,7 +201,7 @@ BEGIN
 END;
 $$;
 
--- Mantener compatibilidad con la función anterior de 2 parámetros si se llama con clave
+-- Compatibilidad de 2 parámetros si se llama con clave
 CREATE OR REPLACE FUNCTION public.sorteo_consultar(p_dni TEXT, p_clave TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -179,11 +228,12 @@ $$;
 GRANT EXECUTE ON FUNCTION public.sorteo_consultar(TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.sorteo_consultar(TEXT, TEXT) TO anon, authenticated;
 
--- 5. Actualizar chances tras inscripción desde la web (fire-and-forget)
+-- 6. Actualizar chances tras inscripción desde la web (actualiza todas las columnas para el CRM)
 CREATE OR REPLACE FUNCTION public.sorteo_actualizar_chances(
   p_token text,
-  p_chances integer DEFAULT 0,
-  p_monto numeric DEFAULT NULL
+  p_chances integer DEFAULT 1,
+  p_monto numeric DEFAULT NULL,
+  p_notas text DEFAULT NULL
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -192,28 +242,59 @@ SET search_path = public
 AS $$
 DECLARE
   v_num integer;
+  v_total integer;
+  v_num_hasta integer;
+  v_txt text;
 BEGIN
   IF p_chances IS NOT NULL AND p_chances > 0 THEN
     SELECT numero INTO v_num FROM public.sorteo_participantes WHERE upload_token::text = p_token;
     IF FOUND THEN
+      v_total := p_chances;
+      v_num_hasta := v_num + v_total - 1;
+      v_txt := CASE 
+        WHEN v_total > 1 THEN 'Del #' || lpad(v_num::text, 5, '0') || ' al #' || lpad(v_num_hasta::text, 5, '0') || ' (' || v_total || ' números)'
+        ELSE '#' || lpad(v_num::text, 5, '0') || ' (1 número)'
+      END;
+
       UPDATE public.sorteo_participantes
-      SET chances = p_chances,
-          chances_extra = GREATEST(0, p_chances - 1),
-          numero_hasta = v_num + p_chances - 1,
-          monto_chances = p_monto
+      SET chances = v_total,
+          cantidad_numeros = v_total,
+          cantidad_chances = v_total,
+          chances_extra = GREATEST(0, v_total - 1),
+          numero_hasta = v_num_hasta,
+          numeros_texto = v_txt,
+          monto_chances = p_monto,
+          notas = COALESCE(p_notas, 'Compró ' || v_total || ' números · ' || v_txt)
       WHERE upload_token::text = p_token;
     END IF;
   END IF;
 END;
 $$;
 
+-- Sobrecarga de 3 parámetros para compatibilidad
+CREATE OR REPLACE FUNCTION public.sorteo_actualizar_chances(
+  p_token text,
+  p_chances integer,
+  p_monto numeric
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  PERFORM public.sorteo_actualizar_chances(p_token, p_chances, p_monto, NULL);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.sorteo_actualizar_chances(text, integer, numeric, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.sorteo_actualizar_chances(text, integer, numeric) TO anon, authenticated;
 
--- 6. Función para que el vendedor asigne/actualice chances desde el CRM
+-- 7. Función para que el vendedor asigne o modifique chances desde el CRM
 CREATE OR REPLACE FUNCTION public.sorteo_set_chances(
   p_dni text,
   p_sorteo_id text DEFAULT '01',
-  p_chances integer DEFAULT 0,
+  p_chances integer DEFAULT 1,
   p_monto numeric DEFAULT NULL
 )
 RETURNS jsonb
@@ -225,6 +306,8 @@ DECLARE
   v_nombre text;
   v_num integer;
   v_total integer;
+  v_num_hasta integer;
+  v_txt text;
 BEGIN
   SELECT numero INTO v_num
     FROM public.sorteo_participantes
@@ -236,12 +319,21 @@ BEGIN
   END IF;
 
   v_total := GREATEST(1, p_chances);
+  v_num_hasta := v_num + v_total - 1;
+  v_txt := CASE 
+    WHEN v_total > 1 THEN 'Del #' || lpad(v_num::text, 5, '0') || ' al #' || lpad(v_num_hasta::text, 5, '0') || ' (' || v_total || ' números)'
+    ELSE '#' || lpad(v_num::text, 5, '0') || ' (1 número)'
+  END;
 
   UPDATE public.sorteo_participantes
   SET chances = v_total,
+      cantidad_numeros = v_total,
+      cantidad_chances = v_total,
       chances_extra = GREATEST(0, v_total - 1),
-      numero_hasta = v_num + v_total - 1,
-      monto_chances = p_monto
+      numero_hasta = v_num_hasta,
+      numeros_texto = v_txt,
+      monto_chances = p_monto,
+      notas = 'Actualizado en CRM: ' || v_total || ' números · ' || v_txt
   WHERE dni = regexp_replace(p_dni, '\D', '', 'g')
     AND sorteo_id = p_sorteo_id
   RETURNING nombre_completo, chances
@@ -251,8 +343,10 @@ BEGIN
     'ok', true,
     'nombre', v_nombre,
     'chances', v_total,
+    'cantidad_numeros', v_total,
     'numero_desde', v_num,
-    'numero_hasta', v_num + v_total - 1,
+    'numero_hasta', v_num_hasta,
+    'numeros_texto', v_txt,
     'monto_chances', p_monto
   );
 END;

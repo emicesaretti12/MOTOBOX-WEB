@@ -527,6 +527,11 @@
       return;
     }
     var pack = ALL_PACKS[state.selectedPack] || ALL_PACKS[0];
+    var totalChances = pack.chances || 1;
+    var infoTexto = totalChances > 1
+      ? ("Compró " + totalChances + " números (Plan " + pack.label + " · " + money(pack.precio) + ")")
+      : ("Compró 1 número (Plan " + pack.label + " · " + money(pack.precio) + ")");
+
     const btn = $("[data-rf-submit]");
     state.sending = true;
     btn.disabled = true;
@@ -535,13 +540,15 @@
       const res = await rpc("sorteo_inscribir", { p: Object.assign({}, r.data, {
         compra_manual: true,
         monto: pack.precio,
-        chances: pack.chances,
-        chances_extra: pack.chances > 1 ? pack.chances : 0,
-        monto_chances: pack.chances > 1 ? pack.precio : null
+        chances: totalChances,
+        cantidad_numeros: totalChances,
+        cantidad_chances: totalChances,
+        chances_extra: totalChances > 1 ? (totalChances - 1) : 0,
+        monto_chances: pack.precio,
+        notas: infoTexto
       }) });
 
       const startNum = Number(res.numero) || 1;
-      const totalChances = pack.chances || 1;
       const endNum = res.numero_hasta ? Number(res.numero_hasta) : (startNum + totalChances - 1);
       const numerosList = Array.isArray(res.numeros) && res.numeros.length
         ? res.numeros
@@ -560,12 +567,13 @@
       };
       saveInscripcion();
 
-      // Si eligió un paquete de chances, guardar en el servidor (fire-and-forget, no bloquea).
-      if (pack.chances > 1 && state.inscripcion.token) {
+      // Guardar chances y notas en el servidor para que el CRM lo refleje siempre
+      if (state.inscripcion.token) {
         rpc("sorteo_actualizar_chances", {
           p_token: state.inscripcion.token,
-          p_chances: pack.chances,
-          p_monto: pack.precio
+          p_chances: totalChances,
+          p_monto: pack.precio,
+          p_notas: infoTexto
         }).catch(function () { /* no bloquear si falla */ });
       }
       // "Mis números" (si está abierta) se actualiza sola con la nueva inscripción.
