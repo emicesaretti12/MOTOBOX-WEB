@@ -29,10 +29,12 @@
   const MANUAL = C.manual || {};
   const precio = Number(MANUAL.precio) || 10000;
   const manualNombre = MANUAL.nombre || "Manual de Cuidado y Mantenimiento";
+  const PROMO = C.promo ? String(C.promo) : "";
 
   const BASE_PACK = {
     chances: 1,
     precio: precio,
+    precioAntes: Number(MANUAL.precioAntes) || 0,
     label: "1 chance",
     desc: "1 número para el sorteo · Manual PDF incluido"
   };
@@ -41,6 +43,7 @@
     return {
       chances: p.chances,
       precio: p.precio,
+      precioAntes: Number(p.precioAntes) || 0,
       label: p.chances + " chances",
       desc: p.chances + " números en el sorteo (" + money(Math.round(p.precio / p.chances)) + " c/u) · Manual incluido",
       popular: !!p.popular,
@@ -155,9 +158,12 @@
 
   const packList = ALL_PACKS.map(function(p, i) {
     var badge = '';
-    if (p.popular) badge = '<em class="rf-pack-badge">⭐ Más elegido</em>';
-    if (p.mejor) badge = '<em class="rf-pack-badge rf-pack-badge--green">🔥 Mejor precio</em>';
-    if (p.premium) badge = '<em class="rf-pack-badge rf-pack-badge--gold">👑 Máximo</em>';
+    var off = p.precioAntes > p.precio ? Math.round((1 - p.precio / p.precioAntes) * 100) : 0;
+    // El plan base lleva el aviso de la promo; los combos, el % de descuento.
+    if (off) badge += '<em class="rf-pack-badge rf-pack-badge--promo">' + (i === 0 && PROMO ? esc(PROMO) : off + '% OFF') + '</em>';
+    if (p.popular) badge += '<em class="rf-pack-badge">⭐ Más elegido</em>';
+    if (p.mejor) badge += '<em class="rf-pack-badge rf-pack-badge--green">🔥 Mejor precio</em>';
+    if (p.premium) badge += '<em class="rf-pack-badge rf-pack-badge--gold">👑 Máximo</em>';
 
     var divider = '';
     if (i === 1) {
@@ -170,7 +176,10 @@
         '<span class="rf-pack-title">' + p.label + badge + '</span>' +
         '<span class="rf-pack-desc">' + p.desc + '</span>' +
       '</span>' +
-      '<span class="rf-pack-price">' + money(p.precio) + '</span>' +
+      '<span class="rf-pack-price">' +
+        (off ? '<s class="rf-pack-old">' + money(p.precioAntes) + '</s>' : '') +
+        money(p.precio) +
+      '</span>' +
     '</button>';
 
     return divider + row;
@@ -211,7 +220,7 @@
         </div>
         <div class="rf-stats rf-st rf-d2">
           <div class="rf-stat"><strong>${PRIZES.length}</strong><span>${PRIZES.length === 1 ? "moto 0km" : "motos 0km"}</span></div>
-          <div class="rf-stat"><strong>Desde ${money(precio)}</strong><span>incluye manual</span></div>
+          <div class="rf-stat"><strong>Desde ${money(precio)}</strong><span>${PROMO ? esc(PROMO) : "incluye manual"}</span></div>
           <div class="rf-stat"><strong>${C.fechaSorteo ? esc(C.fechaSorteo) : "A confirmar"}</strong><span>fecha del sorteo</span></div>
         </div>
         <p class="rf-legal rf-legal--desk">${legal}</p>
@@ -223,6 +232,7 @@
             <h3 class="rf-h">Elegí tus chances</h3>
             <p class="rf-p">Más números = más probabilidades de ganar. Todos los planes incluyen el manual digital en PDF.</p>
           </div>
+          ${PROMO ? '<p class="rf-promo">🔥 Promo · ' + esc(PROMO) + ': 1 chance a ' + money(precio) + (BASE_PACK.precioAntes > precio ? ' (antes ' + money(BASE_PACK.precioAntes) + ')' : '') + ' y 30% OFF en todos los combos</p>' : ''}
           <div class="rf-pack-list">${packList}</div>
           <div class="rf-cta-block">
             <button type="button" class="rf-btn rf-btn-red rf-btn-shine" data-rf-go="datos"><span data-rf-chances-cta>Continuar · ${precio ? money(precio) : ''}</span></button>
