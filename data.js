@@ -178,19 +178,22 @@ const SORTEO_CONFIG = {
     { nombre: "Honda Wave S", imagen: "https://res.cloudinary.com/di9j6zwyz/image/upload/f_auto,q_auto,w_900/v1791326578/WhatsApp_Image_2026-10-06_at_7.37.04_PM_kvumvg.jpg" },
     { nombre: "Keller full", imagen: "https://res.cloudinary.com/di9j6zwyz/image/upload/f_auto,q_auto,w_900/v1791326558/WhatsApp_Image_2026-10-06_at_7.37.05_PM_ih5jsw.jpg" }
   ],
-  manual: { nombre: "Manual de Cuidado y Mantenimiento", precio: 10000 },
+  manual: { nombre: "Manual de Cuidado y Mantenimiento", precio: 6500, precioAntes: 10000 },
+  // Promo vigente: cartel en el popup del sorteo. Vacío = sin cartel de promo.
+  // precioAntes en cada plan = precio original tachado (los combos tienen 30% OFF).
+  promo: "Solo por esta semana",
   fechaSorteo: "",                            // Vacío = "a confirmar"
   basesUrl: "sorteo.html",
   paquetesChances: [
-    { chances: 2, precio: 15000 },
-    { chances: 4, precio: 25000 },
-    { chances: 6, precio: 35000 },
-    { chances: 10, precio: 45000, popular: true },
-    { chances: 15, precio: 70000 },
-    { chances: 20, precio: 90000 },
-    { chances: 30, precio: 120000 },
-    { chances: 50, precio: 150000, mejor: true },
-    { chances: 200, precio: 300000, premium: true }
+    { chances: 2, precio: 10500, precioAntes: 15000 },
+    { chances: 4, precio: 17500, precioAntes: 25000 },
+    { chances: 6, precio: 24500, precioAntes: 35000 },
+    { chances: 10, precio: 31500, precioAntes: 45000, popular: true },
+    { chances: 15, precio: 49000, precioAntes: 70000 },
+    { chances: 20, precio: 63000, precioAntes: 90000 },
+    { chances: 30, precio: 84000, precioAntes: 120000 },
+    { chances: 50, precio: 105000, precioAntes: 150000, mejor: true },
+    { chances: 200, precio: 210000, precioAntes: 300000, premium: true }
   ]
 };
 

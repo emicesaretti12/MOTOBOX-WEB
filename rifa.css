@@ -1058,6 +1058,21 @@ html.rf-lock body {
 }
 .chance-card--premium .chance-card-qty,
 .chance-card--premium .chance-card-price { color: #ffffff; }
+.chance-card-old {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary, #8e8e93);
+  text-decoration: line-through;
+}
+.chance-card--premium .chance-card-old { color: rgba(255, 255, 255, 0.55); }
+.chances-promo {
+  margin: -0.5rem 0 1.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: #fff4e0;
+  color: #8a4b00;
+  font-weight: 600;
+}
 .chance-card--premium .chance-card-label,
 .chance-card--premium .chance-card-unit { color: rgba(255, 255, 255, 0.5); }
 .chance-card--premium .chance-card-btn {
@@ -1245,6 +1260,27 @@ html.rf-lock body {
 }
 .rf-pack-badge--green { background: var(--rf-green); }
 .rf-pack-badge--gold { background: linear-gradient(135deg, #ff9f43, #e02e24); }
+.rf-pack-badge--promo { background: #ff9f0a; color: #1c1c1e; }
+
+/* Promo: precio original tachado + cartel */
+.rf-pack-old {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--rf-ink-2);
+  text-align: right;
+}
+.rf-pack-row--premium .rf-pack-old { color: rgba(255, 255, 255, 0.55); }
+.rf-promo {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff4e0;
+  color: #8a4b00;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
 
 /* Premium row */
 .rf-pack-row--premium {
