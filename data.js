@@ -69,7 +69,7 @@ async function fetchMotosFromCRM() {
 
   // Filter visible & available motos, sort featured first
   const visibleList = data
-    .filter(m => (m.visible_web !== false) && (m.estado !== 'vendida'))
+    .filter(m => (m.visible_web !== false) && (!m.estado || m.estado === 'disponible'))
     .sort((a, b) => (b.destacada ? 1 : 0) - (a.destacada ? 1 : 0));
 
   return visibleList.map((raw, idx) => {
