@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="rifa.css">
   <link rel="stylesheet" href="motion.css">
+  <link rel="preload" href="vendor/fonts/saira-condensed-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="usados.css">
 </head>
 <body data-page="usados">
@@ -59,45 +60,43 @@
           <span>/</span>
           <span aria-current="page">Usados exclusivos</span>
         </nav>
-        <p class="us-kicker">Seleccionados por MOTOBOX</p>
         <h1 class="us-title">Usados exclusivos</h1>
-        <p class="us-lead">Motos usadas elegidas una por una por nuestro equipo. Mirá fotos, año y kilómetros, y consultá estado, papeles, permuta y financiación directo por WhatsApp.</p>
+        <p class="us-lead">Motos usadas que elegimos una por una. Cada una tiene fotos reales, el kilometraje del tablero y el precio. Para verla en el showroom o pedir más datos, escribinos por WhatsApp.</p>
         <div class="us-tools">
-          <div class="us-sort" role="group" aria-label="Ordenar">
-            <button type="button" class="us-sort-btn is-on" data-us-sort="destacados" aria-pressed="true">Destacados</button>
-            <button type="button" class="us-sort-btn" data-us-sort="precio" aria-pressed="false">Menor precio</button>
-            <button type="button" class="us-sort-btn" data-us-sort="km" aria-pressed="false">Menos km</button>
-            <button type="button" class="us-sort-btn" data-us-sort="anio" aria-pressed="false">Más nuevas</button>
+          <div class="us-sort" role="group" aria-label="Ordenar por">
+            <span class="us-sort-label">Ordenar por</span>
+            <button type="button" class="us-sort-btn is-on" data-us-sort="destacados" aria-pressed="true">Destacadas</button>
+            <button type="button" class="us-sort-btn" data-us-sort="precio" aria-pressed="false">Precio</button>
+            <button type="button" class="us-sort-btn" data-us-sort="km" aria-pressed="false">Kilómetros</button>
+            <button type="button" class="us-sort-btn" data-us-sort="anio" aria-pressed="false">Año</button>
           </div>
           <span class="us-count" data-us-count aria-live="polite"></span>
         </div>
       </div>
     </section>
 
-    <section class="us-list">
+    <section class="us-list" aria-label="Motos usadas disponibles">
       <div class="container">
-        <div class="us-grid" data-us-grid>
-          <div class="us-skel" aria-hidden="true"><i class="us-skel-img"></i><i></i><i class="us-skel-short"></i></div>
-          <div class="us-skel" aria-hidden="true"><i class="us-skel-img"></i><i></i><i class="us-skel-short"></i></div>
-          <div class="us-skel" aria-hidden="true"><i class="us-skel-img"></i><i></i><i class="us-skel-short"></i></div>
+        <div class="us-rows" data-us-grid>
+          <div class="us-skel" aria-hidden="true"><i class="us-skel-img"></i><span><i></i><i class="us-skel-big"></i><i></i></span></div>
+          <div class="us-skel" aria-hidden="true"><i class="us-skel-img"></i><span><i></i><i class="us-skel-big"></i><i></i></span></div>
         </div>
         <div class="us-empty" data-us-empty hidden>
-          <h2>Pronto vas a encontrar acá nuestros usados</h2>
-          <p>Seleccionamos cada moto antes de publicarla. Escribinos y te avisamos apenas entre una que te guste.</p>
-          <a class="btn-hero-red" target="_blank" rel="noopener" href="https://wa.me/5493516312930?text=Hola%20MOTOBOX!%20Quiero%20que%20me%20avisen%20cuando%20entren%20usados%20exclusivos.">Avisame por WhatsApp</a>
+          <h2>Todavía no hay usados publicados</h2>
+          <p>Publicamos cada moto recién después de revisarla. Si nos contás qué buscás, te escribimos cuando entre una.</p>
+          <a class="us-btn us-btn--wa" target="_blank" rel="noopener" href="https://wa.me/5493516312930?text=Hola%20MOTOBOX!%20Busco%20una%20moto%20usada.%20Les%20cuento%20qu%C3%A9%20necesito%3A%20">Contar qué busco</a>
         </div>
       </div>
     </section>
 
     <section class="us-sell">
       <div class="container">
-        <div class="us-sell-card">
+        <div class="us-sell-inner">
           <div>
-            <p class="us-kicker">Permutas</p>
             <h2>¿Querés vender o entregar tu moto?</h2>
-            <p>Mandanos fotos, año y kilómetros y te pasamos una cotización para venderla o usarla como parte de pago de una 0km.</p>
+            <p>Mandanos fotos, año y kilómetros. Te pasamos una cotización para venderla o para usarla como parte de pago de una 0km.</p>
           </div>
-          <a class="btn-hero-red" target="_blank" rel="noopener" href="https://wa.me/5493516312930?text=Hola%20MOTOBOX!%20Quiero%20cotizar%20mi%20moto%20usada.%20Les%20paso%20fotos%2C%20a%C3%B1o%20y%20kil%C3%B3metros.">Cotizar mi moto</a>
+          <a class="us-btn us-btn--line" target="_blank" rel="noopener" href="https://wa.me/5493516312930?text=Hola%20MOTOBOX!%20Quiero%20cotizar%20mi%20moto%20usada.%20Les%20paso%20fotos%2C%20a%C3%B1o%20y%20kil%C3%B3metros.">Cotizar mi moto</a>
         </div>
       </div>
     </section>

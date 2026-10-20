@@ -49,7 +49,7 @@
       const res = await fetch(SB_URL + "/rest/v1/usados_exclusivos?" + q, {
         headers: { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY }
       });
-      if (!res.ok) return [];   // la tabla todavía no existe o no hay conexión: se muestra el estado vacío
+      if (!res.ok) return [];   // sin conexión o error del servidor: se muestra el estado vacío
       const data = await res.json();
       return Array.isArray(data) ? data.map(normalize) : [];
     } catch (e) {
@@ -60,45 +60,87 @@
   const consulta = (u) => "Hola MOTOBOX! Me interesa el usado " + u.nombre + (u.anio ? " " + u.anio : "") +
     ((u.km || u.km === 0) ? " (" + num(u.km) + " km)" : "") + " que vi en la web. ¿Sigue disponible?";
 
-  function tags(u) {
-    return [
+  const ICON_CHECK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+  function checks(u) {
+    const list = [
       u.papeles_al_dia && "Papeles al día",
       u.service_al_dia && "Service al día",
-      u.acepta_permuta && "Acepta permuta",
-      u.financiacion && "Financiación"
+      u.acepta_permuta && "Toma tu moto en parte de pago",
+      u.financiacion && "Se puede financiar"
     ].filter(Boolean);
+    return list.length ? '<ul class="us-checks">' + list.map((t) => "<li>" + ICON_CHECK + t + "</li>").join("") + "</ul>" : "";
   }
 
-  function specs(u) {
-    return [
-      u.anio && [u.anio, "Año"],
-      (u.km || u.km === 0) && [num(u.km), "km"],
-      u.cilindrada && [esc(u.cilindrada), "cc"]
-    ].filter(Boolean);
+  // Cuentakilómetros de tambor: 6 dígitos, el último en rojo. Los ceros de la izquierda van apagados.
+  function odometer(km) {
+    if (!(km || km === 0)) return "";
+    const digits = String(Math.min(999999, Math.max(0, Math.round(km)))).padStart(6, "0").split("");
+    const lead = digits.findIndex((d) => d !== "0");
+    const firstReal = lead === -1 ? 5 : lead;
+    const strip = "0123456789".split("").map((n) => "<b>" + n + "</b>").join("");
+    return '<span class="odo is-waiting" role="img" aria-label="' + num(km) + ' kilómetros">' +
+      '<span class="odo-drum" aria-hidden="true">' + digits.map((d, i) =>
+        '<span class="odo-cell' + (i < firstReal ? " is-lead" : "") + '" style="--v:' + d + ";--d:" + i + '"><span class="odo-strip">' + strip + "</span></span>"
+      ).join("") + "</span>" +
+      '<span class="odo-unit" aria-hidden="true">km</span>' +
+    "</span>";
   }
 
-  function badges(u) {
-    return (u.estado === "reservado" ? '<span class="us-badge us-badge--res">Reservado</span>' : "") +
-      (u.destacada ? '<span class="us-badge us-badge--star">Destacado</span>' : "");
+  // Los tambores giran hasta su valor una sola vez, cuando aparecen en pantalla.
+  const odoIo = "IntersectionObserver" in window && !reduce
+    ? new IntersectionObserver((entries) => {
+        entries.forEach((e) => {
+          if (!e.isIntersecting) return;
+          odoIo.unobserve(e.target);
+          e.target.classList.add("is-rolling");
+          requestAnimationFrame(() => requestAnimationFrame(() => e.target.classList.remove("is-waiting")));
+        });
+      }, { rootMargin: "0px 0px -4% 0px" })
+    : null;
+  function rollOdometers(scope) {
+    scope.querySelectorAll(".odo.is-waiting").forEach((o) => {
+      if (odoIo) odoIo.observe(o); else o.classList.remove("is-waiting");
+    });
   }
 
-  function cardHtml(u, i) {
+  function facts(u, withKm) {
+    const rows = [
+      ["Año", u.anio],
+      withKm && (u.km || u.km === 0) ? ["Kilómetros", num(u.km)] : null,
+      ["Cilindrada", u.cilindrada ? esc(u.cilindrada) + " cc" : ""],
+      ["Dueños", u.duenos ? (u.duenos === 1 ? "Único dueño" : u.duenos + " dueños") : ""],
+      ["Color", esc(u.color || "")]
+    ].filter((r) => r && r[1]);
+    return rows.map((r) => "<div><dt>" + r[0] + "</dt><dd>" + r[1] + "</dd></div>").join("");
+  }
+
+  function priceHtml(u) {
+    const p = money(u.precio);
+    return '<div><strong class="us-price' + (p ? "" : " us-price--ask") + '">' + (p || "Precio a consultar") + "</strong>" +
+      (u.estado === "reservado" ? '<span class="us-reserved">Reservada. Preguntá si se libera.</span>' : "") + "</div>";
+  }
+
+  function cardHtml(u) {
     const img = u.fotos[0];
-    return '<article class="us-card" style="--i:' + i + '">' +
-      '<button type="button" class="us-card-media" data-us-open="' + esc(u.id) + '" aria-label="Ver ' + esc(u.nombre) + '">' +
+    const f = facts(u, false);
+    return '<article class="us-row">' +
+      '<button type="button" class="us-row-media" data-us-open="' + esc(u.id) + '" aria-label="Ver fotos y ficha de ' + esc(u.nombre) + '">' +
         (img ? '<img src="' + esc(img) + '" alt="' + esc(u.nombre) + '" loading="lazy" decoding="async">' : '<span class="us-ph">' + ICON_MOTO + "</span>") +
-        '<span class="us-badges">' + badges(u) + "</span>" +
-        (u.fotos.length > 1 ? '<span class="us-photos">' + u.fotos.length + " fotos</span>" : "") +
+        (u.fotos.length > 1 ? '<span class="us-count-photos">' + u.fotos.length + " fotos</span>" : "") +
       "</button>" +
-      '<div class="us-card-body">' +
-        '<p class="us-brand">' + esc(u.marca) + "</p>" +
-        '<h3 class="us-name"><button type="button" data-us-open="' + esc(u.id) + '">' + esc(u.modelo) + "</button></h3>" +
-        '<ul class="us-specs">' + specs(u).map((s) => "<li><b>" + s[0] + "</b><span>" + s[1] + "</span></li>").join("") + "</ul>" +
+      '<div class="us-row-info">' +
+        '<p class="us-row-brand">' + esc(u.marca) + (u.destacada ? '<span class="us-flag">Destacada</span>' : "") + "</p>" +
+        '<h2 class="us-row-name"><button type="button" data-us-open="' + esc(u.id) + '">' + esc(u.modelo) + "</button></h2>" +
+        odometer(u.km) +
+        (f ? '<dl class="us-facts">' + f + "</dl>" : "") +
         (u.frase ? '<p class="us-frase">' + esc(u.frase) + "</p>" : "") +
-        (tags(u).length ? '<ul class="us-tags">' + tags(u).map((t) => "<li>" + t + "</li>").join("") + "</ul>" : "") +
-        '<div class="us-card-foot">' +
-          '<strong class="us-price">' + (money(u.precio) || "Consultar precio") + "</strong>" +
-          '<a class="us-wa" target="_blank" rel="noopener" href="' + esc(waLink(consulta(u))) + '">' + ICON_WA + "<span>Consultar</span></a>" +
+        checks(u) +
+        '<div class="us-row-buy">' + priceHtml(u) +
+          '<div class="us-row-actions">' +
+            '<a class="us-btn us-btn--wa" target="_blank" rel="noopener" href="' + esc(waLink(consulta(u))) + '">' + ICON_WA + "<span>Consultar</span></a>" +
+            '<button type="button" class="us-btn us-btn--line" data-us-open="' + esc(u.id) + '">Ver ficha</button>' +
+          "</div>" +
         "</div>" +
       "</div>" +
     "</article>";
@@ -109,29 +151,19 @@
     const track = homeSection.querySelector("[data-us-home]");
     const list = await load(8);
     if (!list.length) return;   // sin usados la franja no aparece
-    track.innerHTML = list.map((u, i) =>
-      '<a class="us-mini" style="--i:' + i + '" href="usados.html#u-' + encodeURIComponent(u.id) + '">' +
+    track.innerHTML = list.map((u) =>
+      '<a class="us-mini" href="usados.html#u-' + encodeURIComponent(u.id) + '">' +
         '<span class="us-mini-media">' +
           (u.fotos[0] ? '<img src="' + esc(u.fotos[0]) + '" alt="' + esc(u.nombre) + '" loading="lazy" decoding="async">' : '<span class="us-ph">' + ICON_MOTO + "</span>") +
-          '<span class="us-badges">' + badges(u) + "</span>" +
         "</span>" +
-        '<span class="us-mini-body">' +
-          '<span class="us-brand">' + esc(u.marca) + "</span>" +
-          '<span class="us-mini-name">' + esc(u.modelo) + "</span>" +
-          '<span class="us-mini-meta">' + [u.anio, (u.km || u.km === 0) ? num(u.km) + " km" : ""].filter(Boolean).join(" · ") + "</span>" +
-          '<span class="us-price">' + (money(u.precio) || "Consultar precio") + "</span>" +
-        "</span>" +
+        '<span class="us-mini-brand">' + esc(u.marca) + (u.anio ? " " + u.anio : "") + "</span>" +
+        '<span class="us-mini-name">' + esc(u.modelo) + "</span>" +
+        odometer(u.km) +
+        '<strong class="us-price' + (money(u.precio) ? "" : " us-price--ask") + '">' + (money(u.precio) || "Precio a consultar") + "</strong>" +
       "</a>"
     ).join("");
     homeSection.hidden = false;
-    if (!reduce && "IntersectionObserver" in window) {
-      homeSection.classList.add("us-pre");
-      new IntersectionObserver((en, io) => {
-        if (!en[0].isIntersecting) return;
-        homeSection.classList.remove("us-pre");
-        io.disconnect();
-      }, { rootMargin: "0px 0px -15% 0px" }).observe(homeSection);
-    }
+    rollOdometers(track);
   }
 
   // --- Página de usados ---
@@ -158,7 +190,7 @@
   function render() {
     const list = sorted();
     grid.innerHTML = list.map(cardHtml).join("");
-    grid.classList.toggle("is-in", true);
+    rollOdometers(grid);
     if (countEl) countEl.textContent = list.length ? list.length + (list.length === 1 ? " moto" : " motos") : "";
     if (emptyEl) emptyEl.hidden = list.length > 0;
     grid.hidden = list.length === 0;
@@ -183,27 +215,25 @@
 
   function sheetHtml(u) {
     const fotos = u.fotos.length ? u.fotos : [""];
-    const rows = [
-      ["Año", u.anio], ["Kilómetros", (u.km || u.km === 0) ? num(u.km) + " km" : ""], ["Cilindrada", u.cilindrada ? esc(u.cilindrada) + " cc" : ""],
-      ["Color", esc(u.color || "")], ["Dueños", u.duenos ? u.duenos + (u.duenos > 1 ? " dueños" : " dueño") : ""]
-    ].filter((r) => r[1]);
+    const f = facts(u, false);
     return '<div class="us-gallery">' +
-        '<div class="us-gallery-track" data-us-track>' + fotos.map((f, i) =>
-          '<div class="us-slide">' + (f ? '<img src="' + esc(f) + '" alt="' + esc(u.nombre) + " — foto " + (i + 1) + '"' + (i ? ' loading="lazy"' : "") + ' decoding="async">' : '<span class="us-ph">' + ICON_MOTO + "</span>") + "</div>"
+        '<div class="us-gallery-track" data-us-track>' + fotos.map((src, i) =>
+          '<div class="us-slide">' + (src ? '<img src="' + esc(src) + '" alt="' + esc(u.nombre) + ", foto " + (i + 1) + " de " + fotos.length + '"' + (i ? ' loading="lazy"' : "") + ' decoding="async">' : '<span class="us-ph">' + ICON_MOTO + "</span>") + "</div>"
         ).join("") + "</div>" +
-        (fotos.length > 1 ? '<div class="us-gallery-dots" data-us-dots>' + fotos.map((_, i) => "<i" + (i ? "" : ' class="is-on"') + "></i>").join("") + "</div>" : "") +
-        '<span class="us-badges">' + badges(u) + "</span>" +
+        (fotos.length > 1 ? '<span class="us-gallery-count" data-us-dots>1 / ' + fotos.length + "</span>" : "") +
       "</div>" +
       '<div class="us-sheet-info">' +
-        '<p class="us-brand">' + esc(u.marca) + "</p>" +
+        '<p class="us-row-brand">' + esc(u.marca) + (u.destacada ? '<span class="us-flag">Destacada</span>' : "") + "</p>" +
         '<h2 class="us-sheet-title" id="us-sheet-title">' + esc(u.modelo) + "</h2>" +
-        '<p class="us-sheet-price">' + (money(u.precio) || "Consultar precio") + "</p>" +
+        odometer(u.km) +
+        (f ? '<dl class="us-sheet-facts">' + f + "</dl>" : "") +
         (u.frase ? '<p class="us-frase">' + esc(u.frase) + "</p>" : "") +
-        (rows.length ? '<dl class="us-data">' + rows.map((r) => "<div><dt>" + r[0] + "</dt><dd>" + r[1] + "</dd></div>").join("") + "</dl>" : "") +
-        (tags(u).length ? '<ul class="us-tags">' + tags(u).map((t) => "<li>" + t + "</li>").join("") + "</ul>" : "") +
+        checks(u) +
         (u.descripcion ? '<p class="us-desc">' + esc(u.descripcion) + "</p>" : "") +
-        '<a class="us-sheet-cta" target="_blank" rel="noopener" href="' + esc(waLink(consulta(u))) + '">' + ICON_WA + "<span>Consultar por WhatsApp</span></a>" +
-        '<p class="us-sheet-note">Te responde un asesor de MOTOBOX. Podés coordinar para verla en el showroom de Santa Rosa 4227.</p>' +
+        '<div class="us-sheet-buy">' + priceHtml(u) +
+          '<a class="us-btn us-btn--wa" target="_blank" rel="noopener" href="' + esc(waLink(consulta(u))) + '">' + ICON_WA + "<span>Consultar por WhatsApp</span></a>" +
+          '<p class="us-sheet-note">Te contesta un vendedor de MOTOBOX. Si querés verla, la tenemos en el showroom de Santa Rosa 4227.</p>' +
+        "</div>" +
       "</div>";
   }
 
@@ -222,12 +252,13 @@
         raf = requestAnimationFrame(() => {
           raf = 0;
           const i = Math.round(track.scrollLeft / (track.clientWidth || 1));
-          Array.from(dots.children).forEach((d, n) => d.classList.toggle("is-on", n === i));
+          dots.textContent = (i + 1) + " / " + track.children.length;
         });
       }, { passive: true });
     }
     sheet.hidden = false;
     sheet.querySelector(".us-sheet-panel").scrollTop = 0;
+    rollOdometers(sheet);
     document.body.style.overflow = "hidden";   // también pausa las animaciones de fondo (motion.js)
     requestAnimationFrame(() => sheet.classList.add("is-open"));
     opened = true;
