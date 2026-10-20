@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="rifa.css">
   <link rel="stylesheet" href="motion.css">
+  <link rel="stylesheet" href="usados.css">
 </head>
 <body data-page="home">
 
@@ -39,6 +40,7 @@
         <nav class="nav-desktop">
           <a href="index.html" class="nav-desktop-link active">Inicio</a>
           <a href="catalogo.html" class="nav-desktop-link">Catálogo</a>
+          <a href="usados.html" class="nav-desktop-link">Usados</a>
           <a href="sorteo.html" class="nav-desktop-link nav-highlight" data-rifa-open><span class="nav-badge-dot"></span>Sorteo</a>
           <a href="nosotros.html" class="nav-desktop-link">Nosotros</a>
         </nav>
@@ -98,6 +100,20 @@
       </div>
     </section>
 
+    <!-- USADOS EXCLUSIVOS (se muestra solo si hay usados publicados en el CRM; usados.js) -->
+    <section class="us-home" id="usados-home" hidden>
+      <div class="container">
+        <div class="us-home-head">
+          <div>
+            <p class="us-kicker">Seleccionados por MOTOBOX</p>
+            <h2 class="us-home-title">Usados exclusivos</h2>
+          </div>
+          <a href="usados.html" class="us-home-all">Ver todos</a>
+        </div>
+        <div class="us-home-track" data-us-home></div>
+      </div>
+    </section>
+
     <!-- 3. BANNER PROMOCIONAL (Editable desde CRM) -->
     <section class="promo-poster-section" id="promo-poster-section">
       <div class="container">
@@ -153,6 +169,11 @@
       <span>Catálogo</span>
     </a>
 
+    <a href="usados.html" class="btn-dock-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l3.5-3.5"/><path d="M3.3 16a9 9 0 1 1 17.4 0"/><circle cx="12" cy="14" r="1.6"/><path d="M7 19h10"/></svg>
+      <span>Usados</span>
+    </a>
+
     <a href="sorteo.html" class="btn-dock-item" data-rifa-open>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
       <span>Sorteo</span>
@@ -180,6 +201,7 @@
   <script src="data.js"></script>
   <script src="app.js"></script>
   <script src="rifa.js"></script>
+  <script src="usados.js"></script>
   <script src="vendor/lenis.min.js"></script>
   <script src="motion.js"></script>
 </body>

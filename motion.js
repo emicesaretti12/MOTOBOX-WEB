@@ -308,7 +308,8 @@
     const configs = {
       catalogo: { title: ".catalog-page-title", seq: [".catalog-breadcrumbs", ".catalog-page-subtitle", ".catalog-toolbar"] },
       nosotros: { title: ".about-title", seq: [".catalog-breadcrumbs", ".hero-eyebrow", ".about-lead"], media: ".about-hero-media" },
-      sorteo: { title: ".bases h1", seq: [".bases-kicker", ".bases-lead", ".bases-highlight", ".bases-cta"] }
+      sorteo: { title: ".bases h1", seq: [".bases-kicker", ".bases-lead", ".bases-highlight", ".bases-cta"] },
+      usados: { title: ".us-title", seq: [".catalog-breadcrumbs", ".us-kicker", ".us-lead", ".us-tools"] }
     };
     const cfg = configs[page];
     if (!cfg) return;
