@@ -128,7 +128,7 @@
     const f = facts(u, false);
     return '<article class="us-row">' +
       '<div class="us-row-gallery"><button type="button" class="us-row-media" data-us-open="' + esc(u.id) + '" aria-label="Ver fotos y ficha de ' + esc(u.nombre) + '">' +
-        (img ? '<img src="' + esc(img) + '" alt="' + esc(u.nombre) + '" loading="lazy" decoding="async">' : '<span class="us-ph">' + ICON_MOTO + "</span>") +
+        (img ? '<img class="us-blur" src="' + esc(img) + '" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="us-main" src="' + esc(img) + '" alt="' + esc(u.nombre) + '" loading="lazy" decoding="async">' : '<span class="us-ph">' + ICON_MOTO + "</span>") +
         (u.fotos.length > 1 ? '<span class="us-count-photos">' + u.fotos.length + " fotos</span>" : "") +
       "</button>" +
       (u.fotos.length > 1 ? '<div class="us-row-thumbs">' + u.fotos.slice(0, 5).map((src, i) =>
@@ -240,7 +240,7 @@
     const f = facts(u, false);
     return '<div class="us-sheet-media"><div class="us-gallery">' +
         '<div class="us-gallery-track" data-us-track>' + fotos.map((src, i) =>
-          '<div class="us-slide">' + (src ? '<img src="' + esc(src) + '" alt="' + esc(u.nombre) + ", foto " + (i + 1) + " de " + fotos.length + '"' + (i ? ' loading="lazy"' : "") + ' decoding="async">' : '<span class="us-ph">' + ICON_MOTO + "</span>") + "</div>"
+          '<div class="us-slide">' + (src ? '<img class="us-blur" src="' + esc(src) + '" alt="" aria-hidden="true" decoding="async"><img src="' + esc(src) + '" alt="' + esc(u.nombre) + ", foto " + (i + 1) + " de " + fotos.length + '" decoding="async">' : '<span class="us-ph">' + ICON_MOTO + "</span>") + "</div>"
         ).join("") + "</div>" +
         (fotos.length > 1
           ? '<span class="us-gallery-count" data-us-dots>1 / ' + fotos.length + "</span>" +
@@ -283,7 +283,14 @@
       if (dots) dots.textContent = (i + 1) + " / " + total;
       thumbs.forEach((t, n) => {
         t.classList.toggle("is-on", n === i);
-        if (n === i) { t.setAttribute("aria-current", "true"); t.scrollIntoView({ block: "nearest", inline: "nearest" }); }
+        if (n === i) {
+          t.setAttribute("aria-current", "true");
+          // Solo se corre la tira de miniaturas (scrollIntoView movía también la ventana de la ficha)
+          const box = t.parentElement;
+          const left = t.offsetLeft - box.offsetLeft, right = left + t.offsetWidth;
+          if (left < box.scrollLeft) box.scrollLeft = left - 8;
+          else if (right > box.scrollLeft + box.clientWidth) box.scrollLeft = right - box.clientWidth + 8;
+        }
         else t.removeAttribute("aria-current");
       });
       const prev = sheet.querySelector("[data-us-prev]"), next = sheet.querySelector("[data-us-next]");
@@ -357,8 +364,7 @@
       const sw = e.target.closest("[data-us-swap]");
       if (sw) {
         const gal = sw.closest(".us-row-gallery");
-        const img = gal.querySelector(".us-row-media img");
-        if (img) img.src = sw.dataset.usSwap;
+        gal.querySelectorAll(".us-row-media img").forEach((img) => { img.src = sw.dataset.usSwap; });
         gal.querySelectorAll(".us-thumb").forEach((t) => t.classList.toggle("is-on", t === sw));
         return;
       }

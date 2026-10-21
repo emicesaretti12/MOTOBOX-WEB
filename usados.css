@@ -462,3 +462,27 @@
 .us-gal-nav { color: #1c1d21; background: rgba(255, 255, 255, 0.94); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25); }
 @media (hover: hover) { .us-gal-nav:hover { background: #fff; } }
 .us-gal-nav:focus-visible { outline-color: #1c1d21; }
+
+/* Fotos verticales (las del celular): la misma foto, desenfocada, llena los costados.
+   El desenfoque es de una imagen quieta: se dibuja una vez y no traba nada. */
+.us-row-media, .us-slide { position: relative; overflow: hidden; }
+.us-blur {
+  position: absolute;
+  inset: -24px;
+  width: calc(100% + 48px) !important;
+  height: calc(100% + 48px) !important;
+  object-fit: cover !important;
+  filter: blur(22px) saturate(1.1);
+  opacity: 0.55;
+  transform: none !important;
+  pointer-events: none;
+}
+.us-row-media .us-main, .us-slide img:not(.us-blur) { position: relative; z-index: 1; }
+.us-slide img:not(.us-blur) { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* La galería de la ficha nunca se hace más alta que su lugar (las fotos verticales la estiraban) */
+@media (min-width: 900px) {
+  .us-sheet-media .us-gallery { position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; }
+  .us-sheet-media .us-gallery-track { position: absolute; inset: 0; height: auto; }
+  .us-sheet-media .us-slide { height: 100%; }
+  .us-sheet-body, .us-sheet-media { min-height: 0; overflow: hidden; }
+}
