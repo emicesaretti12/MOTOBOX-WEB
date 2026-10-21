@@ -32,6 +32,8 @@
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const ICON_WA = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.26-.46-2.39-1.47-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.7.63.71.22 1.36.19 1.87.12.57-.09 1.76-.72 2-1.41.25-.7.25-1.29.18-1.41-.08-.13-.27-.2-.57-.35M12.05 21.79a9.87 9.87 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.86 9.86 0 0 1-1.51-5.26c0-5.45 4.44-9.88 9.89-9.88 2.64 0 5.12 1.03 6.99 2.9a9.83 9.83 0 0 1 2.89 6.99c0 5.45-4.44 9.88-9.89 9.88m8.41-18.3A11.82 11.82 0 0 0 12.05 0C5.5 0 .16 5.34.16 11.89c0 2.1.55 4.14 1.59 5.95L.06 24l6.3-1.65a11.88 11.88 0 0 0 5.68 1.45h.01c6.55 0 11.89-5.34 11.89-11.89 0-3.18-1.24-6.17-3.48-8.41"/></svg>';
+  const ICON_PREV = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+  const ICON_NEXT = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
   const ICON_CLOSE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   const ICON_MOTO = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5l4-7h4l3 7"/><path d="M13.5 9.5l1.5-3h2.5"/><path d="M9 9.5H6.5"/></svg>';
 
@@ -125,10 +127,14 @@
     const img = u.fotos[0];
     const f = facts(u, false);
     return '<article class="us-row">' +
-      '<button type="button" class="us-row-media" data-us-open="' + esc(u.id) + '" aria-label="Ver fotos y ficha de ' + esc(u.nombre) + '">' +
+      '<div class="us-row-gallery"><button type="button" class="us-row-media" data-us-open="' + esc(u.id) + '" aria-label="Ver fotos y ficha de ' + esc(u.nombre) + '">' +
         (img ? '<img src="' + esc(img) + '" alt="' + esc(u.nombre) + '" loading="lazy" decoding="async">' : '<span class="us-ph">' + ICON_MOTO + "</span>") +
         (u.fotos.length > 1 ? '<span class="us-count-photos">' + u.fotos.length + " fotos</span>" : "") +
       "</button>" +
+      (u.fotos.length > 1 ? '<div class="us-row-thumbs">' + u.fotos.slice(0, 5).map((src, i) =>
+        '<button type="button" class="us-thumb' + (i ? "" : " is-on") + '" data-us-swap="' + esc(src) + '" aria-label="Mostrar foto ' + (i + 1) + '"><img src="' + esc(src) + '" alt="" loading="lazy" decoding="async"></button>'
+      ).join("") + (u.fotos.length > 5 ? '<button type="button" class="us-thumb us-thumb-more" data-us-open="' + esc(u.id) + '">+' + (u.fotos.length - 5) + "</button>" : "") + "</div>" : "") +
+      "</div>" +
       '<div class="us-row-info">' +
         '<p class="us-row-brand">' + esc(u.marca) + (u.destacada ? '<span class="us-flag">Destacada</span>' : "") + "</p>" +
         '<h2 class="us-row-name"><button type="button" data-us-open="' + esc(u.id) + '">' + esc(u.modelo) + "</button></h2>" +
@@ -198,6 +204,11 @@
 
   // --- Ficha (hoja que sube desde abajo) ---
   let sheet = null, opened = false, pushed = false, lastFocus = null;
+  let goTo = () => {};
+  const currentIndex = () => {
+    const tr = sheet && sheet.querySelector("[data-us-track]");
+    return tr ? Math.round(tr.scrollLeft / (tr.clientWidth || 1)) : 0;
+  };
   function buildSheet() {
     sheet = document.createElement("div");
     sheet.className = "us-sheet";
@@ -209,18 +220,37 @@
         '<div class="us-sheet-body" data-us-sheet-body></div>' +
       "</div>";
     document.body.appendChild(sheet);
-    sheet.addEventListener("click", (e) => { if (e.target.closest("[data-us-close]")) close(); });
-    document.addEventListener("keydown", (e) => { if (opened && e.key === "Escape") close(); });
+    sheet.addEventListener("click", (e) => {
+      if (e.target.closest("[data-us-close]")) return close();
+      const t = e.target.closest("[data-us-thumb]");
+      if (t) return goTo(Number(t.dataset.usThumb));
+      if (e.target.closest("[data-us-prev]")) return goTo(currentIndex() - 1);
+      if (e.target.closest("[data-us-next]")) return goTo(currentIndex() + 1);
+    });
+    document.addEventListener("keydown", (e) => {
+      if (!opened) return;
+      if (e.key === "Escape") close();
+      else if (e.key === "ArrowLeft") { e.preventDefault(); goTo(currentIndex() - 1); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); goTo(currentIndex() + 1); }
+    });
   }
 
   function sheetHtml(u) {
     const fotos = u.fotos.length ? u.fotos : [""];
     const f = facts(u, false);
-    return '<div class="us-gallery">' +
+    return '<div class="us-sheet-media"><div class="us-gallery">' +
         '<div class="us-gallery-track" data-us-track>' + fotos.map((src, i) =>
           '<div class="us-slide">' + (src ? '<img src="' + esc(src) + '" alt="' + esc(u.nombre) + ", foto " + (i + 1) + " de " + fotos.length + '"' + (i ? ' loading="lazy"' : "") + ' decoding="async">' : '<span class="us-ph">' + ICON_MOTO + "</span>") + "</div>"
         ).join("") + "</div>" +
-        (fotos.length > 1 ? '<span class="us-gallery-count" data-us-dots>1 / ' + fotos.length + "</span>" : "") +
+        (fotos.length > 1
+          ? '<span class="us-gallery-count" data-us-dots>1 / ' + fotos.length + "</span>" +
+            '<button type="button" class="us-gal-nav us-gal-prev" data-us-prev aria-label="Foto anterior">' + ICON_PREV + "</button>" +
+            '<button type="button" class="us-gal-nav us-gal-next" data-us-next aria-label="Foto siguiente">' + ICON_NEXT + "</button>"
+          : "") +
+      "</div>" +
+      (fotos.length > 1 ? '<div class="us-thumbs" role="group" aria-label="Fotos">' + fotos.map((src, i) =>
+        '<button type="button" class="us-thumb' + (i ? "" : " is-on") + '" data-us-thumb="' + i + '" aria-label="Ver foto ' + (i + 1) + '"' + (i ? "" : ' aria-current="true"') + '><img src="' + esc(src) + '" alt="" loading="lazy" decoding="async"></button>'
+      ).join("") + "</div>" : "") +
       "</div>" +
       '<div class="us-sheet-info">' +
         '<p class="us-row-brand">' + esc(u.marca) + (u.destacada ? '<span class="us-flag">Destacada</span>' : "") + "</p>" +
@@ -245,19 +275,42 @@
     sheet.querySelector("[data-us-sheet-body]").innerHTML = sheetHtml(u);
     const track = sheet.querySelector("[data-us-track]");
     const dots = sheet.querySelector("[data-us-dots]");
-    if (dots) {
+    const thumbs = Array.from(sheet.querySelectorAll("[data-us-thumb]"));
+    const total = track.children.length;
+    let cur = 0;
+    const sync = (i) => {
+      cur = i;
+      if (dots) dots.textContent = (i + 1) + " / " + total;
+      thumbs.forEach((t, n) => {
+        t.classList.toggle("is-on", n === i);
+        if (n === i) { t.setAttribute("aria-current", "true"); t.scrollIntoView({ block: "nearest", inline: "nearest" }); }
+        else t.removeAttribute("aria-current");
+      });
+      const prev = sheet.querySelector("[data-us-prev]"), next = sheet.querySelector("[data-us-next]");
+      if (prev) prev.disabled = i === 0;
+      if (next) next.disabled = i === total - 1;
+    };
+    goTo = (i) => {
+      i = Math.max(0, Math.min(total - 1, i));
+      track.scrollTo({ left: i * track.clientWidth, behavior: reduce ? "auto" : "smooth" });
+      sync(i);
+    };
+    if (total > 1) {
       let raf = 0;
       track.addEventListener("scroll", () => {
         if (raf) return;
         raf = requestAnimationFrame(() => {
           raf = 0;
           const i = Math.round(track.scrollLeft / (track.clientWidth || 1));
-          dots.textContent = (i + 1) + " / " + track.children.length;
+          if (i !== cur) sync(i);
         });
       }, { passive: true });
+      sync(0);
     }
     sheet.hidden = false;
     sheet.querySelector(".us-sheet-panel").scrollTop = 0;
+    const info = sheet.querySelector(".us-sheet-info");
+    if (info) info.scrollTop = 0;
     rollOdometers(sheet);
     document.body.style.overflow = "hidden";   // también pausa las animaciones de fondo (motion.js)
     requestAnimationFrame(() => sheet.classList.add("is-open"));
@@ -301,6 +354,14 @@
       });
     });
     grid.addEventListener("click", (e) => {
+      const sw = e.target.closest("[data-us-swap]");
+      if (sw) {
+        const gal = sw.closest(".us-row-gallery");
+        const img = gal.querySelector(".us-row-media img");
+        if (img) img.src = sw.dataset.usSwap;
+        gal.querySelectorAll(".us-thumb").forEach((t) => t.classList.toggle("is-on", t === sw));
+        return;
+      }
       const t = e.target.closest("[data-us-open]");
       if (t) open(t.dataset.usOpen);
     });
