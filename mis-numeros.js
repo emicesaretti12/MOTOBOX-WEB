@@ -116,13 +116,24 @@
     return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
   }
 
-  function waMensaje(f, tipo) {
+  // Monto a pagar según el plan elegido: lo guardado en el servidor, si no el precio del plan
+  // con esa cantidad de chances en la config, y si no el precio del manual (1 chance).
+  function montoAPagar(f, totalChances) {
+    const guardado = Number(f.monto_chances) || Number(f.monto) || 0;
+    if (guardado) return guardado;
+    const plan = (Array.isArray(C.paquetesChances) ? C.paquetesChances : []).find((p) => Number(p.chances) === totalChances);
+    return plan ? Number(plan.precio) || precio : precio;
+  }
+
+  function waMensaje(f, tipo, totalChances) {
     const numero = (f.numeros || []).map(pad).join(", ");
     const base = "Hola MOTOBOX! Soy " + f.nombre + (f.dni ? " (DNI " + f.dni + ")" : "") + ". Participo del Sorteo N.º " + C.id +
       " con el número " + numero + ".";
     const codigo = f.codigo ? " Código: " + f.codigo + "." : "";
     if (tipo === "pagar") {
-      return base + " Quiero pagar el " + manualNombre + (precio ? " ($" + fmt(precio) + ")" : "") +
+      const monto = montoAPagar(f, totalChances || 1);
+      const que = totalChances > 1 ? "el plan de " + totalChances + " chances (" + manualNombre + " incluido)" : "el " + manualNombre;
+      return base + " Quiero pagar " + que + (monto ? " ($" + fmt(monto) + ")" : "") +
         ". ¿Me pasan el alias para transferir? Después les envío el comprobante." + codigo;
     }
     if (tipo === "comprar") {
@@ -145,7 +156,7 @@
     const pagado = !!f.pagado;
     const rechazado = f.estado_pago === "rechazado";
     const nombre = String(f.nombre || "").split(" ")[0];
-    const montoChances = f.monto_chances || 0;
+    const monto = montoAPagar(f, totalChances);
     let i = 0;
 
     const tickets = numeros.map((n, k) =>
@@ -162,7 +173,7 @@
     if (f.compra_manual) {
       if (pagado) rows += row("ok", ICON_OK, "Manual pagado", "El vendedor confirmó tu pago. Ya podés descargar el manual.", i++);
       else if (rechazado) rows += row("no", ICON_NO, "Pago no confirmado", "No pudimos verificar el comprobante. Escribinos por WhatsApp. Tus números siguen participando.", i++);
-      else rows += row("wait", ICON_WAIT, "Pago del manual y chances pendiente", "Cuando el vendedor verifique tu transferencia, acá vas a ver «Pagado».", i++);
+      else rows += row("wait", ICON_WAIT, "Pago del manual y chances pendiente" + (monto ? " · $" + fmt(monto) : ""), "Cuando el vendedor verifique tu transferencia, acá vas a ver «Pagado».", i++);
     } else {
       rows += row("info", ICON_INFO, "Participación registrada", "Tus números están activos para el sorteo.", i++);
     }
@@ -177,8 +188,8 @@
     if (pagado) {
       actions += '<a class="rf-btn rf-btn-red" href="' + esc(MANUAL_URL) + '" target="_blank" rel="noopener" download>' + ICON_PDF + "<span>Descargar el manual (PDF)</span></a>";
     } else if (f.compra_manual) {
-      actions += '<a class="rf-btn rf-btn-wa" href="' + esc(waLink(waMensaje(f, rechazado ? "rechazado" : "pagar"))) + '" target="_blank" rel="noopener">' + ICON_WA +
-        "<span>" + (rechazado ? "Resolverlo por WhatsApp" : "Coordinar el pago por WhatsApp") + "</span></a>";
+      actions += '<a class="rf-btn rf-btn-wa" href="' + esc(waLink(waMensaje(f, rechazado ? "rechazado" : "pagar", totalChances))) + '" target="_blank" rel="noopener">' + ICON_WA +
+        "<span>" + (rechazado ? "Resolverlo por WhatsApp" : "Coordinar el pago" + (monto ? " · $" + fmt(monto) : " por WhatsApp")) + "</span></a>";
     } else {
       if (!f.telefono_verificado) {
         actions += '<a class="rf-btn rf-btn-wa" href="' + esc(waLink(waMensaje(f, "confirmar"))) + '" target="_blank" rel="noopener">' + ICON_WA + "<span>Confirmar por WhatsApp</span></a>";
