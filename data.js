@@ -36,19 +36,26 @@ if (typeof window !== "undefined" && window.supabase && typeof window.supabase.c
 }
 
 // --- Supabase REST helper ---
+// Con conexión lenta o si Supabase no responde, el pedido se corta a los 12 s
+// (sin esto el navegador podía quedarse esperando minutos).
 async function supabaseFetch(table, query = '') {
+  const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), 12000) : 0;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      }
+      },
+      signal: ctrl ? ctrl.signal : undefined
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch (e) {
     console.warn(`[MotoBox] Error fetching ${table}:`, e.message);
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -182,6 +189,8 @@ const SORTEO_CONFIG = {
   // Promo vigente: cartel en el popup del sorteo. Vacío = sin cartel de promo.
   // precioAntes en cada plan = precio original tachado (los combos tienen 30% OFF).
   promo: "Solo por esta semana",
+  // Video "Mirá cómo participar" del popup. Vacío = sin video.
+  video: "video/sorteo.mp4",
   fechaSorteo: "",                            // Vacío = "a confirmar"
   basesUrl: "sorteo.html",
   paquetesChances: [

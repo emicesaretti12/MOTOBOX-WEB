@@ -156,6 +156,11 @@
     "</div>"
   ).join("");
 
+  // Para no abrumar, a la vista quedan 1 chance, el primer combo, el más elegido y el de mejor
+  // precio; el resto aparece con "Ver todos los planes".
+  const isMainPack = (p, i) => i <= 1 || p.popular || p.mejor;
+  const extraPacks = ALL_PACKS.filter((p, i) => !isMainPack(p, i)).length;
+
   const packList = ALL_PACKS.map(function(p, i) {
     var badge = '';
     var off = p.precioAntes > p.precio ? Math.round((1 - p.precio / p.precioAntes) * 100) : 0;
@@ -170,7 +175,7 @@
       divider = '<div class="rf-pack-divider" aria-hidden="true"><span>O aumentá tus chances con más números</span></div>';
     }
 
-    var row = '<button type="button" class="rf-pack-row' + (i === 0 ? ' is-selected rf-pack-row--base' : '') + (p.premium ? ' rf-pack-row--premium' : '') + '" data-rf-pack="' + i + '">' +
+    var row = '<button type="button" class="rf-pack-row' + (i === 0 ? ' is-selected rf-pack-row--base' : '') + (p.premium ? ' rf-pack-row--premium' : '') + '" data-rf-pack="' + i + '"' + (isMainPack(p, i) ? '' : ' data-rf-extra hidden') + '>' +
       '<span class="rf-pack-radio"></span>' +
       '<span class="rf-pack-info">' +
         '<span class="rf-pack-title">' + p.label + badge + '</span>' +
@@ -183,7 +188,28 @@
     '</button>';
 
     return divider + row;
-  }).join('');
+  }).join('') + (extraPacks
+    ? '<button type="button" class="rf-pack-more" data-rf-more>Ver todos los planes (' + extraPacks + ' más)</button>'
+    : '');
+
+  // Video "Mirá cómo participar": la miniatura no descarga el video entero; se reproduce con
+  // sonido recién cuando la persona lo toca.
+  const VIDEO = C.video ? String(C.video) : "";
+  const ICON_PLAY = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>';
+  const videoCard = VIDEO
+    ? '<button type="button" class="rf-video-card" data-rf-video>' +
+        '<span class="rf-video-thumb"><video src="' + esc(VIDEO) + '#t=0.6" muted playsinline preload="metadata" tabindex="-1" aria-hidden="true"></video>' +
+        '<span class="rf-video-play">' + ICON_PLAY + '</span></span>' +
+        '<span class="rf-video-text"><strong>Mirá cómo participar</strong><span>Te lo explicamos en un video corto, desde el local.</span></span>' +
+        '<span class="rf-video-go" aria-hidden="true">Ver</span>' +
+      '</button>'
+    : '';
+  const howTo =
+    '<ol class="rf-howto">' +
+      '<li><b>1</b>Elegí tus chances</li>' +
+      '<li><b>2</b>Completá tus datos</li>' +
+      '<li><b>3</b>Pagás por WhatsApp</li>' +
+    '</ol>';
 
   const field = (name, label, attrs, hint) =>
     '<label class="rf-field" data-field="' + name + '"><span class="rf-label-t">' + label + "</span>" +
@@ -230,8 +256,10 @@
         <section class="rf-step is-active" data-step="chances">
           <div class="rf-head">
             <h3 class="rf-h">Elegí tus chances</h3>
-            <p class="rf-p">Más números = más probabilidades de ganar. Todos los planes incluyen el manual digital en PDF.</p>
+            <p class="rf-p">Más números, más chances de ganar. Todos los planes incluyen el manual en PDF.</p>
           </div>
+          ${howTo}
+          ${videoCard}
           ${PROMO ? '<p class="rf-promo">🔥 Promo · ' + esc(PROMO) + ': 1 chance a ' + money(precio) + (BASE_PACK.precioAntes > precio ? ' (antes ' + money(BASE_PACK.precioAntes) + ')' : '') + ' y 30% OFF en todos los combos</p>' : ''}
           <div class="rf-pack-list">${packList}</div>
           <div class="rf-cta-block">
@@ -297,7 +325,14 @@
           <p class="rf-legal">${legal}</p>
         </section>
       </div>
-    </div>`;
+    </div>
+    ${VIDEO ? `<div class="rf-vbox" data-rf-vbox hidden role="dialog" aria-modal="true" aria-label="Video: cómo participar del sorteo">
+      <div class="rf-vbox-frame">
+        <video data-rf-vbox-video playsinline controls preload="none"></video>
+        <button type="button" class="rf-icon-btn rf-vbox-x" data-rf-vbox-close aria-label="Cerrar el video">${ICON_CLOSE}</button>
+      </div>
+      <button type="button" class="rf-btn rf-btn-red rf-vbox-cta" data-rf-vbox-close>Quiero participar</button>
+    </div>` : ""}`;
 
   const pill = document.createElement("div");
   pill.className = "rf-pill";
@@ -576,6 +611,7 @@
         pack: { chances: totalChances, precio: pack.precio }
       };
       saveInscripcion();
+      clearDraft();
 
       // Guardar chances y notas en el servidor para que el CRM lo refleje siempre
       if (state.inscripcion.token) {
@@ -630,6 +666,7 @@
 
   function close() {
     if (!state.open) return;
+    closeVideo();
     state.open = false;
     resetTilt();
     document.documentElement.classList.remove("rf-lock");
@@ -712,17 +749,72 @@
     });
   }
 
+  // --- Video "Mirá cómo participar" ---
+  const vbox = $("[data-rf-vbox]");
+  const vboxVideo = $("[data-rf-vbox-video]");
+  function openVideo() {
+    if (!vbox) return;
+    if (!vboxVideo.getAttribute("src")) vboxVideo.src = VIDEO;
+    vbox.hidden = false;
+    vboxVideo.currentTime = 0;
+    const p = vboxVideo.play();
+    if (p && p.catch) p.catch(() => { /* sin autoplay: queda el botón de play */ });
+    $("[data-rf-vbox-close]").focus();
+  }
+  function closeVideo() {
+    if (!vbox || vbox.hidden) return;
+    vboxVideo.pause();
+    vbox.hidden = true;
+    const card = $("[data-rf-video]");
+    if (card && state.open) card.focus();
+  }
+  function showAllPacks(btn) {
+    root.querySelectorAll("[data-rf-extra]").forEach((row) => { row.hidden = false; });
+    btn.remove();
+  }
+
+  // --- Borrador del formulario ---
+  // Lo que la persona va escribiendo queda guardado en esta pestaña: si cierra el popup o
+  // va a leer las bases, al volver sigue donde estaba.
+  const DRAFT_KEY = KEY + "_borrador";
+  const DRAFT_FIELDS = ["dni", "nombre_completo", "fecha_nacimiento", "telefono", "email", "localidad", "codigo_postal", "direccion", "provincia"];
+  function saveDraft() {
+    const d = {};
+    DRAFT_FIELDS.forEach((k) => { if (form.elements[k]) d[k] = form.elements[k].value; });
+    d.pack = state.selectedPack;
+    writeKey("sessionStorage", DRAFT_KEY, JSON.stringify(d));
+  }
+  function loadDraft() {
+    let d = null;
+    try { d = JSON.parse(readKey("sessionStorage", DRAFT_KEY) || "null"); } catch (e) { d = null; }
+    if (!d) return;
+    DRAFT_FIELDS.forEach((k) => { if (d[k] && form.elements[k]) form.elements[k].value = d[k]; });
+    if (typeof d.pack === "number" && d.pack > 0) {
+      const row = root.querySelector('[data-rf-pack="' + d.pack + '"]');
+      if (row && row.hidden) { const more = $("[data-rf-more]"); if (more) showAllPacks(more); }
+      setPack(d.pack);
+    }
+  }
+  function clearDraft() {
+    try { if (window.sessionStorage) sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* almacenamiento bloqueado */ }
+  }
+
   // --- Eventos ---
   root.addEventListener("click", (e) => {
-    const t = e.target.closest("[data-rf-close], [data-rf-back], [data-rf-go], [data-rf-pack]");
+    if (vbox && e.target === vbox) { closeVideo(); return; }
+    const t = e.target.closest("[data-rf-close], [data-rf-back], [data-rf-go], [data-rf-pack], [data-rf-video], [data-rf-vbox-close], [data-rf-more]");
     if (!t || !root.contains(t)) return;
-    if (t.hasAttribute("data-rf-close")) close();
+    if (t.hasAttribute("data-rf-vbox-close")) closeVideo();
+    else if (t.hasAttribute("data-rf-video")) openVideo();
+    else if (t.hasAttribute("data-rf-more")) showAllPacks(t);
+    else if (t.hasAttribute("data-rf-close")) close();
     else if (t.hasAttribute("data-rf-back")) back();
-    else if (t.hasAttribute("data-rf-pack")) setPack(Number(t.dataset.rfPack));
+    else if (t.hasAttribute("data-rf-pack")) { setPack(Number(t.dataset.rfPack)); saveDraft(); }
     else if (t.hasAttribute("data-rf-go")) { if (!t.disabled) go(t.getAttribute("data-rf-go"), "fwd"); }
   });
   form.addEventListener("submit", submitForm);
-  form.addEventListener("input", (e) => { if (e.target.name) setError(e.target.name, ""); });
+  form.addEventListener("input", (e) => { if (e.target.name) setError(e.target.name, ""); saveDraft(); });
+  form.addEventListener("change", saveDraft);
 
   // Los links "Sorteo" del menú abren el popup en vez de navegar.
   document.addEventListener("click", (e) => {
@@ -750,16 +842,19 @@
 
   document.addEventListener("keydown", (e) => {
     if (!state.open) return;
+    const videoOpen = vbox && !vbox.hidden;
     if (e.key === "Escape") {
       e.preventDefault();
-      close();
+      if (videoOpen) closeVideo();
+      else close();
       return;
     }
     if (e.key !== "Tab") return;
-    const focusables = Array.from(dialog.querySelectorAll("a[href], button:not([disabled]), input, select")).filter((el) => el.offsetParent !== null);
+    const scope = videoOpen ? vbox : dialog;
+    const focusables = Array.from(scope.querySelectorAll("a[href], button:not([disabled]), input, select, video[controls]")).filter((el) => el.offsetParent !== null);
     if (!focusables.length) return;
     const first = focusables[0], last = focusables[focusables.length - 1];
-    if (e.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+    if (e.shiftKey && (document.activeElement === first || document.activeElement === scope)) {
       e.preventDefault();
       last.focus();
     } else if (!e.shiftKey && document.activeElement === last) {
@@ -773,6 +868,7 @@
     document.body.appendChild(root);
     document.body.appendChild(pill);
     state.inscripcion = loadInscripcion();
+    if (!state.inscripcion) loadDraft();
     bindTilt($("[data-rf-tilt-hit]"), $("[data-rf-tilt]"));
 
     if (window.location.hash === "#sorteo") {

@@ -770,12 +770,22 @@
   }
 
   // Async initialization to load CRM data from Supabase before rendering
+  // La página no espera más de 4 s a los datos del CRM: con internet lento (o si Supabase
+  // tarda) se dibuja igual, y cuando los datos llegan se actualiza sola.
   async function initApp() {
     if (typeof initDataFromCRM === "function") {
-      try {
-        await initDataFromCRM();
-      } catch (e) {
+      const crm = Promise.resolve().then(initDataFromCRM).catch((e) => {
         console.error("Error loading CRM data:", e);
+      });
+      const late = await Promise.race([
+        crm.then(() => false),
+        new Promise((resolve) => setTimeout(() => resolve(true), 4000))
+      ]);
+      if (late) {
+        crm.then(() => {
+          document.dispatchEvent(new CustomEvent("motobox:motos-updated", { detail: motos }));
+          document.dispatchEvent(new CustomEvent("motobox:promo-updated", { detail: PROMO_CRM }));
+        });
       }
     }
 
