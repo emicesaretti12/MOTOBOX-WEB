@@ -2315,7 +2315,8 @@ ul, ol { list-style: none; }
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 95;
+  /* Por encima de la intro de la portada y del cartel del sorteo: siempre se puede navegar. */
+  z-index: 10002;
   height: calc(var(--bottom-bar-height) + env(safe-area-inset-bottom, 0px));
   background: rgba(255, 255, 255, 0.97);
   border-top: 1px solid var(--border-subtle);
@@ -2334,12 +2335,16 @@ ul, ol { list-style: none; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.12rem;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 48px;
+  gap: 0.15rem;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 0.6rem;
+  font-size: 0.66rem;
   font-weight: 700;
   padding: 0.2rem 0;
+  -webkit-tap-highlight-color: transparent;
   transition: transform var(--transition-fast), opacity var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
 }
 .btn-dock-item.active { color: var(--accent-orange); }
@@ -3020,21 +3025,9 @@ input:focus-visible {
               box-shadow 0.25s ease;
 }
 
-/* ── MOBILE BOTTOM DOCK: entrada desde abajo ── */
-.mobile-bottom-dock {
-  animation: dockSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both;
-}
+/* ── MOBILE BOTTOM DOCK: sin animación de entrada. Es la navegación: tiene que estar
+   lista para tocar desde el primer momento, como la barra de pestañas de una app. ── */
 
-@keyframes dockSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 /* ── PRESIÓN: respuesta inmediata al tocar botones ── */
 .btn-hero-red:active,

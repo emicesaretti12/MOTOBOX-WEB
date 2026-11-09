@@ -1563,3 +1563,8 @@ html.rf-lock body {
 @media (hover: hover) {
   .rf-pack-more:hover { background: var(--rf-soft); }
 }
+
+/* En celular la hoja termina arriba de la barra de abajo: la navegación sigue a mano. */
+@media (max-width: 899px) {
+  .rf-dialog { bottom: calc(var(--bottom-bar-height, 56px) + env(safe-area-inset-bottom, 0px)); border-radius: 28px; }
+}
