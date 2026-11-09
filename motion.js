@@ -21,8 +21,15 @@
   const EASE_OUT = "cubic-bezier(0.23, 1, 0.32, 1)";
   const EASE_IN_OUT = "cubic-bezier(0.77, 0, 0.175, 1)";
 
-  const BRANDS = ["Honda", "Yamaha", "Suzuki", "Kawasaki", "Bajaj", "KTM", "Royal Enfield", "Benelli", "Voge", "TVS",
-    "Hero", "Motomel", "Keller", "Zanella", "Corven", "Gilera", "Guerrero", "Mondial", "Beta", "Brava"];
+  // Solo marcas que de verdad hay en el showroom. logo: archivo en img/marcas (si no hay, va el nombre).
+  const BRANDS = [
+    { name: "Honda", logo: "honda.svg" },
+    { name: "Yamaha", logo: "yamaha.svg" },
+    { name: "Keller" },
+    { name: "Motomel" },
+    { name: "TVS" },
+    { name: "Gilera" }
+  ];
 
   const ICON_MOTO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5l4-7h4l3 7"/><path d="M13.5 9.5l1.5-3h2.5"/><path d="M9 9.5H6.5"/></svg>';
 
@@ -356,63 +363,23 @@
     }
   }
 
-  // ── 4. Cinta de marcas (velocidad e inclinación según el scroll) ─────────
+  // ── 4. Marcas del showroom (logos, sin animación: tiene que leerse) ─────
   function buildMarquee(anchor, where) {
     if (!anchor) return;
-    const half = Math.ceil(BRANDS.length / 2);
-    const rowHtml = (list, outline) => {
-      const items = list.map((b) => '<span class="mx-marquee-item">' + esc(b) + "<i></i></span>").join("");
-      return '<div class="mx-marquee-row' + (outline ? " mx-marquee-row--outline" : "") + '">' +
-        '<div class="mx-marquee-track">' + items + "</div>" +
-        '<div class="mx-marquee-track" aria-hidden="true">' + items + "</div>" +
-      "</div>";
-    };
+    const items = BRANDS.map((b) =>
+      '<li class="mx-brand">' + (b.logo
+        ? '<img src="img/marcas/' + esc(b.logo) + '" alt="' + esc(b.name) + '" width="40" height="40" loading="lazy" decoding="async"><span>' + esc(b.name) + "</span>"
+        : '<span class="mx-brand-word">' + esc(b.name) + "</span>") +
+      "</li>").join("");
     const section = document.createElement("section");
-    section.className = "mx-marquee";
-    section.setAttribute("aria-label", "Marcas que trabajamos: " + BRANDS.join(", "));
-    section.innerHTML = rowHtml(BRANDS.slice(0, half), false) + rowHtml(BRANDS.slice(half), true);
+    section.className = "mx-brands";
+    section.setAttribute("aria-labelledby", "mx-brands-title");
+    section.innerHTML =
+      '<div class="mx-brands-in">' +
+        '<p class="mx-brands-title" id="mx-brands-title">Marcas que tenemos en el showroom</p>' +
+        '<ul class="mx-brands-list">' + items + "</ul>" +
+      "</div>";
     if (where === "before") anchor.before(section); else anchor.after(section);
-    if (reduce) return;
-    if (!finePointer) {
-      // Celular: la cinta corre con CSS y se pausa fuera de pantalla.
-      section.classList.add("mx-marquee--css");
-      pauseOffscreen(section);
-      return;
-    }
-
-    const rows = Array.from(section.querySelectorAll(".mx-marquee-row")).map((row, i) => ({
-      el: row, x: 0, dir: i % 2 ? 1 : -1, width: row.firstElementChild.offsetWidth
-    }));
-    const measure = () => rows.forEach((r) => { r.width = r.el.firstElementChild.offsetWidth; });
-    window.addEventListener("resize", measure);
-    rows.forEach((r) => { if (r.dir > 0) r.x = -r.width / 2; });
-
-    // Movimiento constante = lineal; el scroll suma velocidad y una leve inclinación.
-    let visible = false, lastY = window.scrollY, boost = 0, last = performance.now(), raf = 0;
-    const tick = (now) => {
-      const dt = Math.min(64, now - last);
-      last = now;
-      const y = window.scrollY;
-      boost += (clamp((y - lastY) * 0.9, -40, 40) - boost) * 0.12;
-      lastY = y;
-      rows.forEach((r) => {
-        if (!r.width) return;
-        r.x += r.dir * (0.045 * dt + Math.abs(boost) * 0.35);
-        if (r.x <= -r.width) r.x += r.width;
-        if (r.x > 0) r.x -= r.width;
-        const skew = clamp(boost * 0.25, -8, 8) * -r.dir;
-        r.el.style.transform = "translate3d(" + r.x.toFixed(2) + "px,0,0) skewX(" + skew.toFixed(2) + "deg)";
-      });
-      raf = (visible && !lock.on && !document.hidden) ? requestAnimationFrame(tick) : 0;
-    };
-    const run = () => {
-      cancelAnimationFrame(raf);
-      raf = 0;
-      if (visible && !lock.on && !document.hidden) { last = performance.now(); lastY = window.scrollY; raf = requestAnimationFrame(tick); }
-    };
-    new IntersectionObserver((entries) => { visible = entries[0].isIntersecting; run(); }).observe(section);
-    onLock(run);
-    document.addEventListener("visibilitychange", run);
   }
 
   // ── 5. Escenario 3D del sorteo ───────────────────────────────────────────
@@ -1581,7 +1548,7 @@
   function buildSections() {
     if (page === "home") {
       buildMarquee($(".simple-hero"), "after");
-      buildShowroom($(".mx-marquee"));
+      buildShowroom($(".mx-brands"));
       buildStory($("#catalogo-home"));
       buildSorteo($("#promo-poster-section"), "before");
     } else if (page === "catalogo") {
@@ -1630,7 +1597,7 @@
     const tasks = page === "home"
       ? [
           () => buildMarquee($(".simple-hero"), "after"),
-          () => buildShowroom($(".mx-marquee")),
+          () => buildShowroom($(".mx-brands")),
           () => buildStory($("#catalogo-home")),
           () => buildSorteo($("#promo-poster-section"), "before")
         ]

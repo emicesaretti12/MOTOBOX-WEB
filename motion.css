@@ -158,62 +158,89 @@ html.mx-intro-on .mx-word { animation-play-state: paused; }
   100% { opacity: 0; }
 }
 
-/* ── 3. Cinta de marcas ───────────────────────────────────────────────── */
-.mx-marquee {
-  position: relative;
-  overflow: hidden;
-  padding: 1.6rem 0;
+/* ── 3. Marcas del showroom ────────────────────────────────────────────── */
+.mx-brands {
   background: var(--mx-ink);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-.mx-marquee::before,
-.mx-marquee::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 12vw;
-  z-index: 2;
-  pointer-events: none;
-}
-.mx-marquee::before { left: 0; background: linear-gradient(90deg, var(--mx-ink), transparent); }
-.mx-marquee::after  { right: 0; background: linear-gradient(-90deg, var(--mx-ink), transparent); }
-.mx-marquee-row {
-  display: flex;
-  width: max-content;
-  will-change: transform;
-}
-.mx-marquee-row + .mx-marquee-row { margin-top: 0.35rem; }
-.mx-marquee-track {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-.mx-marquee-item {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: clamp(1.8rem, 5vw, 3.6rem);
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-  white-space: nowrap;
-  padding: 0 0.55em;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   color: #fff;
 }
-.mx-marquee-row--outline .mx-marquee-item {
-  color: transparent;
-  -webkit-text-stroke: 1.2px rgba(255, 255, 255, 0.4);
+.mx-brands-in {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.6rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
 }
-.mx-marquee-item i {
-  display: inline-block;
-  width: 0.28em;
-  height: 0.28em;
-  margin-left: 1.1em;
-  vertical-align: middle;
-  border-radius: 50%;
-  background: var(--mx-red);
+.mx-brands-title {
+  margin: 0;
+  flex: 0 0 auto;
+  max-width: 11em;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.62);
 }
-.mx-marquee-row--outline .mx-marquee-item i { background: rgba(255, 255, 255, 0.25); }
+.mx-brands-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: center;
+}
+.mx-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 56px;
+  padding: 0 0.5rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+.mx-brand img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+.mx-brand-logo img { width: auto; height: 30px; max-width: 120px; }
+.mx-brand span,
+.mx-brand-word {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .mx-brands-in { flex-direction: column; align-items: stretch; gap: 0.9rem; padding: 1.3rem 1rem; }
+  .mx-brands-title { max-width: none; text-align: center; font-size: 0.9rem; }
+  .mx-brands-list { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 0.4rem; }
+  .mx-brand { border-left: 0; min-height: 48px; }
+  .mx-brand img { width: 28px; height: 28px; }
+  .mx-brand span, .mx-brand-word { font-size: 1rem; }
+}
+
+/* Señales de confianza bajo los botones del hero */
+.hero-trust {
+  list-style: none;
+  margin: 1.6rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1.5rem;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.78);
+}
+.hero-trust li { display: flex; align-items: center; gap: 0.45rem; }
+.hero-trust svg { flex: none; color: var(--mx-red); }
+.hero-trust a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, 0.35); }
+@media (max-width: 640px) {
+  .hero-trust { flex-direction: column; width: fit-content; margin-inline: auto; gap: 0.45rem; font-size: 0.86rem; text-align: left; }
+}
 
 /* ── 4. Escenario 3D del sorteo (portada) ─────────────────────────────── */
 .mx-sorteo {
@@ -1194,11 +1221,6 @@ html.mx-intro-on .simple-hero.mx-sway .simple-hero-title,
 /* =========================================================================
    25. Cinta de marcas en celular: animación CSS continua (sin JS por cuadro)
    ========================================================================= */
-.mx-marquee--css .mx-marquee-row { animation: mxMarquee 38s linear infinite; }
-.mx-marquee--css .mx-marquee-row + .mx-marquee-row { animation-duration: 46s; animation-direction: reverse; }
-@keyframes mxMarquee { to { transform: translate3d(-50%, 0, 0); } }
-.mx-off.mx-marquee--css .mx-marquee-row,
-.mx-paused .mx-marquee--css .mx-marquee-row { animation-play-state: paused; }
 
 /* =========================================================================
    26. Portada en celular: las motos en un carrusel como el de una app
@@ -1307,7 +1329,7 @@ html.mx-intro-on .simple-hero.mx-sway .simple-hero-title,
 @keyframes mxSkel { to { transform: translateX(100%); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .moto-skel::after, .simple-hero.mx-sway .simple-hero-title, .mx-marquee--css .mx-marquee-row { animation: none !important; }
+  .moto-skel::after, .simple-hero.mx-sway .simple-hero-title { animation: none !important; }
   .mx-carousel.mx-car-pre { opacity: 1; transform: none; }
 }
 
