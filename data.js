@@ -68,6 +68,26 @@ const cleanUrl = (v) => {
   return /^https:\/\/[^\s"'<>()]+$/i.test(u) || /^img\/[\w./-]+$/.test(u) ? u : '';
 };
 
+// --- Textos prolijos aunque en el CRM se carguen en MAYÚSCULAS o minúsculas ---
+// "YAMAHA" → "Yamaha", "XR 300 TORNADO" → "XR 300 Tornado", "bliz" → "Bliz". Siglas cortas y
+// palabras con números (TVS, XR, CB300) quedan como están. Si ya viene mezclado, no se toca.
+const prettyName = (v) => {
+  const t = String(v || '').trim().replace(/\s+/g, ' ');
+  if (!t || (t !== t.toUpperCase() && t !== t.toLowerCase())) return t;
+  return t.split(' ').map((w) => (/\d/.test(w) || (w.length <= 3 && w === w.toUpperCase()))
+    ? w.toUpperCase()
+    : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+};
+const isNum = (v) => /^\d+([.,]\d+)?$/.test(String(v || '').trim());
+// "12" → "12 HP"; si ya trae la unidad, queda igual.
+const fmtPotencia = (v) => (isNum(v) ? String(v).trim().replace('.', ',') + ' HP' : String(v || '').trim());
+// "2,1" → "2,1 L/100 km"; "40" → "40 km/L" (nadie gasta 40 litros cada 100 km).
+const fmtConsumo = (v) => {
+  if (!isNum(v)) return String(v || '').trim();
+  const n = parseFloat(String(v).replace(',', '.'));
+  return String(v).trim().replace('.', ',') + (n > 15 ? ' km/L' : ' L/100 km');
+};
+
 // --- Fetch motos from CRM ---
 async function fetchMotosFromCRM() {
   // Direct select with order, filtering performed in JS for 100% resilience across all schema versions
@@ -87,22 +107,22 @@ async function fetchMotosFromCRM() {
     const imagenUrl = cleanUrl(raw.imagen_url);
     return {
     id: m.id || idx + 1,
-    marca: m.marca || '',
-    modelo: m.modelo || '',
+    marca: prettyName(m.marca),
+    modelo: prettyName(m.modelo),
     categoria: m.categoria || 'economica',
     categoriaLabel: CAT_LABELS[m.categoria] || m.categoria || 'General',
     imagen: imagenUrl || (imagenes.length ? imagenes[0] : `img/motos/placeholder.jpg`),
     imagenes: imagenes.length ? imagenes : (imagenUrl ? [imagenUrl] : []),
     disponible: m.estado === 'disponible',
     cilindrada: m.cilindrada ? `${m.cilindrada} cc` : '',
-    consumo: m.consumo || '',
-    potencia: m.potencia || '',
+    consumo: fmtConsumo(m.consumo),
+    potencia: fmtPotencia(m.potencia),
     frenos: m.frenos || '',
     tanque: m.tanque || '',
     arranque: m.arranque || '',
     destacada: Boolean(m.destacada),
     badge: m.destacada ? 'Destacada' : (m.estado === 'reservada' ? 'Reservada' : ''),
-    tagline: m.tagline || `${m.marca} ${m.modelo} — disponible en nuestro showroom.`,
+    tagline: m.tagline || `${prettyName(m.marca)} ${prettyName(m.modelo)}, disponible en nuestro showroom.`,
     precio: m.precio || null,
     color: m.color || '',
     anio: m.anio || null,

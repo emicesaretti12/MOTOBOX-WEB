@@ -916,239 +916,80 @@
     update();
   }
 
-  // ── 13. Showroom 360° (portada) ──────────────────────────────────────────
-  // Las motos en un anillo 3D sobre una plataforma giratoria. Se arrastra con inercia
-  // (velocidad al soltar) y encaja en la moto más cercana con un resorte; avanza solo
-  // cada pocos segundos mientras nadie lo toca.
+  // ── 13. Showroom (portada) ─────────────────────────────────────────────────
+  // Carrusel nativo: se desliza con el dedo o el trackpad y frena en cada moto (scroll-snap).
+  // Las fotos de catálogo con fondo blanco se funden con el fondo de estudio de la tarjeta;
+  // las fotos verticales (sacadas con el celular en el local) ocupan toda la tarjeta.
   function buildShowroom(anchor) {
     if (!anchor) return;
     const section = document.createElement("section");
     section.className = "mx-showroom";
-    section.setAttribute("aria-label", "Showroom 360°");
+    section.setAttribute("aria-labelledby", "mx-sr-title");
     section.innerHTML =
       '<div class="container mx-sr-head">' +
-        '<h2 class="mx-sr-title" data-mx-chars>Showroom 360°</h2>' +
-        '<p class="mx-sr-hint">Arrastrá para girar o usá las flechas.</p>' +
-      "</div>" +
-      '<div class="mx-sr-stage" tabindex="0" role="group" aria-roledescription="carrusel" aria-label="Motos del showroom">' +
-        '<div class="mx-sr-spot" aria-hidden="true"></div>' +
-        '<div class="mx-sr-tilt"><div class="mx-sr-ring"></div></div>' +
-      "</div>" +
-      '<div class="container mx-sr-info">' +
-        '<div class="mx-sr-meta" aria-live="polite"></div>' +
-        '<div class="mx-sr-side">' +
-          '<div class="mx-sr-ctrl">' +
-            '<button type="button" class="mx-sr-btn" data-sr="prev" aria-label="Moto anterior"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>' +
-            '<span class="mx-sr-count"></span>' +
-            '<button type="button" class="mx-sr-btn" data-sr="next" aria-label="Moto siguiente"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>' +
-          "</div>" +
-          '<div class="mx-sr-cta"></div>' +
+        '<div><h2 class="mx-sr-title" id="mx-sr-title">En el showroom hoy</h2>' +
+        '<p class="mx-sr-hint" data-sr-hint></p></div>' +
+        '<div class="mx-sr-ctrl">' +
+          '<button type="button" class="mx-sr-btn" data-sr="prev" aria-label="Ver motos anteriores"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+          '<button type="button" class="mx-sr-btn" data-sr="next" aria-label="Ver más motos"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>' +
         "</div>" +
-      "</div>";
+      "</div>" +
+      '<ul class="mx-sr-track" tabindex="0" aria-label="Motos del showroom"></ul>';
     anchor.after(section);
 
-    const stage = section.querySelector(".mx-sr-stage");
-    const tiltEl = section.querySelector(".mx-sr-tilt");
-    const ring = section.querySelector(".mx-sr-ring");
-    const meta = section.querySelector(".mx-sr-meta");
-    const count = section.querySelector(".mx-sr-count");
-    const cta = section.querySelector(".mx-sr-cta");
+    const track = section.querySelector(".mx-sr-track");
+    const hint = section.querySelector("[data-sr-hint]");
+    const prev = section.querySelector('[data-sr="prev"]');
+    const next = section.querySelector('[data-sr="next"]');
+    const wa = (m) => "https://wa.me/5493516312930?text=" + encodeURIComponent("Hola Motobox! Quiero consultar por la " + m.marca + " " + m.modelo + " 0km que vi en la web.");
 
-    let items = [], list = [], N = 0, step = 0, R = 0, W = 0, Hc = 0;
-    let rot = 0, target = 0, vel = 0, mode = "rest", active = -1;
-    let dragging = false, dragX = 0, dragRot = 0, moved = 0, samples = [];
-    let raf = 0, last = 0, visible = false, idleAt = performance.now(), hover = false, tiltNow = -16, tiltGoal = -16;
-    // Inclinación extra del escenario: mouse encima (compu) o giroscopio (celular).
-    const lean = { x: 0, y: 0 }, leanGoal = { x: 0, y: 0 };
+    function card(m) {
+      const specs = [m.cilindrada, m.potencia, m.consumo].filter(Boolean).slice(0, 3)
+        .map((v) => "<li>" + esc(v) + "</li>").join("");
+      return '<li class="mx-sr-card">' +
+        '<div class="mx-sr-photo"><img src="' + esc(m.imagen) + '" alt="' + esc(m.marca + " " + m.modelo) + '" loading="lazy" decoding="async" draggable="false"></div>' +
+        '<div class="mx-sr-body">' +
+          '<p class="mx-sr-brand">' + esc(m.marca) + "</p>" +
+          '<h3 class="mx-sr-model">' + esc(m.modelo) + "</h3>" +
+          (specs ? '<ul class="mx-sr-specs">' + specs + "</ul>" : "") +
+          '<a class="mx-sr-wa" href="' + wa(m) + '" target="_blank" rel="noopener">Consultar esta moto</a>' +
+        "</div>" +
+      "</li>";
+    }
 
-    const wa = (m) => "https://wa.me/5493516312930?text=" + encodeURIComponent("Hola Motobox! Quiero consultar por la " + m.marca + " " + m.modelo + " 0km que vi en el showroom de la web.");
-
-    function layout() {
-      const small = window.innerWidth < 700;
-      W = small ? Math.round(Math.min(250, window.innerWidth * 0.62)) : 340;
-      Hc = Math.round(W * 0.78);
-      R = Math.max(W * 0.9, (W + (small ? 26 : 46)) / (2 * Math.tan(Math.PI / N)));
-      stage.style.setProperty("--sr-w", W + "px");
-      stage.style.setProperty("--sr-h", Hc + "px");
-      stage.style.setProperty("--sr-r", R + "px");
-      stage.style.perspective = (small ? 900 : 1500) + "px";
-      items.forEach((el, i) => { el.style.transform = "rotateY(" + (i * step) + "deg) translateZ(" + R.toFixed(1) + "px)"; });
-      const disc = ring.querySelector(".mx-sr-disc");
-      if (disc) disc.style.setProperty("--sr-d", (R * 2 + W * 0.9).toFixed(0) + "px");
+    // Foto vertical o casi cuadrada sacada en el local: llena la tarjeta en vez de quedar chiquita.
+    function fit(img) {
+      const w = img.naturalWidth, h = img.naturalHeight;
+      if (!w || !h) return;
+      img.closest(".mx-sr-photo").classList.toggle("is-photo", h > w * 0.95);
     }
 
     function setData(source) {
-      const base = (source || []).filter((m) => m && m.imagen);
-      if (!base.length) { section.hidden = true; return; }
+      const list = (source || []).filter((m) => m && m.imagen);
+      if (!list.length) { section.hidden = true; return; }
       section.hidden = false;
-      list = base.slice();
-      // Con pocas motos se repiten para que el anillo quede lleno (las copias no se anuncian).
-      const reps = Math.max(1, Math.ceil(8 / base.length));
-      const ringList = [];
-      for (let r = 0; r < reps; r++) base.forEach((m, i) => ringList.push({ m: m, i: i, copy: r > 0 }));
-      N = ringList.length;
-      step = 360 / N;
-      ring.innerHTML = '<div class="mx-sr-disc" aria-hidden="true"></div>' + ringList.map((it) =>
-        '<div class="mx-sr-item"' + (it.copy ? ' aria-hidden="true"' : "") + ' data-i="' + it.i + '">' +
-          '<div class="mx-sr-card"><img src="' + esc(it.m.imagen) + '" alt="' + (it.copy ? "" : esc(it.m.marca + " " + it.m.modelo)) + '" loading="lazy" draggable="false">' +
-          '<span class="mx-sr-tag">' + esc(it.m.marca) + "</span></div>" +
-        "</div>"
-      ).join("");
-      items = Array.from(ring.querySelectorAll(".mx-sr-item"));
-      layout();
-      active = -1;
-      rot = target = Math.round(rot / step) * step;
-      paint(true);
-      kick();
-    }
-
-    function showInfo(idx, instant) {
-      const m = list[idx % list.length];
-      if (!m) return;
-      const specs = [m.cilindrada, m.potencia, m.consumo].filter(Boolean).slice(0, 3)
-        .map((v) => "<li>" + esc(v) + "</li>").join("");
-      const html =
-        '<p class="mx-sr-brand">' + esc(m.marca) + (m.categoriaLabel ? " · " + esc(m.categoriaLabel) : "") + "</p>" +
-        '<h3 class="mx-sr-model">' + esc(m.modelo) + "</h3>" +
-        (specs ? '<ul class="mx-sr-specs">' + specs + "</ul>" : "");
-      const swap = () => {
-        meta.innerHTML = html;
-        cta.innerHTML = '<a class="btn-hero-red mx-magnetic" href="' + wa(m) + '" target="_blank" rel="noopener">Consultar esta moto</a>' +
-          '<a class="mx-sr-link" href="catalogo.html">Ver catálogo</a>';
-        count.textContent = String((idx % list.length) + 1).padStart(2, "0") + " / " + String(list.length).padStart(2, "0");
-      };
-      if (instant || reduce || !meta.animate) { swap(); return; }
-      // Fundido con un leve desenfoque: une las dos fichas en una sola transición.
-      meta.animate([{ opacity: 1, filter: "blur(0px)", transform: "none" }, { opacity: 0, filter: "blur(6px)", transform: "translateY(-6px)" }],
-        { duration: 140, easing: "ease-in-out", fill: "forwards" }).onfinish = () => {
-        swap();
-        meta.animate([{ opacity: 0, filter: "blur(6px)", transform: "translateY(8px)" }, { opacity: 1, filter: "blur(0px)", transform: "none" }],
-          { duration: 260, easing: EASE_OUT, fill: "forwards" });
-      };
-    }
-
-    function paint(force) {
-      ring.style.transform = "translateZ(" + (-R).toFixed(1) + "px) rotateY(" + rot.toFixed(3) + "deg)";
-      tiltEl.style.transform = "rotateX(" + (tiltNow + lean.y * -7).toFixed(2) + "deg) rotateY(" + (lean.x * 12).toFixed(2) + "deg) rotateZ(" + (lean.x * -1.5).toFixed(2) + "deg)";
-      for (let i = 0; i < items.length; i++) {
-        let a = ((i * step + rot) % 360 + 540) % 360 - 180;
-        const c = Math.cos(a * Math.PI / 180);
-        items[i].style.opacity = (0.12 + 0.88 * Math.pow((c + 1) / 2, 2.2)).toFixed(3);
-        items[i].classList.toggle("is-front", Math.abs(a) < step / 2);
-      }
-      const idx = ((Math.round(-rot / step) % N) + N) % N;
-      const real = items[idx] ? Number(items[idx].dataset.i) : 0;
-      if (real !== active || force) {
-        if (!force && active !== -1) tick();
-        active = real;
-        showInfo(real, force);
-      }
-    }
-
-    function frame(now) {
-      const dt = Math.min(0.05, (now - last) / 1000 || 0.016);
-      last = now;
-      if (!dragging) {
-        if (mode === "glide") {
-          rot += vel * dt;
-          vel *= Math.exp(-3.2 * dt);
-          if (Math.abs(vel) < 40) { mode = "snap"; target = Math.round(rot / step) * step; vel *= 0.5; }
-        }
-        if (mode === "snap" || mode === "rest") {
-          const a = 70 * (target - rot) - 13 * vel;
-          vel += a * dt;
-          rot += vel * dt;
-          if (Math.abs(target - rot) < 0.01 && Math.abs(vel) < 0.05) { rot = target; vel = 0; mode = "rest"; }
-        }
-      }
-      tiltNow += (tiltGoal - tiltNow) * Math.min(1, dt * 6);
-      lean.x += (leanGoal.x - lean.x) * Math.min(1, dt * 5);
-      lean.y += (leanGoal.y - lean.y) * Math.min(1, dt * 5);
-      paint(false);
-      // El bucle corre solo mientras algo se mueve; quieto no gasta nada.
-      const busy = dragging || mode !== "rest" || Math.abs(tiltGoal - tiltNow) > 0.02 ||
-        Math.abs(leanGoal.x - lean.x) > 0.003 || Math.abs(leanGoal.y - lean.y) > 0.003;
-      raf = busy ? requestAnimationFrame(frame) : 0;
-    }
-    function kick() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
-    // Avance automático: un reloj liviano en vez de un bucle por cuadro.
-    setInterval(() => {
-      const now = performance.now();
-      if (mode !== "rest" || dragging || hover || !visible || reduce || lock.on || document.hidden || now - idleAt < 3600) return;
-      target -= step; mode = "snap"; idleAt = now; kick();
-    }, 400);
-    const go = (dir) => { target = Math.round(target / step) * step - dir * step; mode = "snap"; idleAt = performance.now(); kick(); };
-
-    stage.addEventListener("pointerdown", (e) => {
-      if (e.button !== 0) return;
-      dragging = true; moved = 0; dragX = e.clientX; dragRot = rot; samples = [{ t: e.timeStamp, x: e.clientX }];
-      stage.setPointerCapture(e.pointerId);
-      stage.classList.add("is-dragging");
-      kick();
-    });
-    stage.addEventListener("pointermove", (e) => {
-      if (!dragging) return;
-      const dx = e.clientX - dragX;
-      moved = Math.max(moved, Math.abs(dx));
-      rot = dragRot + dx * (step / (W + 40)) * 1.1;
-      samples.push({ t: e.timeStamp, x: e.clientX });
-      if (samples.length > 6) samples.shift();
-    });
-    const release = (e) => {
-      if (!dragging) return;
-      dragging = false;
-      stage.classList.remove("is-dragging");
-      const a = samples[0], b = samples[samples.length - 1];
-      const dtv = Math.max(1, b.t - a.t);
-      // Un gesto rápido alcanza: la velocidad decide, no solo la distancia.
-      vel = ((b.x - a.x) / dtv) * 1000 * (step / (W + 40)) * 1.1;
-      mode = Math.abs(vel) > 60 ? "glide" : "snap";
-      target = Math.round(rot / step) * step;
-      idleAt = performance.now();
-      if (moved < 6 && e && e.target && e.target.closest) {
-        const item = e.target.closest(".mx-sr-item");
-        if (item && !item.classList.contains("is-front")) {
-          const i = items.indexOf(item);
-          target = -i * step + Math.round((rot + i * step) / 360) * 360;
-          mode = "snap";
-        }
-      }
-      kick();
-    };
-    stage.addEventListener("pointerup", release);
-    stage.addEventListener("pointercancel", release);
-    stage.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
-      else if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
-    });
-    section.querySelector('[data-sr="prev"]').addEventListener("click", () => go(-1));
-    section.querySelector('[data-sr="next"]').addEventListener("click", () => go(1));
-    if (finePointer) {
-      stage.addEventListener("pointermove", (e) => {
-        if (dragging) { leanGoal.x = 0; leanGoal.y = 0; kick(); return; }
-        const r = stage.getBoundingClientRect();
-        leanGoal.x = clamp((e.clientX - r.left) / r.width * 2 - 1, -1, 1);
-        leanGoal.y = clamp((e.clientY - r.top) / r.height * 2 - 1, -1, 1);
-        kick();
+      track.innerHTML = list.map(card).join("");
+      track.scrollLeft = 0;
+      hint.textContent = list.length + (list.length === 1 ? " moto lista para ver y llevar." : " motos listas para ver y llevar. Deslizá para recorrerlas.");
+      track.querySelectorAll("img").forEach((img) => {
+        if (img.complete) fit(img); else img.addEventListener("load", () => fit(img), { once: true });
+        img.addEventListener("error", () => { img.closest(".mx-sr-photo").classList.add("is-missing"); }, { once: true });
       });
-      stage.addEventListener("pointerleave", () => { leanGoal.x = 0; leanGoal.y = 0; kick(); });
-    } else {
-      onGyro((x, y) => {
-        if (!visible) return;
-        // Zona muerta: el temblor natural de la mano no despierta el bucle.
-        if (Math.abs(x - leanGoal.x) < 0.02 && Math.abs(y - leanGoal.y) < 0.02) return;
-        leanGoal.x = x; leanGoal.y = y; kick();
-      });
+      edges();
     }
-    stage.addEventListener("pointerenter", () => { hover = true; });
-    stage.addEventListener("pointerleave", () => { hover = false; idleAt = performance.now(); });
 
-    // Al entrar en pantalla la cámara baja de una vista en picada a la altura del showroom.
-    new IntersectionObserver((entries) => {
-      visible = entries[0].isIntersecting;
-      if (visible) { tiltGoal = window.innerWidth < 700 ? -8 : -10; idleAt = performance.now(); kick(); }
-    }, { threshold: 0.25 }).observe(stage);
-    window.addEventListener("resize", () => { if (N) { layout(); paint(true); } });
+    // Flechas (compu): avanzan de a una tarjeta; se apagan en los extremos.
+    const stepPx = () => { const c = track.querySelector(".mx-sr-card"); return c ? c.offsetWidth + parseFloat(getComputedStyle(track).columnGap || 16) : 300; };
+    function edges() {
+      const max = track.scrollWidth - track.clientWidth - 2;
+      prev.disabled = track.scrollLeft <= 2;
+      next.disabled = track.scrollLeft >= max;
+    }
+    let edgeRaf = 0;
+    track.addEventListener("scroll", () => { if (!edgeRaf) edgeRaf = requestAnimationFrame(() => { edgeRaf = 0; edges(); }); }, { passive: true });
+    prev.addEventListener("click", () => track.scrollBy({ left: -stepPx(), behavior: reduce ? "auto" : "smooth" }));
+    next.addEventListener("click", () => track.scrollBy({ left: stepPx(), behavior: reduce ? "auto" : "smooth" }));
+    window.addEventListener("resize", edges);
 
     setData(typeof motos !== "undefined" ? motos : []);
     const refresh = () => setData(typeof motos !== "undefined" ? motos : []);
@@ -1352,26 +1193,6 @@
       el.classList.add("mx-pre");
       io.observe(el);
     });
-  }
-
-  // ── 16. Scroll suave (solo con mouse o trackpad) ─────────────────────────
-  function initSmoothScroll() {
-    if (reduce || !finePointer || typeof Lenis === "undefined") return;
-    const lenis = new Lenis({
-      lerp: 0.11,
-      wheelMultiplier: 1,
-      anchors: { offset: -70 },
-      prevent: (node) => !!(node.closest && node.closest(".rf, .assistant-modal-backdrop, .moto-gallery-track, [data-lenis-prevent]"))
-    });
-    const loop = (t) => { lenis.raf(t); requestAnimationFrame(loop); };
-    requestAnimationFrame(loop);
-    // Con el popup o la ficha abiertos, el scroll de la página se detiene.
-    const sync = () => {
-      const locked = root.classList.contains("rf-lock") || document.body.style.overflow === "hidden";
-      if (locked) lenis.stop(); else lenis.start();
-    };
-    new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ["class"] });
-    new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ["style"] });
   }
 
   // ── 18. Nosotros: la foto del showroom se inclina en 3D ──────────────────
@@ -1586,8 +1407,6 @@
 
   function init() {
     initLockWatch();
-    initSmoothScroll();
-    initGyro();
     runIntro();
     initHero();
     initPageEntrance();
@@ -1602,7 +1421,7 @@
           () => buildSorteo($("#promo-poster-section"), "before")
         ]
       : [buildSections];
-    tasks.push(initCharTitles, initReveals, initCards, initHomeCarousel, initTouch3D, initFooterWord, initAboutTilt);
+    tasks.push(initCharTitles, initReveals, initCards, initHomeCarousel, initFooterWord, initAboutTilt);
     runInSlices(tasks);
   }
 
